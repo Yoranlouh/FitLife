@@ -1,0 +1,104 @@
+@page "/workouts/edit/{Id:int}"
+@using SharedLibrary.DTOs.Requests
+@using WA.Services.Http.Interfaces
+@inject IWorkoutApi WorkoutApi
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@layout WA.Layout.AdminLayout
+
+<PageTitle>Workout Bewerken</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6">
+    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
+                   Variant="Variant.Text"
+                   Color="Color.Default"
+                   Href="/workouts"
+                   Title="Terug naar overzicht"/>
+    <MudText Typo="Typo.h4">Workout Bewerken</MudText>
+</MudStack>
+
+@if (_loadingData)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+}
+else if (_loadError)
+{
+    <MudAlert Severity="Severity.Error">Fout bij het laden van workout data.</MudAlert>
+}
+else
+{
+    <MudPaper Elevation="1" Class="pa-6">
+        <WorkoutForm Model="_model" OnValidSubmit="HandleValidSubmit" Loading="_saving" />
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    
+    private WorkoutUpdateRequest _model = new();
+    private bool _loadingData = true;
+    private bool _loadError;
+    private bool _saving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadWorkoutAsync();
+    }
+
+    private async Task LoadWorkoutAsync()
+    {
+        _loadingData = true;
+        _loadError = false;
+        try
+        {
+            var workout = await WorkoutApi.GetWorkoutByIdAsync(Id);
+            if (workout != null)
+            {
+                _model = new WorkoutUpdateRequest
+                {
+                    Name = workout.Name,
+                    Description = workout.Description,
+                    Duration = workout.Duration
+                };
+            }
+            else
+            {
+                _loadError = true;
+            }
+        }
+        catch (Exception)
+        {
+            _loadError = true;
+        }
+        finally
+        {
+            _loadingData = false;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        _saving = true;
+        try
+        {
+            var success = await WorkoutApi.UpdateWorkoutAsync(Id, _model);
+            if (success)
+            {
+                Snackbar.Add("Workout succesvol bijgewerkt", Severity.Success);
+                Navigation.NavigateTo("/workouts");
+            }
+            else
+            {
+                Snackbar.Add("Fout bij het bijwerken van workout", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Fout: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

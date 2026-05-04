@@ -1,0 +1,150 @@
+@page "/lid-worden"
+@using System.ComponentModel.DataAnnotations
+@inject NavigationManager NavManager
+
+<PageTitle>Lid Worden - FitLife</PageTitle>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0">Word Lid van FitLife</h3>
+                </div>
+                <div class="card-body">
+                    @if (!isProcessing && !isSuccess)
+                    {
+                        <EditForm Model="@registrationModel" OnValidSubmit="HandleRegistration">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="text-danger" />
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Voornaam</label>
+                                    <InputText @bind-Value="registrationModel.FirstName" class="form-control" />
+                                    <ValidationMessage For="@(() => registrationModel.FirstName)" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Achternaam</label>
+                                    <InputText @bind-Value="registrationModel.LastName" class="form-control" />
+                                    <ValidationMessage For="@(() => registrationModel.LastName)" />
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">E-mailadres</label>
+                                <InputText @bind-Value="registrationModel.Email" class="form-control" />
+                                <ValidationMessage For="@(() => registrationModel.Email)" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Gekozen Abonnement</label>
+                                <InputSelect @bind-Value="registrationModel.SelectedPlan" class="form-select">
+                                    <option value="Basis">Basis (€29,99/mnd)</option>
+                                    <option value="Premium">Premium (€39,99/mnd)</option>
+                                    <option value="Elite">Elite (€59,99/mnd)</option>
+                                </InputSelect>
+                            </div>
+
+                            <hr class="my-4">
+                            <h5>Betalingsinformatie (Stripe Simulatie)</h5>
+                            <div class="mb-3 p-3 border rounded bg-light">
+                                <div class="mb-3">
+                                    <label class="form-label">Kaartnummer</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-credit-card"></i></span>
+                                        <input type="text" class="form-control" placeholder="4242 4242 4242 4242" disabled />
+                                    </div>
+                                    <small class="text-muted">Gebruik de Stripe testkaart in deze simulatie.</small>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6 mb-3">
+                                        <label class="form-label">Vervaldatum</label>
+                                        <input type="text" class="form-control" placeholder="MM/YY" disabled />
+                                    </div>
+                                    <div class="col-6 mb-3">
+                                        <label class="form-label">CVC</label>
+                                        <input type="text" class="form-control" placeholder="123" disabled />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-grid mt-4">
+                                <button type="submit" class="btn btn-success btn-lg">Afrekenen en Lid Worden</button>
+                            </div>
+                        </EditForm>
+                    }
+                    else if (isProcessing)
+                    {
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-success" role="status" style="width: 3rem; height: 3rem;">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <h4 class="mt-3">Betaling wordt verwerkt via Stripe...</h4>
+                            <p class="text-muted">Sluit dit venster niet.</p>
+                        </div>
+                    }
+                    else if (isSuccess)
+                    {
+                        <div class="text-center py-5">
+                            <i class="bi bi-check-circle-fill text-success display-1"></i>
+                            <h2 class="mt-3">Welkom bij de club, @registrationModel.FirstName!</h2>
+                            <p class="lead">Je betaling is succesvol verwerkt. Je ontvangt binnen enkele minuten een bevestigingsmail.</p>
+                            <button class="btn btn-primary mt-3" @onclick="GoHome">Terug naar Home</button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private RegistrationModel registrationModel = new();
+    private bool isProcessing = false;
+    private bool isSuccess = false;
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? Plan { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrEmpty(Plan))
+        {
+            registrationModel.SelectedPlan = Plan;
+        }
+    }
+
+    private async Task HandleRegistration()
+    {
+        isProcessing = true;
+        
+        // Simuleer Stripe API vertraging
+        await Task.Delay(2500);
+        
+        isProcessing = false;
+        isSuccess = true;
+    }
+
+    private void GoHome()
+    {
+        NavManager.NavigateTo("/");
+    }
+
+    public class RegistrationModel
+    {
+        [Required(ErrorMessage = "Voornaam is verplicht")]
+        public string FirstName { get; set; } = "";
+
+        [Required(ErrorMessage = "Achternaam is verplicht")]
+        public string LastName { get; set; } = "";
+
+        [Required(ErrorMessage = "E-mailadres is verplicht")]
+        [EmailAddress(ErrorMessage = "Ongeldig e-mailadres")]
+        public string Email { get; set; } = "";
+
+        [Required]
+        public string SelectedPlan { get; set; } = "Basis";
+    }
+}

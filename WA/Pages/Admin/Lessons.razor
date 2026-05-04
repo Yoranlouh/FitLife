@@ -1,0 +1,123 @@
+@page "/admin/lessons"
+@using SharedLibrary.DTOs.Responses
+@using WA.Services.Http.Interfaces
+@using WA.Components
+@inject ILessonApi LessonApi
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-16">
+    <MudPaper Elevation="4" Class="pa-8">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+            <MudText Typo="Typo.h4">Lessen Beheer</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OnCreateClicked">
+                Nieuwe Les
+            </MudButton>
+        </MudStack>
+
+        <MudTable Items="@_lessons" Loading="@_loading" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0">
+            <HeaderContent>
+                <MudTh>Workout</MudTh>
+                <MudTh>Starttijd</MudTh>
+                <MudTh>Eindtijd</MudTh>
+                <MudTh>Instructeur</MudTh>
+                <MudTh>Locatie</MudTh>
+                <MudTh>Herhaling</MudTh>
+                <MudTh>Acties</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Workout">@context.WorkoutName</MudTd>
+                <MudTd DataLabel="Starttijd">@context.StartTime.ToString("g")</MudTd>
+                <MudTd DataLabel="Eindtijd">@context.EndTime.ToString("g")</MudTd>
+                <MudTd DataLabel="Instructeur">@context.InstructorName</MudTd>
+                <MudTd DataLabel="Locatie">@context.LocationName</MudTd>
+                <MudTd DataLabel="Herhaling">
+                    @if (context.IsRecurring)
+                    {
+                        <MudChip T="string" Color="Color.Info" Size="Size.Small">@context.RecurrencePattern</MudChip>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2">Nee</MudText>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Acties">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" OnClick="@(() => OnEditClicked(context.Id))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => OnDeleteClicked(context))" />
+                </MudTd>
+            </RowTemplate>
+            <LoadingContent>
+                <MudText>Laden...</MudText>
+            </LoadingContent>
+            <NoItemsContent>
+                <MudText>Geen lessen gevonden.</MudText>
+            </NoItemsContent>
+        </MudTable>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private IReadOnlyList<LessonResponse> _lessons = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLessons();
+    }
+
+    private async Task LoadLessons()
+    {
+        _loading = true;
+        _lessons = await LessonApi.GetLessonsAsync();
+        _loading = false;
+    }
+
+    private async Task OnCreateClicked()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<LessonDialog>("Nieuwe Les", options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadLessons();
+            Snackbar.Add("Les succesvol aangemaakt", Severity.Success);
+        }
+    }
+
+    private async Task OnEditClicked(int id)
+    {
+        var parameters = new DialogParameters<LessonDialog> { { x => x.LessonId, id } };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<LessonDialog>("Les Bewerken", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadLessons();
+            Snackbar.Add("Les succesvol bijgewerkt", Severity.Success);
+        }
+    }
+
+    private async Task OnDeleteClicked(LessonResponse lesson)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Verwijderen", 
+            $"Weet je zeker dat je de les '{lesson.WorkoutName}' op {lesson.StartTime:g} wilt verwijderen?", 
+            yesText:"Verwijder", cancelText:"Annuleer");
+
+        if (result == true)
+        {
+            var success = await LessonApi.DeleteLessonAsync(lesson.Id);
+            if (success)
+            {
+                await LoadLessons();
+                Snackbar.Add("Les verwijderd", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Fout bij verwijderen les", Severity.Error);
+            }
+        }
+    }
+}

@@ -1,0 +1,53 @@
+@page "/workouts/create"
+@using SharedLibrary.DTOs.Requests
+@using WA.Services.Http.Interfaces
+@inject IWorkoutApi WorkoutApi
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@layout WA.Layout.AdminLayout
+
+<PageTitle>Nieuwe Workout</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6">
+    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
+                   Variant="Variant.Text"
+                   Color="Color.Default"
+                   Href="/workouts"
+                   Title="Terug naar overzicht"/>
+    <MudText Typo="Typo.h4">Nieuwe Workout</MudText>
+</MudStack>
+
+<MudPaper Elevation="1" Class="pa-6">
+    <WorkoutForm Model="_model" OnValidSubmit="HandleValidSubmit" Loading="_loading" />
+</MudPaper>
+
+@code {
+    private WorkoutCreateRequest _model = new();
+    private bool _loading;
+
+    private async Task HandleValidSubmit()
+    {
+        _loading = true;
+        try
+        {
+            var result = await WorkoutApi.CreateWorkoutAsync(_model);
+            if (result != null)
+            {
+                Snackbar.Add("Workout succesvol aangemaakt", Severity.Success);
+                Navigation.NavigateTo("/workouts");
+            }
+            else
+            {
+                Snackbar.Add("Fout bij het aanmaken van workout", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Fout: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

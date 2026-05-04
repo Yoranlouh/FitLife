@@ -1,0 +1,63 @@
+@page "/abonnementen"
+
+<PageTitle>Abonnementen - FitLife</PageTitle>
+
+<div class="container mt-5">
+    <h2 class="text-center mb-4">Onze Abonnementen</h2>
+    <p class="text-center">Kies het abonnement dat het beste bij jouw levensstijl past.</p>
+
+    <div class="row row-cols-1 row-cols-md-3 g-4 mt-3">
+        @foreach (var sub in mockSubscriptions)
+        {
+            <div class="col">
+                <div class="card h-100 shadow @(sub.Name == "Premium" ? "border-primary" : "")">
+                    @if (sub.Name == "Premium")
+                    {
+                        <div class="card-header bg-primary text-white text-center">
+                            <strong>Meest Gekozen</strong>
+                        </div>
+                    }
+                    <div class="card-body text-center">
+                        <h5 class="card-title">@sub.Name</h5>
+                        <h2 class="card-price">€@sub.Price<span class="text-muted small">/mnd</span></h2>
+                        <p class="text-muted">Looptijd: @sub.DurationInMonths maanden</p>
+                        <hr>
+                        <ul class="list-unstyled mb-4">
+                            <li><i class="bi bi-check2 text-success"></i> Onbeperkt toegang</li>
+                            <li><i class="bi bi-check2 text-success"></i> Toegang tot alle lessen</li>
+                            @if (sub.Name != "Basis")
+                            {
+                                <li><i class="bi bi-check2 text-success"></i> Gratis sportdrank</li>
+                                <li><i class="bi bi-check2 text-success"></i> 1 Gastbezoek per maand</li>
+                            }
+                            @if (sub.Name == "Elite")
+                            {
+                                <li><i class="bi bi-check2 text-success"></i> Personal training (1u/mnd)</li>
+                                <li><i class="bi bi-check2 text-success"></i> Sauna & Wellness</li>
+                            }
+                        </ul>
+                    </div>
+                    <div class="card-footer bg-transparent border-top-0 pb-4">
+                        <a href="lid-worden?plan=@sub.Name" class="btn @(sub.Name == "Premium" ? "btn-primary" : "btn-outline-primary") w-100">Kies @sub.Name</a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<SubscriptionData> mockSubscriptions = new()
+    {
+        new SubscriptionData { Name = "Basis", Price = 29.99m, DurationInMonths = 12 },
+        new SubscriptionData { Name = "Premium", Price = 39.99m, DurationInMonths = 12 },
+        new SubscriptionData { Name = "Elite", Price = 59.99m, DurationInMonths = 6 }
+    };
+
+    private class SubscriptionData
+    {
+        public string Name { get; set; } = "";
+        public decimal Price { get; set; }
+        public int DurationInMonths { get; set; }
+    }
+}
