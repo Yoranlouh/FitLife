@@ -39,11 +39,17 @@ builder.Services.AddScoped(sp =>
 
 // WA API/SERVICES
 builder.Services.AddScoped<IUserApi, UserApi>();
+builder.Services.AddScoped<IMemberApi, MemberApi>();
+builder.Services.AddScoped<IWorkoutApi, WorkoutApi>();
+builder.Services.AddScoped<IInstructorApi, InstructorApi>();
+builder.Services.AddScoped<ILessonApi, LessonApi>();
+builder.Services.AddScoped<ILocationApi, LocationApi>();
 builder.Services.AddScoped<LayoutStateService>();
 builder.Services.AddScoped<IMovieApiClient, MovieApiClient>();
 builder.Services.AddScoped<IShowingApi, ShowingApi>();
 builder.Services.AddScoped<IAuditoriumApi, AuditoriumApi>();
 builder.Services.AddScoped<ISeatFinderApiClient, SeatFinderApiService>();
+builder.Services.AddScoped<IReservationApi, ReservationApi>();
 builder.Services.AddScoped<IArrangementApi, ArrangementApi>();
 builder.Services.AddScoped<IOrderApi, OrderApi>();
 

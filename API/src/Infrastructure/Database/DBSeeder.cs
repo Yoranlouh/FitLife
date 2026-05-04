@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SharedLibrary.Domain.Entities;
+using API.Domain.Model;
 
 namespace API.Infrastructure.Database
 {
@@ -7,6 +8,115 @@ namespace API.Infrastructure.Database
     {
         public static async Task SeedAsync(ApiDbContext db)
         {
+            // Seed Subscriptions
+            if (!await db.Subscriptions.AnyAsync())
+            {
+                var subscriptions = new List<Subscription>
+                {
+                    new Subscription { Name = "Basic", Price = 29.99m, DurationInMonths = 1 },
+                    new Subscription { Name = "Pro", Price = 49.99m, DurationInMonths = 1 },
+                    new Subscription { Name = "Annual Elite", Price = 499.99m, DurationInMonths = 12 }
+                };
+                db.Subscriptions.AddRange(subscriptions);
+                await db.SaveChangesAsync();
+            }
+
+            // Seed Instructors
+            if (!await db.Instructors.AnyAsync())
+            {
+                var instructors = new List<Instructor>
+                {
+                    new Instructor { FirstName = "Marco", LastName = "Borsato", Email = "marco@fitlife.com", Specialization = "Spinning" },
+                    new Instructor { FirstName = "Anouk", LastName = "Teeuwe", Email = "anouk@fitlife.com", Specialization = "Yoga" },
+                    new Instructor { FirstName = "Ali", LastName = "B", Email = "ali@fitlife.com", Specialization = "HIIT" },
+                    new Instructor { FirstName = "NNB", LastName = "", Email = "nnb@fitlife.com", Specialization = "Unknown" }
+                };
+                db.Instructors.AddRange(instructors);
+                await db.SaveChangesAsync();
+            }
+
+            // Seed Locations
+            if (!await db.Locations.AnyAsync())
+            {
+                var locations = new List<Location>
+                {
+                    new Location { Name = "Studio A", Address = "Hoofdstraat 1, Amsterdam", Capacity = 20 },
+                    new Location { Name = "Studio B", Address = "Hoofdstraat 2, Amsterdam", Capacity = 15 },
+                    new Location { Name = "Spinning Zone", Address = "Hoofdstraat 3, Amsterdam", Capacity = 25 }
+                };
+                db.Locations.AddRange(locations);
+                await db.SaveChangesAsync();
+            }
+
+            // Seed Workouts
+            if (!await db.Workouts.AnyAsync())
+            {
+                var workouts = new List<Workout>
+                {
+                    new Workout { Name = "Extreme Spinning", Description = "High intensity spinning session", Duration = TimeSpan.FromMinutes(45) },
+                    new Workout { Name = "Zen Yoga", Description = "Relaxing yoga for all levels", Duration = TimeSpan.FromMinutes(60) },
+                    new Workout { Name = "Power HIIT", Description = "Full body interval training", Duration = TimeSpan.FromMinutes(30) }
+                };
+                db.Workouts.AddRange(workouts);
+                await db.SaveChangesAsync();
+            }
+
+            // Seed Lessons
+            if (!await db.Lessons.AnyAsync())
+            {
+                var workout = await db.Workouts.FirstAsync();
+                var instructor = await db.Instructors.FirstAsync();
+                var location = await db.Locations.FirstAsync();
+
+                var lessons = new List<Lesson>
+                {
+                    new Lesson 
+                    { 
+                        StartTime = DateTime.Now.AddDays(1).Date.AddHours(10), 
+                        EndTime = DateTime.Now.AddDays(1).Date.AddHours(11),
+                        MaxParticipants = 20,
+                        WorkoutId = workout.Id,
+                        InstructorId = instructor.Id,
+                        LocationId = location.Id
+                    },
+                    new Lesson 
+                    { 
+                        StartTime = DateTime.Now.AddDays(1).Date.AddHours(14), 
+                        EndTime = DateTime.Now.AddDays(1).Date.AddHours(15),
+                        MaxParticipants = 20,
+                        WorkoutId = workout.Id,
+                        InstructorId = instructor.Id,
+                        LocationId = location.Id
+                    }
+                };
+                db.Lessons.AddRange(lessons);
+                await db.SaveChangesAsync();
+
+                // Seed SpinningBikes for the first lesson if it's spinning
+                foreach (var lesson in lessons)
+                {
+                    for (int i = 1; i <= 10; i++)
+                    {
+                        db.SpinningBikes.Add(new SpinningBike { BikeNumber = i, LessonId = lesson.Id });
+                    }
+                }
+                await db.SaveChangesAsync();
+            }
+
+            // Seed Members
+            if (!await db.Members.AnyAsync())
+            {
+                var subscription = await db.Subscriptions.FirstAsync();
+                var members = new List<Member>
+                {
+                    new Member { FirstName = "John", LastName = "Doe", Email = "john.doe@example.com", JoinDate = DateTime.Now.AddMonths(-3), SubscriptionId = subscription.Id },
+                    new Member { FirstName = "Jane", LastName = "Smith", Email = "jane.smith@example.com", JoinDate = DateTime.Now.AddMonths(-1), SubscriptionId = subscription.Id }
+                };
+                db.Members.AddRange(members);
+                await db.SaveChangesAsync();
+            }
+
+            // Seed Users
             if (!await db.Users.AnyAsync())
             {
                 db.Users.AddRange(
@@ -17,298 +127,16 @@ namespace API.Infrastructure.Database
                 );
                 await db.SaveChangesAsync();
             }
-        }
-    }
-}
-            {
-                var auditoriumsRequest = new List<CreateAuditoriumRequest>
-                {
-                    new CreateAuditoriumRequest("Zaal 1", new List<RowConfig>
-                    {
-                        new RowConfig(15, 2),
-                        new RowConfig(15, 0),
-                        new RowConfig(15, 2),
-                        new RowConfig(15, 0),
-                        new RowConfig(15, 0),
-                        new RowConfig(15, 0),
-                        new RowConfig(15, 0),
-                        new RowConfig(15, 4)
-                    }),
-                    new CreateAuditoriumRequest("Zaal 2", new List<RowConfig>
-                    {
-                        new RowConfig(15, 2),
-                        new RowConfig(15, 0),
-                        new RowConfig(15, 2),
-                        new RowConfig(15, 0),
-                        new RowConfig(15, 0),
-                        new RowConfig(15, 0),
-                        new RowConfig(15, 0),
-                        new RowConfig(15, 4)
-                    }),
-                    new CreateAuditoriumRequest("Zaal 3", new List<RowConfig>
-                    {
-                        new RowConfig(15, 2),
-                        new RowConfig(15, 0),
-                        new RowConfig(15, 2),
-                        new RowConfig(15, 0),
-                        new RowConfig(15, 0),
-                        new RowConfig(15, 0),
-                        new RowConfig(15, 0),
-                        new RowConfig(15, 4)
-                    }),
-                    new CreateAuditoriumRequest("Zaal 4", new List<RowConfig>
-                    {
-                        new RowConfig(10, 0),
-                        new RowConfig(10, 1),
-                        new RowConfig(10, 2),
-                        new RowConfig(10, 0),
-                        new RowConfig(10, 1),
-                        new RowConfig(10, 2)
-                    }),
-                    new CreateAuditoriumRequest("Zaal 5", new List<RowConfig>
-                    {
-                        new RowConfig(15, 0),
-                        new RowConfig(15, 0),
-                        new RowConfig(10, 0),
-                        new RowConfig(10, 0)
-                    }),
-                    new CreateAuditoriumRequest("Zaal 6", new List<RowConfig>
-                    {
-                        new RowConfig(15, 0),
-                        new RowConfig(15, 0),
-                        new RowConfig(10, 0),
-                        new RowConfig(10, 0)
-                    }),
-                };
-                foreach (var request in auditoriumsRequest)
-                {
-                    await auditoriumService.AddAuditoriumAsync(request);
-                }
-            }
 
-            // SEED SHOWINGS
-            var movies = await db.Movies.ToListAsync();
-            var auditoriums = await db.Auditoriums.ToListAsync();
-
-            var random = new Random();
-            var showings = new List<Showing>();
-
-            var dutchMovies = movies
-                .Where(m => m.SpokenLanguageCodeIso6391 == "nl")
-                .ToList();
-
-            var kidsMovies = movies
-                .Where(m => int.TryParse(m.AgeIndication, out var age) && age < 12)
-                .ToList();
-
-// tijdslots tussen 10:00 en 23:00 (ongeveer elke 2 uur)
-            var baseDate = DateTimeOffset.UtcNow.Date;
-            var timeSlots = new List<DateTimeOffset>();
-
-            for (int hour = 10; hour <= 23; hour += 2)
-            {
-                timeSlots.Add(baseDate.AddHours(hour));
-            }
-
-// shuffle + basis selectie
-            var selectedMovies = movies
-                .OrderBy(_ => random.Next())
-                .Take(10)
-                .ToList();
-
-// forceer NL film
-            if (dutchMovies.Any())
-            {
-                var dutchMovie = dutchMovies[random.Next(dutchMovies.Count)];
-                selectedMovies = selectedMovies.Where(m => m.Id != dutchMovie.Id).ToList();
-                selectedMovies.Add(dutchMovie);
-            }
-
-// forceer kids film (<12)
-            if (kidsMovies.Any())
-            {
-                var kidsMovie = kidsMovies[random.Next(kidsMovies.Count)];
-                selectedMovies = selectedMovies.Where(m => m.Id != kidsMovie.Id).ToList();
-                selectedMovies.Add(kidsMovie);
-            }
-
-// max 12 totaal
-            selectedMovies = selectedMovies.Take(12).ToList();
-
-// maak showings
-            for (int i = 0; i < selectedMovies.Count; i++)
-            {
-                var movie = selectedMovies[i];
-                var auditorium = auditoriums[i % auditoriums.Count];
-                var time = timeSlots[i % timeSlots.Count];
-
-                showings.Add(new Showing
-                {
-                    MovieId = movie.Id,
-                    AuditoriumId = auditorium.Id,
-                    StartsAt = time,
-                    IsThreeD = random.Next(0, 2) == 0,
-                    AuditoriumLayoutSnapshot = auditorium.RowConfigJson
-                });
-            }
-
-// reset + opslaan
-            db.Showings.RemoveRange(db.Showings);
-            db.Showings.AddRange(showings);
-            await db.SaveChangesAsync();
-
-            // Dummy order for API testing when no orders exist
-            if (!await db.Orders.AnyAsync())
-            {
-                var showing = await db.Showings.OrderBy(s => s.Id).FirstOrDefaultAsync();
-                if (showing != null)
-                {
-                    var ticket = new Ticket
-                    {
-                        ShowingId = showing.Id,
-                        ShowDateTimeUtc = showing.StartsAt.UtcDateTime.ToString("O"),
-                        SeatNumber = "A1",
-                        Price = 9.50m,
-                        TicketType = "Adult",
-                        PaymentStatus = "Pending",
-                        QrIsActive = false
-                    };
-                    await db.Tickets.AddAsync(ticket);
-                    await db.SaveChangesAsync();
-
-                    var order = new Order
-                    {
-                        OrderCode = "DUMMYORDER001",
-                        CreatedAtUtc = DateTime.UtcNow,
-                        TotalAmount = ticket.Price,
-                        OrderType = "Reservation",
-                        PaymentStatus = "Pending",
-                        PaymentMethod = "IDEAL",
-                        IsPrinted = false,
-                        OrderTickets = new List<OrderTicket>
-                        {
-                            new OrderTicket { TicketId = ticket.Id, Ticket = ticket }
-                        }
-                    };
-
-                    await db.Orders.AddAsync(order);
-                    await db.SaveChangesAsync();
-                }
-            }
-
-            if (!await db.Tickets.AnyAsync())
-            {
-                await ticketService.CreateTicketAsync(new Ticket
-                {
-                    ShowingId = 1,
-                    ShowDateTimeUtc = DateTimeOffset.UtcNow.Date.AddHours(18).ToString("O"),
-                    SeatNumber = "A1",
-                    TicketType = "Adult",
-                    Price = 8.50m
-                });
-            }
-            
-            if (!await db.Arrangements.AnyAsync())
-            {
-                var arr1 = new Arrangement
-                {
-                    Name = "Movie Deal - Popcorn & Cola",
-                    Price = 12.00m,
-                    IsActive = true
-                };
-
-                var arr2 = new Arrangement
-                {
-                    Name = "Movie Deal - M&M's & Fanta",
-                    Price = 12.00m,
-                    IsActive = true
-                };
-
-                db.Arrangements.AddRange(arr1, arr2);
-                await db.SaveChangesAsync();
-            }
-
-            if (!await db.ArrangementItems.AnyAsync())
-            {
-                var arr1 = await db.Arrangements.FirstAsync(a => a.Name.Contains("Popcorn"));
-                var arr2 = await db.Arrangements.FirstAsync(a => a.Name.Contains("M&M"));
-
-                db.ArrangementItems.AddRange(
-                    new ArrangementItem
-                    {
-                        ArrangementId = arr1.Id,
-                        Type = ArrangementItemType.Ticket,
-                        Name = "Ticket",
-                        Quantity = 1
-                    },
-                    new ArrangementItem
-                    {
-                        ArrangementId = arr1.Id,
-                        Type = ArrangementItemType.Food,
-                        Name = "Popcorn",
-                        Quantity = 1
-                    },
-                    new ArrangementItem
-                    {
-                        ArrangementId = arr1.Id,
-                        Type = ArrangementItemType.Drink,
-                        Name = "Cola",
-                        Quantity = 1
-                    },
-
-                    new ArrangementItem
-                    {
-                        ArrangementId = arr2.Id,
-                        Type = ArrangementItemType.Ticket,
-                        Name = "Ticket",
-                        Quantity = 1
-                    },
-                    new ArrangementItem
-                    {
-                        ArrangementId = arr2.Id,
-                        Type = ArrangementItemType.Food,
-                        Name = "M&M's",
-                        Quantity = 1
-                    },
-                    new ArrangementItem
-                    {
-                        ArrangementId = arr2.Id,
-                        Type = ArrangementItemType.Drink,
-                        Name = "Fanta",
-                        Quantity = 1
-                    }
-                );
-
-                await db.SaveChangesAsync();
-            }
-            
-
+            // Seed EmailSubscriptions
             if (!await db.EmailSubscriptions.AnyAsync())
             {
-                await localMailService.AddAsync("TheBeeKeerIsAmazing@Badazz.yow");
-                await localMailService.AddAsync("Batman@adjlaskjd.nl");
-                var textPart = new TextPart("plain")
-                {
-                    Text = @" Hello subscribers!,
-                    
-This is a test email to confirm that the subscription system is working correctly. Thank you for subscribing to our newsletter!
-
-Groetjessssss,
-
-CineNet."
-                };
-                await localMailService.SendEmailToSubscribersAsync(textPart, "CineNet", "Kom nu kijken!!");
+                db.EmailSubscriptions.AddRange(
+                    new EmailSubscription { Email = "newsletter@fitlife.com" },
+                    new EmailSubscription { Email = "promo@fitlife.com" }
+                );
+                await db.SaveChangesAsync();
             }
-
-            await db.SaveChangesAsync();
-
-
-            
-
-
         }
     }
-    
-    
-    
 }

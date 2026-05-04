@@ -1,5 +1,7 @@
 <Solution>
-  <Project Path="API/API.csproj" />
-  <Project Path="SharedLibrary/SharedLibrary.csproj" Id="30dfd035-f228-42c4-a048-eea6779dc50a" />
-  <Project Path="WA/WA.csproj" Id="1a977501-8a7b-47de-8860-5e1a3d85cf59" />
+  <Project Path="FitLife.Domain/FitLife.Domain.csproj" />
+  <Project Path="FitLife.Application/FitLife.Application.csproj" />
+  <Project Path="FitLife.Infrastructure/FitLife.Infrastructure.csproj" />
+  <Project Path="FitLife.API/FitLife.API.csproj" />
+  <Project Path="FitLife.BlazorWebApp/FitLife.BlazorWebApp.csproj" />
 </Solution>

@@ -37,6 +37,35 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 
+// Workouts
+builder.Services.AddScoped<IWorkoutRepository, WorkoutRepository>();
+builder.Services.AddScoped<IWorkoutService, WorkoutService>();
+
+// Instructors
+builder.Services.AddScoped<IInstructorRepository, InstructorRepository>();
+builder.Services.AddScoped<IInstructorService, InstructorService>();
+
+// Lessons
+builder.Services.AddScoped<ILessonRepository, LessonRepository>();
+builder.Services.AddScoped<ILessonService, LessonService>();
+
+// Members
+builder.Services.AddScoped<IMemberRepository, MemberRepository>();
+builder.Services.AddScoped<IMemberService, MemberService>();
+
+// Reservations
+builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
+builder.Services.AddScoped<IReservationService, ReservationService>();
+
+// Subscriptions
+builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+
+// Waitlist
+builder.Services.AddScoped<IWaitlistService, WaitlistService>();
+
+// Photo Storage
+builder.Services.AddScoped<IPhotoStorage, LocalPhotoStorage>();
+
 // Monitoring: health check endpoint
 builder.Services.AddHealthChecks();
 
