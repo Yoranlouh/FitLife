@@ -1,0 +1,54 @@
+﻿@page "/users"
+@using SharedLibrary.DTOs.Responses
+@using WA.Services.Http.Interfaces
+@using MudBlazor
+@inject IUserApi UserApi
+@inject ISnackbar Snackbar
+
+<MudText Typo="Typo.h4" GutterBottom="true">Users</MudText>
+
+<MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadUsers">
+        Load users
+    </MudButton>
+
+    <MudText Typo="Typo.body2">
+        @(_users.Count == 0 ? "No users loaded" : $"{_users.Count} users")
+    </MudText>
+</MudStack>
+
+<MudDivider Class="my-4" />
+
+@if (_users.Count == 0)
+{
+    <MudText Typo="Typo.body2">Click “Load users”.</MudText>
+}
+else
+{
+    <MudList T="UserResponse" Dense="true">
+        @foreach (var u in _users)
+        {
+            <MudListItem T="UserResponse">
+                <MudText Typo="Typo.body1">@u.Name</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@u.Id</MudText>
+            </MudListItem>
+        }
+    </MudList>
+}
+
+@code {
+    private IReadOnlyList<UserResponse> _users = [];
+
+    private async Task LoadUsers()
+    {
+        try
+        {
+            _users = await UserApi.GetUsersAsync();
+            Snackbar.Add($"Loaded {_users.Count} users", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load users: {ex.Message}", Severity.Error);
+        }
+    }
+}

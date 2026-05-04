@@ -1,0 +1,30 @@
+name: Build WA image on push to develop/main, check which branch is the source →
+
+on:
+  push:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build & push WA image
+        run: |
+          if [ "${{ github.ref_name }}" = "develop" ]; then
+            TAG=acc
+          else
+            TAG=prod
+          fi
+
+          docker build -f WA/Dockerfile -t ghcr.io/gielvangaal/cine.net/wa:$TAG .
+          docker push ghcr.io/gielvangaal/cine.net/wa:$TAG

@@ -1,0 +1,111 @@
+@page "/admin/arrangements"
+@using SharedLibrary.DTOs.Requests
+@using WA.Services.Http.Interfaces
+@inject IArrangementApi _api
+
+<MudPaper Class="pa-4">
+
+    <MudText Typo="Typo.h5">Create Arrangement</MudText>
+
+    <MudTextField @bind-Value="_name" Label="Name" />
+    <MudNumericField @bind-Value="_price" Label="Price" Adornment="Adornment.End" AdornmentText="€" />
+
+    <MudDivider Class="my-4"/>
+
+    <MudText Typo="Typo.h6">Add Item</MudText>
+
+    <MudSelect T="ArrangementItemType" @bind-Value="_newItemType" Label="Type">
+        <MudSelectItem Value="ArrangementItemType.Ticket">Ticket</MudSelectItem>
+        <MudSelectItem Value="ArrangementItemType.Drink">Drink</MudSelectItem>
+        <MudSelectItem Value="ArrangementItemType.Food">Food</MudSelectItem>
+    </MudSelect>
+
+    <MudTextField @bind-Value="_newItemName" Label="Name" />
+    <MudNumericField @bind-Value="_newItemQuantity" Label="Quantity" />
+
+    <MudButton OnClick="AddItem" Variant="Variant.Filled" Color="Color.Primary">
+        Add Item
+    </MudButton>
+
+    <MudDivider Class="my-4"/>
+
+    <MudText Typo="Typo.h6">Items</MudText>
+
+    @foreach (var item in _items)
+    {
+        <MudPaper Class="pa-2 mb-2 d-flex align-center">
+            <MudText>@item.Quantity x @item.Name (@item.Type)</MudText>
+
+            <MudSpacer />
+
+            <MudButton Color="Color.Error" OnClick="@(() => RemoveItem(item))">
+                Remove
+            </MudButton>
+        </MudPaper>
+    }
+
+    <MudDivider Class="my-4"/>
+
+    <MudButton OnClick="Save" Variant="Variant.Filled" Color="Color.Success">
+        Save Arrangement
+    </MudButton>
+
+</MudPaper>
+
+@code {
+    private string _name = "";
+    private decimal _price = 0;
+
+    private List<ItemVm> _items = new();
+
+    private ArrangementItemType _newItemType = ArrangementItemType.Ticket;
+    private string _newItemName = "";
+    private int _newItemQuantity = 1;
+
+    private void AddItem()
+    {
+        _items.Add(new ItemVm
+        {
+            Type = _newItemType,
+            Name = _newItemName,
+            Quantity = _newItemQuantity
+        });
+
+        _newItemName = "";
+        _newItemQuantity = 1;
+    }
+
+    private void RemoveItem(ItemVm item)
+    {
+        _items.Remove(item);
+    }
+
+    private async Task Save()
+    {
+        var request = new CreateArrangementRequest
+        {
+            Name = _name,
+            Price = _price,
+            Items = _items.Select(i => new CreateArrangementItemRequest
+            {
+                Type = (int)i.Type,
+                Name = i.Name,
+                Quantity = i.Quantity
+            }).ToList()
+        };
+
+        await _api.CreateAsync(request);
+
+        // reset
+        _name = "";
+        _price = 0;
+        _items.Clear();
+    }
+
+    private class ItemVm
+    {
+        public ArrangementItemType Type { get; set; }
+        public string Name { get; set; } = "";
+        public int Quantity { get; set; }
+    }
+}

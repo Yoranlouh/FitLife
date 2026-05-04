@@ -1,0 +1,30 @@
+name: Deploy API PROD
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Install Ansible
+        run: sudo apt update && sudo apt install -y ansible
+
+      - name: Add VPS to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
+
+      - name: Run Ansible (PROD)
+        run: |
+          ansible-playbook ansible/site-api.yml \
+            -i ansible/inventory/prod.ini \
+            --extra-vars "image_tag=prod tmdb_api_key_read_only=${{ secrets.TMDB_API_KEY_READ_ONLY }}"

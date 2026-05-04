@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="API/API.csproj" />
+  <Project Path="SharedLibrary/SharedLibrary.csproj" Id="30dfd035-f228-42c4-a048-eea6779dc50a" />
+  <Project Path="WA/WA.csproj" Id="1a977501-8a7b-47de-8860-5e1a3d85cf59" />
+</Solution>

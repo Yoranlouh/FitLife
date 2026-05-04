@@ -1,0 +1,186 @@
+@page "/admin/showings"
+@using SharedLibrary.DTOs.Responses
+@using WA.Services.Http.Interfaces
+@inject IShowingApi ShowingApi
+@inject IAuditoriumApi AuditoriumApi
+@inject NavigationManager Navigation
+@using WA.Layout
+@layout AdminLayout
+
+<PageTitle>Admin — Showings</PageTitle>
+
+@* ── Page header ── *@
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+    <MudText Typo="Typo.h4" Style="color: var(--mud-palette-text-secondary);">Showings</MudText>
+    <div style="width: 220px">
+        <MudDatePicker
+            @bind-Date="_selectedDate"
+            Label="Viewing showings for"
+            Variant="Variant.Outlined"
+            Margin="Margin.Dense"
+            DateFormat="dd/MM/yyyy"
+            PickerVariant="PickerVariant.Dialog"
+            AdornmentColor="Color.Primary"
+            ShowToolbar="false"
+            Class="white-text"
+        />
+    </div>
+</MudStack>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+}
+else if (_loadError)
+{
+    <MudAlert Severity="Severity.Error">Failed to load schedule. Please try again.</MudAlert>
+}
+else
+{
+    <MudStack Spacing="6" Style="margin-bottom: 60px;">
+        @foreach (var auditorium in _auditoriums)
+        {
+            var showingsForAuditorium = GetShowingsForAuditorium(auditorium.Id);
+
+            <div>
+                @* ── Auditorium header ── *@
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-2">
+                    <MudText Typo="Typo.h6" Style="color: var(--mud-palette-text-secondary);">
+                        @auditorium.Name
+                    </MudText>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Add"
+                               Href="@($"/admin/showings/add/{auditorium.Id}")">
+                        Add Showing
+                    </MudButton>
+                </MudStack>
+
+                @* ── Showings datagrid ── *@
+                <MudDataGrid T="ShowingDisplayResponse"
+                             Items="showingsForAuditorium"
+                             SortMode="SortMode.Single"
+                             Dense="true"
+                             Striped="true"
+                             Hover="true"
+                             Class="white-datagrid"
+                             Style="table-layout: fixed; width: 100%;">
+                    <Columns>
+                        <PropertyColumn Property="x => x.MovieTitle" Title="Movie"
+                                        HeaderStyle="width: 60%;"
+                                        CellStyle="width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" />
+                        <TemplateColumn Title="Starts At"
+                                        HeaderStyle="width: 120px;"
+                                        CellStyle="width: 120px;">
+                            <CellTemplate>
+                                @context.Item.StartsAt.LocalDateTime.ToString("HH:mm")
+                            </CellTemplate>
+                        </TemplateColumn>
+                        <TemplateColumn Title="Ends At"
+                                        HeaderStyle="width: 120px;"
+                                        CellStyle="width: 120px;">
+                            <CellTemplate>
+                                @context.Item.StartsAt.AddMinutes((double)(context.Item.Runtime ?? 0)).LocalDateTime.ToString("HH:mm")
+                            </CellTemplate>
+                        </TemplateColumn>
+                        <TemplateColumn Title="Runtime"
+                                        HeaderStyle="width: 100px;"
+                                        CellStyle="width: 100px;">
+                            <CellTemplate>
+                                @($"{context.Item.Runtime} min")
+                            </CellTemplate>
+                        </TemplateColumn>
+                    </Columns>
+                    <NoRecordsContent>
+                        <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-disabled);">
+                            No showings scheduled for this auditorium.
+                        </MudText>
+                    </NoRecordsContent>
+                </MudDataGrid>
+            </div>
+        }
+    </MudStack>
+    
+    <div style="height: 25px;"></div>
+}
+
+@code {
+    private List<Auditorium> _auditoriums = new();
+    private List<ShowingDisplayResponse> _showings = new();
+
+    private bool _loading = true;
+    private bool _loadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private DateTime? _selectedDateInternal = DateTime.Today;
+
+    private DateTime? _selectedDate
+    {
+        get => _selectedDateInternal;
+        set
+        {
+            if (_selectedDateInternal == value)
+                return;
+
+            _selectedDateInternal = value;
+            
+            _ = InvokeAsync(async () =>
+            {
+                await LoadShowingsAsync();
+                StateHasChanged();
+            });
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        _loadError = false;
+        
+        var auditoriumTask = AuditoriumApi.GetAllAuditoriumsAsync();
+        var showingsTask   = ShowingApi.GetShowingDisplayAsync(DateOnly.FromDateTime(_selectedDate ?? DateTime.Today));
+
+        await Task.WhenAll(auditoriumTask, showingsTask);
+
+        var auditoriums = await auditoriumTask;
+        var showings    = await showingsTask;
+
+        if (auditoriums is null || showings is null)
+        {
+            _loadError = true;
+            _loading   = false;
+            return;
+        }
+        
+        _auditoriums = auditoriums.OrderBy(a => a.Name).ToList();
+        _showings    = showings.ToList();
+
+        _loading = false;
+    }
+
+    private async Task LoadShowingsAsync()
+    {
+        _loading = true;
+        _loadError = false;
+
+        var result = await ShowingApi.GetShowingDisplayAsync(
+            DateOnly.FromDateTime(_selectedDate ?? DateTime.Today));
+
+        if (result is null)
+            _loadError = true;
+        else
+            _showings = result.ToList();
+
+        _loading = false;
+    }
+
+    private IEnumerable<ShowingDisplayResponse> GetShowingsForAuditorium(int auditoriumId)
+        => _showings
+            .Where(s => s.AuditoriumId == auditoriumId)
+            .OrderBy(s => s.StartsAt);
+}

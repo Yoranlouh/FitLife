@@ -1,0 +1,104 @@
+@page "/componentexamples"
+@using MudBlazor
+@inject ISnackbar Snackbar
+
+<MudText Typo="Typo.h4">
+    Component Sheet
+</MudText>
+
+<MudDivider Class="my-4" />
+
+<!-- Buttons -->
+
+<MudText Typo="Typo.h6">Buttons</MudText>
+
+<MudButton Variant="Variant.Filled">Default</MudButton>
+<MudButton Variant="Variant.Filled" Color="Color.Primary">Primary</MudButton>
+<MudButton Variant="Variant.Filled" Color="Color.Secondary">Secondary</MudButton>
+<MudButton Variant="Variant.Filled" Disabled="true">Disabled</MudButton>
+
+<MudDivider Class="my-4" />
+
+<!-- Simple FAB -->
+
+<MudText Typo="Typo.h6">FAB</MudText>
+
+<MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" />
+<MudFab Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Edit" />
+<MudFab Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.ShoppingCart" DropShadow="false" />
+<MudFab StartIcon="@Icons.Material.Filled.Bookmark" Label="Bookmark" />
+<MudFab StartIcon="@Icons.Material.Filled.Save" Disabled="true" />
+
+<MudDivider Class="my-4" />
+
+<!-- TextField -->
+
+<MudText Typo="Typo.h6">Text Field</MudText>
+
+        <MudTextField T="string" Label="Text field" />
+
+<MudDivider Class="my-4" />
+
+<!-- Switch / Checkbox -->
+
+<MudText Typo="Typo.h6">Boolean Inputs</MudText>
+
+<MudSwitch T="bool" Label="Switch" />
+<MudCheckBox T="bool" Label="Checkbox" />
+
+<MudDivider Class="my-4" />
+
+<!-- Card -->
+
+<MudText Typo="Typo.h6">Card</MudText>
+
+<MudCard>
+    <MudCardMedia Image="https://image.tmdb.org/t/p/original/uzIGtyS6bbnJzGsPL93WCF1FWm8.jpg" Height="200" />
+    <MudCardContent>
+        <MudText Typo="Typo.h5">Old Paint</MudText>
+        <MudText Typo="Typo.body2">Old paint found on a stone house door.</MudText>
+        <MudText Typo="Typo.body2">This photo was taken in a small village in Istra Croatia.</MudText>
+    </MudCardContent>
+    <MudCardActions>
+        <MudButton Variant="Variant.Text" Color="Color.Primary">Share</MudButton>
+        <MudButton Variant="Variant.Text" Color="Color.Primary">Learn more</MudButton>
+    </MudCardActions>
+</MudCard>
+
+<MudDivider Class="my-4" />
+
+<!-- Chip -->
+
+<MudText Typo="Typo.h6">Chip</MudText>
+
+<MudChip T="string" Variant="Variant.Text">Default</MudChip>
+<MudChip T="string" Variant="Variant.Text" Color="Color.Primary">Primary</MudChip>
+<MudChip T="string" Variant="Variant.Text" Color="Color.Secondary">Secondary</MudChip>
+<MudChip T="string" Variant="Variant.Text" Color="Color.Info">Info</MudChip>
+<MudChip T="string" Variant="Variant.Text" Color="Color.Success">Success</MudChip>
+<MudChip T="string" Variant="Variant.Text" Color="Color.Warning">Warning</MudChip>
+<MudChip T="string" Variant="Variant.Text" Color="Color.Error">Error</MudChip>
+<MudChip T="string" Variant="Variant.Text" Color="Color.Dark">Dark</MudChip>
+
+<MudDivider Class="my-4" />
+
+<!-- Snackbar -->
+
+<MudText Typo="Typo.h6">Snackbar</MudText>
+
+<MudButton Variant="Variant.Filled"
+           Color="Color.Primary"
+           OnClick="ShowSnackbar">
+    Show Snackbar
+</MudButton>
+
+@code {
+private void ShowSnackbar()
+{
+    Snackbar.Add(
+        "Button clicked!",
+        Severity.Success);
+}
+}
+
+<MudDivider Class="my-4" />

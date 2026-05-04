@@ -1,0 +1,76 @@
+@using System.Globalization
+@inject IStringLocalizer<WA.Localization.SharedResources> L
+@inject LayoutStateService LayoutStateService
+@implements IDisposable
+
+<MudAppBar Color="Color.Default"
+           Elevation="1"
+           Style="background-color: var(--mud-palette-appbar-background); color: white; height:110px; justify-content:center;">
+
+    <div style="display:flex; align-items:center; padding-left:16px;">
+        <a href="/" style="display:flex; align-items:center;">
+            <MudImage src="images/logo.png" alt="App Logo" style="height:90px; width:auto; padding-top:10px; padding-bottom:10px;"/>
+        </a>
+    </div>
+
+    <MudSpacer />
+    
+    <div style="display: flex; align-items: center; gap: 4px; margin: 0 8px;">
+        <span @onclick='() => ChangeLanguage("nl")'
+              style="cursor: pointer; font-size: 1.5rem; opacity: @(_selectedLanguage == "nl" ? "1" : "0.4"); transition: opacity 0.2s;">
+            🇳🇱
+        </span>
+        <span @onclick='() => ChangeLanguage("en")'
+              style="cursor: pointer; font-size: 1.5rem; opacity: @(_selectedLanguage == "en" ? "1" : "0.4"); transition: opacity 0.2s;">
+            🇬🇧
+        </span>
+    </div>
+
+    <MudButton Class="nav-button"
+               Variant="Variant.Filled"
+               Color="Color.Primary"
+               Href="/"
+               Match="NavLinkMatch.All">
+        @L["Home"]
+    </MudButton>
+
+    <MudButton Class="nav-button"
+               Variant="Variant.Filled"
+               Color="Color.Primary"
+               Href="contact">
+        @L["Contact"]
+    </MudButton>
+
+</MudAppBar>
+
+@code {
+    private string _selectedLanguage = "nl";
+    private Action? _handler;
+
+    protected override void OnInitialized()
+    {
+        _handler = async () =>
+        {
+            SyncLanguage();
+            await InvokeAsync(StateHasChanged);
+        };
+        LayoutStateService.OnChange += _handler;
+        SyncLanguage();
+    }
+
+    private void SyncLanguage()
+    {
+        _selectedLanguage = LayoutStateService.Language.Name.StartsWith("en") ? "en" : "nl";
+    }
+
+    private void ChangeLanguage(string value)
+    {
+        _selectedLanguage = value;
+        LayoutStateService.ChangeLanguage(value);
+    }
+
+    public void Dispose()
+    {
+        LayoutStateService.OnChange -= _handler;
+    }
+}

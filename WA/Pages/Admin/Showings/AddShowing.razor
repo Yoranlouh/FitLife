@@ -1,0 +1,363 @@
+@page "/admin/showings/add/{AuditoriumId:int}"
+@using SharedLibrary.DTOs.Responses
+@using WA.Services.Http.Interfaces
+@inject IShowingApi ShowingApi
+@inject IAuditoriumApi AuditoriumApi
+@inject IMovieApiClient MovieApi
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@using WA.Layout
+@layout AdminLayout
+
+<PageTitle>Admin — Add Showing</PageTitle>
+
+@* ── Page header ── *@
+<MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
+                       Href="/admin/showings"
+                       Color="Color.Default" />
+        <MudText Typo="Typo.h4" Style="color: var(--mud-palette-text-secondary);">Add Showing</MudText>
+    </MudStack>
+</MudStack>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+}
+else if (_loadError)
+{
+    <MudAlert Severity="Severity.Error">Failed to load required data. Please try again.</MudAlert>
+}
+else
+{
+    <MudStack Spacing="6">
+        @* ── Form card ── *@
+        <MudPaper Class="pa-6" Elevation="1">
+            <MudStack Spacing="4">
+                
+                <MudTextField Value="@_auditorium?.Name"
+                              Label="Auditorium"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              ReadOnly="true"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Weekend"
+                              InputStyle="pointer-events: none; user-select: none; cursor: default;" />
+
+                @* Movie picker *@
+                <MudSelect T="MovieResponse"
+                           @bind-Value="_selectedMovie"
+                           Label="Movie"
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense"
+                           AnchorOrigin="Origin.BottomLeft"
+                           ToStringFunc="@(m => m is null ? string.Empty : $"{m.Title} ({m.InformationLanguage.ToUpper()})")"
+                           Required="true"
+                           RequiredError="Please select a movie.">
+                    @foreach (var movie in _movies)
+                    {
+                        <MudSelectItem T="MovieResponse" Value="@movie">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudText>@movie.Title</MudText>
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Color="Color.Default"
+                                         Variant="Variant.Outlined"
+                                         Style="height: 20px; font-size: 0.7rem;">
+                                    @movie.InformationLanguage.ToUpper()
+                                </MudChip>
+                                @if (movie.Runtime.HasValue)
+                                {
+                                    <MudText Typo="Typo.caption"
+                                             Style="color: var(--mud-palette-text-disabled);">
+                                        @($"{movie.Runtime} min")
+                                    </MudText>
+                                }
+                            </MudStack>
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+
+                @* Date + time row *@
+                <MudStack Row="true" Spacing="3">
+                    <MudDatePicker @bind-Date="_selectedDate"
+                                   Label="Date"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   DateFormat="dd/MM/yyyy"
+                                   PickerVariant="PickerVariant.Dialog"
+                                   AdornmentColor="Color.Primary"
+                                   Required="true"
+                                   Style="flex: 1;" />
+                    <MudTimePicker @bind-Time="_selectedTime"
+                                   Label="Start time"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   AmPm="false"
+                                   PickerVariant="PickerVariant.Dialog"
+                                   AdornmentColor="Color.Primary"
+                                   Required="true"
+                                   Style="flex: 1;" />
+                </MudStack>
+                
+                @if (_selectedMovie is not null && _selectedDate.HasValue && _selectedTime.HasValue)
+                {
+                    var startsAt = _selectedDate.Value.Add(_selectedTime.Value);
+                    var endsAt   = startsAt.AddMinutes(_selectedMovie.Runtime ?? 0);
+                    
+                    @if (_crossesMidnight)
+                    {
+                        <MudAlert Severity="Severity.Warning" Icon="@Icons.Material.Filled.NightlightRound">
+                            <MudText>
+                                <strong>Showing crosses midnight.</strong>
+                                This showing would run from <strong>@startsAt.ToString("HH:mm")</strong> to
+                                <strong>@endsAt.ToString("HH:mm")</strong> the following day.
+                                Please choose an earlier start time.
+                            </MudText>
+                        </MudAlert>
+                    }
+                    else if (_hasConflict)
+                    {
+                        <MudAlert Severity="Severity.Error" Icon="@Icons.Material.Filled.Warning">
+                            <MudText>
+                                <strong>Scheduling conflict.</strong>
+                                This showing (@startsAt.ToString("HH:mm") – @endsAt.ToString("HH:mm"))
+                                overlaps with an existing showing in @_auditorium?.Name.
+                            </MudText>
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.Schedule">
+                            <MudText>
+                                This showing will run from
+                                <strong>@startsAt.ToString("HH:mm")</strong> to
+                                <strong>@endsAt.ToString("HH:mm")</strong>
+                                (@(_selectedMovie.Runtime ?? 0) min). No conflicts found.
+                            </MudText>
+                        </MudAlert>
+                    }
+                }
+
+                @* ── Submit ── *@
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="SubmitAsync"
+                           Disabled="@(_submitting || _hasConflict || _crossesMidnight || _selectedMovie is null || !_selectedDate.HasValue || !_selectedTime.HasValue)"
+                           Style="align-self: flex-start;">
+                    @if (_submitting)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Add Showing
+                </MudButton>
+
+            </MudStack>
+        </MudPaper>
+
+        @* ── Current schedule for this auditorium ── *@
+        <div>
+            <MudText Typo="Typo.h6"
+                     Style="color: var(--mud-palette-text-secondary);"
+                     Class="mb-2">
+                @(_auditorium?.Name ?? "Auditorium") — Schedule for @(_selectedDate?.ToString("dd/MM/yyyy") ?? "today")
+            </MudText>
+
+            <MudDataGrid T="ShowingDisplayResponse"
+                         Items="_scheduleForDay"
+                         SortMode="SortMode.Single"
+                         Dense="true"
+                         Striped="true"
+                         Hover="true"
+                         Class="white-datagrid"
+                         Style="table-layout: fixed; width: 100%;">
+                <Columns>
+                    <PropertyColumn Property="x => x.MovieTitle" Title="Movie"
+                                    HeaderStyle="width: 60%;"
+                                    CellStyle="width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" />
+                    <TemplateColumn Title="Starts At"
+                                    HeaderStyle="width: 120px;"
+                                    CellStyle="width: 120px;">
+                        <CellTemplate>
+                            @context.Item.StartsAt.LocalDateTime.ToString("HH:mm")
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="Ends At"
+                                    HeaderStyle="width: 120px;"
+                                    CellStyle="width: 120px;">
+                        <CellTemplate>
+                            @context.Item.StartsAt.AddMinutes((double)(context.Item.Runtime ?? 0)).LocalDateTime.ToString("HH:mm")
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="Runtime"
+                                    HeaderStyle="width: 100px;"
+                                    CellStyle="width: 100px;">
+                        <CellTemplate>
+                            @($"{context.Item.Runtime} min")
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+                <NoRecordsContent>
+                    <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-disabled);">
+                        No showings scheduled for this day.
+                    </MudText>
+                </NoRecordsContent>
+            </MudDataGrid>
+        </div>
+
+    </MudStack>
+}
+
+@code {
+    [Parameter] public int AuditoriumId { get; set; }
+
+    private Auditorium? _auditorium;
+    private List<MovieResponse> _movies = new();
+    private List<ShowingDisplayResponse> _scheduleForDay = new();
+
+    private MovieResponse? _selectedMovie;
+    private TimeSpan? _selectedTime;
+
+    private bool _loading = true;
+    private bool _loadError;
+    private bool _submitting;
+
+    private bool _hasConflict    => CheckForConflict();
+    private bool _crossesMidnight => CheckCrossesMidnight();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPageDataAsync();
+    }
+
+    private DateTime? _selectedDateInternal = DateTime.Today;
+
+    private DateTime? _selectedDate
+    {
+        get => _selectedDateInternal;
+        set
+        {
+            if (_selectedDateInternal == value)
+                return;
+
+            _selectedDateInternal = value;
+
+            _ = InvokeAsync(async () =>
+            {
+                await RefreshScheduleAsync();
+                StateHasChanged();
+            });
+        }
+    }
+    
+    private async Task LoadPageDataAsync()
+    {
+        _loading = true;
+        _loadError = false;
+
+        var auditoriumTask = AuditoriumApi.GetAuditoriumByIdAsync(AuditoriumId);
+        var moviesTask     = MovieApi.GetAllMoviesAsync();
+        var scheduleTask   = ShowingApi.GetShowingDisplayAsync(DateOnly.FromDateTime(_selectedDate ?? DateTime.Today));
+
+        await Task.WhenAll(auditoriumTask, moviesTask, scheduleTask);
+
+        var auditorium = await auditoriumTask;
+        var movies     = await moviesTask;
+        var schedule   = await scheduleTask;
+
+        if (auditorium is null || movies is null || schedule is null)
+        {
+            _loadError = true;
+            _loading = false;
+            return;
+        }
+
+        _auditorium     = auditorium;
+        _movies         = movies.OrderBy(m => m.Title).ToList();
+        _scheduleForDay = schedule
+            .Where(s => s.AuditoriumId == AuditoriumId)
+            .OrderBy(s => s.StartsAt)
+            .ToList();
+
+        _loading = false;
+    }
+
+    private async Task OnDateChanged(DateTime? date)
+    {
+        _selectedDate = date;
+        await RefreshScheduleAsync();
+    }
+
+    private async Task RefreshScheduleAsync()
+    {
+        var result = await ShowingApi.GetShowingDisplayAsync(
+            DateOnly.FromDateTime(_selectedDate ?? DateTime.Today));
+
+        if (result is not null)
+            _scheduleForDay = result
+                .Where(s => s.AuditoriumId == AuditoriumId)
+                .OrderBy(s => s.StartsAt)
+                .ToList();
+    }
+
+    private bool CheckForConflict()
+    {
+        if (_selectedMovie is null || !_selectedDate.HasValue || !_selectedTime.HasValue)
+            return false;
+
+        var newStart = _selectedDate.Value.Add(_selectedTime.Value);
+        var newEnd   = newStart.AddMinutes(_selectedMovie.Runtime ?? 0);
+
+        return _scheduleForDay.Any(existing =>
+        {
+            var existingStart = existing.StartsAt.LocalDateTime;
+            var existingEnd   = existingStart.AddMinutes(existing.Runtime ?? 0);
+            return newStart < existingEnd && newEnd > existingStart;
+        });
+    }
+
+    private bool CheckCrossesMidnight()
+    {
+        if (_selectedMovie is null || !_selectedDate.HasValue || !_selectedTime.HasValue)
+            return false;
+
+        var startsAt = _selectedDate.Value.Add(_selectedTime.Value);
+        var endsAt   = startsAt.AddMinutes(_selectedMovie.Runtime ?? 0);
+        
+        return endsAt.Date > startsAt.Date;
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (_selectedMovie is null || !_selectedDate.HasValue || !_selectedTime.HasValue)
+            return;
+
+        if (_hasConflict || _crossesMidnight)
+            return;
+
+        _submitting = true;
+
+        var startsAt = new DateTimeOffset(
+            _selectedDate.Value.Add(_selectedTime.Value),
+            TimeZoneInfo.Local.GetUtcOffset(DateTime.Now));
+
+        var success = await ShowingApi.AddShowingAsync(
+            movieId:      _selectedMovie.Id,
+            auditoriumId: AuditoriumId,
+            startsAt:     startsAt);
+
+        _submitting = false;
+
+        if (success)
+        {
+            Snackbar.Add("Showing added successfully.", Severity.Success);
+            Navigation.NavigateTo("/admin/showings");
+        }
+        else
+        {
+            Snackbar.Add("Failed to add showing. Please try again.", Severity.Error);
+        }
+    }
+}

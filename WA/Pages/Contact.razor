@@ -1,0 +1,87 @@
+﻿@page "/contact"
+@inject IStringLocalizer<WA.Localization.SharedResources> L
+@inherits LocalizedComponentBase
+@using WA.Layout
+@layout MainLayout
+
+<PageTitle>@L["contact title"]</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-6 mb-10">
+
+    <MudText Typo="Typo.h4" GutterBottom="true" Style="color: var(--mud-palette-text-secondary); font-weight: 700;">@L["Contact"]</MudText>
+    <MudText Typo="Typo.body1" Class="mb-6">
+        @L["contact body"]
+    </MudText>
+
+    <MudDivider Class="mb-6" />
+
+    <MudText Typo="Typo.h6" GutterBottom="true" Style="color: var(--mud-palette-text-secondary); font-weight: 700;">@L["contact info"]</MudText>
+
+    <MudStack Spacing="2" Class="mb-6">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.Phone" Color="Color.Primary" />
+            <MudLink Href="tel:+310000000000" Typo="Typo.body1">+31 555 385 385</MudLink>
+        </MudStack>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.Email" Color="Color.Primary" />
+            <MudLink Href="mailto:info@cine.net" Typo="Typo.body1">info@cine.net</MudLink>
+        </MudStack>
+    </MudStack>
+
+    <MudDivider Class="mb-6" />
+
+    <MudText Typo="Typo.h6" GutterBottom="true" Style="color: var(--mud-palette-text-secondary); font-weight: 700;">@L["contact openinghours"]</MudText>
+
+    <MudSimpleTable Hover="false" Striped="true" Class="mb-6" Style="max-width: 400px;">
+        <tbody>
+            <tr>
+                <td><MudText Typo="Typo.body2">@L["monday"]</MudText></td>
+                <td><MudText Typo="Typo.body2">10:00 – 23:00</MudText></td>
+            </tr>
+            <tr>
+                <td><MudText Typo="Typo.body2">@L["teusday"]</MudText></td>
+                <td><MudText Typo="Typo.body2">10:00 – 23:00</MudText></td>
+            </tr>
+            <tr>
+                <td><MudText Typo="Typo.body2">@L["wednesday"]</MudText></td>
+                <td><MudText Typo="Typo.body2">10:00 – 23:00</MudText></td>
+            </tr>
+            <tr>
+                <td><MudText Typo="Typo.body2">@L["thursday"]</MudText></td>
+                <td><MudText Typo="Typo.body2">10:00 – 23:00</MudText></td>
+            </tr>
+            <tr>
+                <td><MudText Typo="Typo.body2">@L["friday"]</MudText></td>
+                <td><MudText Typo="Typo.body2">10:00 – 23:00</MudText></td>
+            </tr>
+            <tr>
+                <td><MudText Typo="Typo.body2">@L["saturday"]</MudText></td>
+                <td><MudText Typo="Typo.body2">10:00 – 23:00</MudText></td>
+            </tr>
+            <tr>
+                <td><MudText Typo="Typo.body2">@L["sunday"]</MudText></td>
+                <td><MudText Typo="Typo.body2">10:00 – 23:00</MudText></td>
+            </tr>
+        </tbody>
+    </MudSimpleTable>
+
+    <MudDivider Class="mb-6" />
+
+    <MudText Typo="Typo.h6" GutterBottom="true" Style="color: var(--mud-palette-text-secondary); font-weight: 700;">@L["contact how to find"]</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">
+        @L["contact lower body"]
+    </MudText>
+
+    <MudPaper Elevation="2" Class="overflow-hidden" Style="border-radius: 8px; height: 550px">
+        <iframe
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2478.836181625161!2d4.782672576476568!3d51.5895657046977!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47c69f7f704bcddd%3A0x39798afaa1dc4718!2sPath%C3%A9%20Breda!5e0!3m2!1sen!2snl!4v1774792161591!5m2!1sen!2snl"
+            width="100%"
+            height="850"
+            style="border: 0; display: block;"
+            allowfullscreen=""
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade">
+        </iframe>
+    </MudPaper>
+
+</MudContainer>

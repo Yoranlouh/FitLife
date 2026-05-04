@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+		<BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\SharedLibrary\SharedLibrary.csproj" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.3" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.3" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.3" PrivateAssets="all" />
+        <PackageReference Include="MudBlazor" Version="8.15.0" />
+		<PackageReference Include="Microsoft.Extensions.Localization" Version="10.0.5" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="..\.dockerignore">
+        <Link>.dockerignore</Link>
+      </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Include="wwwroot\css\app.css" />
+      <None Include="wwwroot\css\ideal-page.css" />
+      <None Include="wwwroot\favicon.png" />
+      <None Include="wwwroot\icon-192.png" />
+      <None Include="wwwroot\index.html" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <AdditionalFiles Include="App.razor" />
+      <AdditionalFiles Include="_Imports.razor" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <_ContentIncludedByDefault Remove="Pages\Admin\MovieOverview.razor" />
+    </ItemGroup>
+
+</Project>

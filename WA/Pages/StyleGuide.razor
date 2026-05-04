@@ -1,0 +1,153 @@
+@page "/styleguide"
+@using MudBlazor
+@using WA.Theme
+
+<MudThemeProvider Theme="@AppTheme.Dark" IsDarkMode="true" />
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="pa-8">
+
+    <!-- Intro -->
+    <MudText Typo="Typo.h1" Class="mb-4">Style Guide</MudText>
+
+    <MudText Typo="Typo.body1" Class="mb-4">
+        Dit zijn richtlijnen voor het visuele ontwerp van de applicatie.
+        Het beschrijft kleurgebruik, typografie, spacing en componentgebruik.
+        Gebruik deze pagina als referentie bij het bouwen van nieuwe features.
+    </MudText>
+
+    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-8">
+        MudBlazor Documentatie:<br />
+        <br />
+        <MudLink Href="https://mudblazor.com/customization/typography#how-it-works" Target="_blank">Typography</MudLink><br />
+        <MudLink Href="https://mudblazor.com/components/button#api" Target="_blank">Buttons</MudLink><br />
+        <MudLink Href="https://mudblazor.com/components/paper#component" Target="_blank">Paper / Elevation</MudLink><br />
+        <MudLink Href="https://mudblazor.com/components/grid#basic-grid" Target="_blank">Layout & Grid</MudLink><br />
+        <MudLink Href="https://mudblazor.com/customization/default-theme#mudtheme-typography" Target="_blank">Theming</MudLink>
+    </MudAlert>
+
+    <!-- TYPOGRAFIE -->
+    <MudDivider Class="mb-6" />
+    <MudText Typo="Typo.h2" Class="mb-4">Typografie</MudText>
+
+    <MudStack Spacing="2">
+        <MudText Typo="Typo.h1">H1 – Pagina Titel</MudText>
+        <MudText Typo="Typo.h2">H2 – Sectie Titel</MudText>
+        <MudText Typo="Typo.h3">H3 – Subsectie</MudText>
+        <MudText Typo="Typo.h4">H4 – Kleine Titel</MudText>
+        <MudText Typo="Typo.body1">Body1 – Standaard tekst (16px)</MudText>
+        <MudText Typo="Typo.body2">Body2 – Secundaire tekst (14px)</MudText>
+        <MudText Typo="Typo.caption">Caption – Kleine toelichting (12px)</MudText>
+    </MudStack>
+
+    <MudPaper Class="pa-4 mt-4" Elevation="0">
+        <MudText Typo="Typo.caption">Voorbeeld implementatie:</MudText>
+        <MudText Typo="Typo.body2">
+            &lt;MudText Typo="Typo.h1"&gt;Titel&lt;/MudText&gt;
+        </MudText>
+    </MudPaper>
+
+    <!-- KLEUREN -->
+    
+    <MudDivider Class="my-8" />
+    
+    <MudText Typo="Typo.h2" Class="mb-4">Light Theme</MudText>
+
+    <MudGrid>
+
+        @foreach (var color in ThemeColorService.MapLightThemeToHex())
+        {
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-4"
+                          Style=@($"background:{color.Value}; padding:16px;")>
+                    <b>@color.Key</b><br />
+                    @color.Value
+                </MudPaper>
+            </MudItem>
+        }
+
+    </MudGrid>
+    
+    <MudDivider Class="my-8" />
+    
+    <MudText Typo="Typo.h2" Class="mb-4">Dark Theme</MudText>
+
+    <MudGrid>
+
+        @foreach (var color in ThemeColorService.MapDarkThemeToHex())
+        {
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-4"
+                          Style=@($"background:{color.Value}; padding:16px;")>
+                    <b>@color.Key</b><br />
+                    @color.Value
+                </MudPaper>
+            </MudItem>
+        }
+
+    </MudGrid>
+    
+    <!-- ELEVATION -->
+    <MudPaper Class="pa-4 mt-4" Elevation="0">
+        <MudText Typo="Typo.caption">Voorbeeld implementatie:</MudText>
+        <MudText Typo="Typo.body2">
+            &lt;MudButton Color="Color.Primary"&gt;Opslaan&lt;/MudButton&gt;
+        </MudText>
+    </MudPaper>
+
+    <!-- SPACING -->
+    <MudDivider Class="my-8" />
+    <MudText Typo="Typo.h2" Class="mb-4">Spacing & Afmetingen</MudText>
+
+    <MudText Typo="Typo.body1" Class="mb-4">
+        We hanteren het 8px grid systeem.
+        Gebruik MudBlazor utility classes zoals pa-*, ma-*, mt-*, mb-*.
+    </MudText>
+
+    <MudStack Spacing="2">
+        <MudPaper Class="pa-2">pa-2 (16px padding)</MudPaper>
+        <MudPaper Class="pa-4">pa-4 (32px padding)</MudPaper>
+        <MudPaper Class="mt-4 pa-2">mt-4 (margin-top 32px)</MudPaper>
+    </MudStack>
+
+    <MudPaper Class="pa-4 mt-4" Elevation="0">
+        <MudText Typo="Typo.caption">Voorbeeld implementatie:</MudText>
+        <MudText Typo="Typo.body2">
+            &lt;MudContainer Class="pa-8"&gt;&lt;/MudContainer&gt;
+        </MudText>
+    </MudPaper>
+
+    <!-- ELEVATION -->
+    <MudDivider Class="my-8" />
+    <MudText Typo="Typo.h2" Class="mb-4">Elevation</MudText>
+
+    <MudGrid>
+
+        <MudItem xs="4">
+            <MudPaper Class="pa-4" Elevation="0">
+                Elevation 0
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="4">
+            <MudPaper Class="pa-4" Elevation="4">
+                Elevation 4
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="4">
+            <MudPaper Class="pa-4" Elevation="8">
+                Elevation 8
+            </MudPaper>
+        </MudItem>
+
+    </MudGrid>
+
+    <MudPaper Class="pa-4 mt-4" Elevation="0">
+        <MudText Typo="Typo.caption">Voorbeeld implementatie:</MudText>
+        <MudText Typo="Typo.body2">
+            &lt;MudPaper Elevation="4"&gt;Content&lt;/MudPaper&gt;
+        </MudText>
+    </MudPaper>
+
+</MudContainer>
+

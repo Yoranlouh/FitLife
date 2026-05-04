@@ -1,0 +1,74 @@
+﻿@using SharedLibrary.DTOs.Models
+<MudPaper Class="pa-4 mb-4" Elevation="2">
+    <MudText Typo="Typo.subtitle2" Class="mb-3" Style="letter-spacing:.1em;color:var(--mud-palette-text-secondary)">
+        ZAALINDELING BEWERKEN
+    </MudText>
+
+    @for (int i = 0; i < Rows.Count; i++)
+    {
+        var idx = i;
+        var row = Rows[idx];
+
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-2">
+            <MudText Typo="Typo.caption" Style="min-width:52px;color:var(--mud-palette-text-secondary)">
+                Rij @(idx + 1)
+            </MudText>
+
+            <MudText Typo="Typo.caption" Style="color:var(--mud-palette-text-secondary)">Stoelen</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Remove" Size="Size.Small"
+                           OnClick="() => SetSeats(idx, row.Seats - 1)" />
+            <MudText Style="min-width:24px;text-align:center;font-weight:700">@row.Seats</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
+                           OnClick="() => SetSeats(idx, row.Seats + 1)" />
+
+            <MudText Typo="Typo.caption" Class="ml-2" Style="color:var(--mud-palette-text-secondary)">♿</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Remove" Size="Size.Small"
+                           OnClick="() => SetWC(idx, row.Wheelchair - 1)" />
+            <MudText Style="min-width:24px;text-align:center;font-weight:700;color:#93c5fd">@row.Wheelchair</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
+                           OnClick="() => SetWC(idx, row.Wheelchair + 1)" />
+
+            @if (Rows.Count > 3)
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.DeleteOutline" Size="Size.Small"
+                               Color="Color.Error" OnClick="() => Remove(idx)" />
+            }
+        </MudStack>
+    }
+
+    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
+               StartIcon="@Icons.Material.Filled.Add" OnClick="Add" Class="mt-2">
+        Rij toevoegen
+    </MudButton>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public List<RowConfig> Rows { get; set; } = [];
+    [Parameter] public EventCallback<List<RowConfig>> RowsChanged { get; set; }
+
+    private async Task Notify() => await RowsChanged.InvokeAsync(Rows);
+
+    private async Task SetSeats(int i, int v)
+    {
+        v = Math.Max(1, v);
+        Rows[i] = Rows[i] with { Seats = v, Wheelchair = Math.Min(Rows[i].Wheelchair, v) };
+        await Notify();
+    }
+
+    private async Task SetWC(int i, int v)
+    {
+        v = Math.Clamp(v, 0, Rows[i].Seats);
+        Rows[i] = Rows[i] with { Wheelchair = v };
+        await Notify();
+    }
+
+    private async Task Remove(int i) { Rows.RemoveAt(i); await Notify(); }
+
+    private async Task Add()
+    {
+        int seats = Rows.Count > 0 ? Rows.Max(r => r.Seats) : 10;
+        Rows.Add(new RowConfig(seats, 0));
+        await Notify();
+    }
+}
+
