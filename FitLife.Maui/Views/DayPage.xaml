@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
+             xmlns:models="clr-namespace:SharedLibrary.DTOs.Responses;assembly=SharedLibrary"
+             x:Class="FitLife.Maui.Views.DayPage"
+             Title="{Binding Title}"
+             x:DataType="vm:DayViewModel">
+
+    <Grid RowDefinitions="Auto, Auto, *">
+        <DatePicker Date="{Binding SelectedDate}" Grid.Row="0" Margin="10" Format="D"/>
+        <Button Text="Refresh" Command="{Binding LoadLessonsCommand}" Grid.Row="1" Margin="10"/>
+        
+        <CollectionView Grid.Row="2" ItemsSource="{Binding Lessons}">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:LessonResponse">
+                    <Frame Margin="10" Padding="15" HasShadow="True">
+                        <Frame.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DayViewModel}}, Path=GoToDetailsCommand}" 
+                                                  CommandParameter="{Binding .}"/>
+                        </Frame.GestureRecognizers>
+                        <StackLayout>
+                            <Label Text="{Binding WorkoutName}" FontSize="20" FontAttributes="Bold" />
+                            <Label Text="{Binding StartTime, StringFormat='{0:HH:mm}'}" />
+                            <Label Text="{Binding InstructorName}" FontAttributes="Italic" />
+                        </StackLayout>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>

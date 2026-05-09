@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
+             x:Class="FitLife.Maui.Views.MyLessonsPage"
+             x:DataType="vm:MyLessonsViewModel"
+             Title="{Binding Title}">
+    <CollectionView ItemsSource="{Binding EnrolledLessons}">
+        <CollectionView.ItemTemplate>
+            <DataTemplate x:DataType="vm:UserLesson">
+                <Frame Margin="0,5" Padding="15" CornerRadius="8" HasShadow="True">
+                    <VerticalStackLayout Spacing="5">
+                        <Label Text="{Binding Name}" FontSize="20" FontAttributes="Bold" />
+                        <HorizontalStackLayout Spacing="10">
+                            <Label Text="Datum:" FontAttributes="Bold" />
+                            <Label Text="{Binding Time, StringFormat='{0:dd-MM-yyyy HH:mm}'}" />
+                        </HorizontalStackLayout>
+                        <HorizontalStackLayout Spacing="10">
+                            <Label Text="Instructeur:" FontAttributes="Bold" />
+                            <Label Text="{Binding Instructor}" />
+                        </HorizontalStackLayout>
+                        <HorizontalStackLayout Spacing="10">
+                            <Label Text="Locatie:" FontAttributes="Bold" />
+                            <Label Text="{Binding Location}" />
+                        </HorizontalStackLayout>
+                        <Button Text="Reservering Annuleren" Margin="0,10,0,0" />
+                    </VerticalStackLayout>
+                </Frame>
+            </DataTemplate>
+        </CollectionView.ItemTemplate>
+    </CollectionView>
+</ContentPage>

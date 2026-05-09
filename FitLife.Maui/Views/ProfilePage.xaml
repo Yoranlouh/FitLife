@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
+             x:Class="FitLife.Maui.Views.ProfilePage"
+             x:DataType="vm:ProfileViewModel"
+             Title="{Binding Title}">
+    
+    <ScrollView>
+        <VerticalStackLayout Spacing="20" Padding="20">
+            <!-- Profiel Sectie -->
+            <Frame CornerRadius="10" Padding="15" HasShadow="True">
+                <VerticalStackLayout Spacing="10" HorizontalOptions="Center">
+                    <Image Source="{Binding ProfilePictureUrl}"
+                           HeightRequest="120"
+                           WidthRequest="120"
+                           Aspect="AspectFill"
+                           HorizontalOptions="Center">
+                        <Image.Clip>
+                            <EllipseGeometry RadiusX="60" RadiusY="60" Center="60,60" />
+                        </Image.Clip>
+                    </Image>
+                    
+                    <Label Text="{Binding FirstName}" 
+                           FontSize="24" 
+                           FontAttributes="Bold" 
+                           HorizontalOptions="Center" />
+                    <Label Text="{Binding LastName}" 
+                           FontSize="18" 
+                           HorizontalOptions="Center" />
+                    
+                    <Button Text="Foto wijzigen" 
+                            Margin="0,10,0,0" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Abonnement Sectie -->
+            <Label Text="Mijn Abonnement" FontSize="20" FontAttributes="Bold" />
+            <Frame CornerRadius="10" Padding="15" HasShadow="True">
+                <VerticalStackLayout Spacing="5">
+                    <HorizontalStackLayout Spacing="10">
+                        <Label Text="Status:" FontAttributes="Bold" />
+                        <Label Text="{Binding SubscriptionName}" TextColor="Green" />
+                    </HorizontalStackLayout>
+                    
+                    <HorizontalStackLayout Spacing="10">
+                        <Label Text="Geldig tot:" FontAttributes="Bold" />
+                        <Label Text="{Binding SubscriptionEndDate, StringFormat='{0:dd-MM-yyyy}'}" />
+                    </HorizontalStackLayout>
+                    
+                    <Button Text="Abonnement Beheren" 
+                            Clicked="OnManageSubscriptionClicked"
+                            Margin="0,10,0,0" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Button Text="Mijn Lessen Bekijken" 
+                    Clicked="OnViewMyLessonsClicked" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

@@ -1,8 +1,0 @@
-services:
-  wa:
-    build:
-      context: ..
-      dockerfile: WA/Dockerfile
-    ports:
-      - "5031:80"
-    restart: unless-stopped

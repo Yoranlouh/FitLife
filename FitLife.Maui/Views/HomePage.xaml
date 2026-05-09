@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
+             x:Class="FitLife.Maui.Views.HomePage"
+             x:DataType="vm:HomeViewModel"
+             Title="{Binding Title}">
+    
+    <ScrollView>
+        <VerticalStackLayout Spacing="25" Padding="30,0" VerticalOptions="Center">
+            <Label 
+                Text="Welkom bij FitLife!"
+                FontSize="32"
+                HorizontalOptions="Center" />
+            
+            <Label 
+                Text="Jouw reis naar een gezonder en fitter leven begint hier."
+                FontSize="18"
+                HorizontalOptions="Center"
+                HorizontalTextAlignment="Center" />
+
+            <Button
+                Text="Bekijk Lesaanbod"
+                SemanticProperties.Hint="Toont het huidige lesaanbod"
+                HorizontalOptions="Center"
+                Clicked="OnViewLessonsClicked" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

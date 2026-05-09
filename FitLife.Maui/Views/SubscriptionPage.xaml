@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
+             x:Class="FitLife.Maui.Views.SubscriptionPage"
+             x:DataType="vm:SubscriptionViewModel"
+             Title="{Binding Title}">
+    <ScrollView>
+        <VerticalStackLayout Spacing="20" Padding="20">
+            <Frame BackgroundColor="LightBlue" CornerRadius="10">
+                <VerticalStackLayout>
+                    <Label Text="Huidig Abonnement" FontAttributes="Bold" FontSize="18" />
+                    <Label Text="{Binding CurrentSubscription}" FontSize="22" />
+                    <Label Text="{Binding ExpiryDate, StringFormat='Verloopt op: {0:dd-MM-yyyy}'}" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Label Text="Kies een Upgrade of Verlenging" FontSize="20" FontAttributes="Bold" Margin="0,10,0,0" />
+
+            <CollectionView ItemsSource="{Binding AvailableSubscriptions}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SubscriptionOption">
+                        <Frame Margin="0,5" Padding="15" CornerRadius="8" HasShadow="True">
+                            <HorizontalStackLayout Spacing="15">
+                                <VerticalStackLayout WidthRequest="200">
+                                    <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="18" />
+                                    <Label Text="{Binding Description}" FontSize="14" />
+                                </VerticalStackLayout>
+                                <VerticalStackLayout VerticalOptions="Center">
+                                    <Label Text="{Binding Price, StringFormat='€{0:F2}/p.m.'}" FontAttributes="Bold" />
+                                    <Button Text="Kies" Margin="0,5,0,0" />
+                                </VerticalStackLayout>
+                            </HorizontalStackLayout>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

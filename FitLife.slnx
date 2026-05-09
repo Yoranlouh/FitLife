@@ -4,4 +4,5 @@
   <Project Path="FitLife.Infrastructure/FitLife.Infrastructure.csproj" />
   <Project Path="FitLife.API/FitLife.API.csproj" />
   <Project Path="FitLife.BlazorWebApp/FitLife.BlazorWebApp.csproj" />
+  <Project Path="FitLife.Maui/FitLife.Maui.csproj" />
 </Solution>

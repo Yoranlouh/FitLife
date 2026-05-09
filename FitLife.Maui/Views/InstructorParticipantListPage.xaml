@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
+             x:Class="FitLife.Maui.Views.InstructorParticipantListPage"
+             x:DataType="vm:InstructorParticipantListViewModel"
+             Title="{Binding Title}">
+    <VerticalStackLayout Spacing="10" Padding="10">
+        <Frame BackgroundColor="LightGray" CornerRadius="5">
+            <VerticalStackLayout>
+                <Label Text="{Binding LessonName}" FontSize="22" FontAttributes="Bold" />
+                <Label Text="{Binding LessonTime}" FontSize="16" />
+            </VerticalStackLayout>
+        </Frame>
+
+        <Label Text="Deelnemers" FontSize="18" FontAttributes="Bold" Margin="0,10,0,0" />
+
+        <CollectionView ItemsSource="{Binding Participants}">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:Participant">
+                    <Grid Padding="10" ColumnDefinitions="*, Auto">
+                        <Label Grid.Column="0" Text="{Binding Name}" VerticalOptions="Center" FontSize="16" />
+                        <Label Grid.Column="1" Text="{Binding Status}" VerticalOptions="Center" 
+                               TextColor="{Binding Status, Converter={StaticResource StatusToColorConverter}}" />
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </VerticalStackLayout>
+</ContentPage>
