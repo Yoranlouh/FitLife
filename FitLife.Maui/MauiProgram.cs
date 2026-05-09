@@ -2,6 +2,8 @@ using Microsoft.Extensions.Logging;
 using FitLife.Maui.ViewModels;
 using FitLife.Maui.Views;
 using CommunityToolkit.Maui;
+using Microsoft.Maui;
+using Microsoft.Maui.Hosting;
 
 namespace FitLife.Maui;
 
