@@ -1,6 +1,13 @@
+using FitLife.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -10,9 +17,30 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    
+    // Automatisch database aanmaken in development
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        db.Database.EnsureCreated();
+    }
 }
 
 app.UseHttpsRedirection();
+
+app.MapGet("/users", async (ApplicationDbContext dbContext) =>
+{
+    var users = await dbContext.Users.ToListAsync();
+    if (!users.Any())
+    {
+        // Voeg test data toe als de database leeg is
+        dbContext.Users.Add(new FitLife.Domain.Entities.User { Id = Guid.NewGuid(), Name = "Test Gebruiker", Email = "test@fitlife.nl" });
+        await dbContext.SaveChangesAsync();
+        users = await dbContext.Users.ToListAsync();
+    }
+    return users;
+})
+.WithName("GetUsers");
 
 var summaries = new[]
 {

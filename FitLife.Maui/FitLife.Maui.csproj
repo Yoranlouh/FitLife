@@ -3,6 +3,7 @@
 	<PropertyGroup>
 		<TargetFrameworks>net9.0-android;net9.0-ios;net9.0-maccatalyst</TargetFrameworks>
 		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net9.0-windows10.0.19041.0</TargetFrameworks>
+		<OutputType>Exe</OutputType>
 		<Nullable>enable</Nullable>
 		<WindowsPackageType>None</WindowsPackageType>
 		<UseMaui>true</UseMaui>
@@ -28,6 +29,11 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net9.0-android'">
+		<EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+		<AndroidUseSharedRuntime>false</AndroidUseSharedRuntime>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<!-- App Icon -->
 		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
@@ -42,7 +48,7 @@
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />
 
-		<!-- Raw Assets (also used as web assets) -->
+		<!-- Raw Assets -->
 		<MauiAsset Include="Resources\Raw\**" />
 	</ItemGroup>
 
@@ -57,7 +63,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\SharedLibrary\SharedLibrary.csproj" />
+		<ProjectReference Include="..\SharedLibrary\SharedLibrary.csproj" />
 	</ItemGroup>
 
 </Project>
