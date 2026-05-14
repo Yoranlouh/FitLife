@@ -1,0 +1,14 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: fitlife_mysql
+    environment:
+      MYSQL_DATABASE: fitlife_db
+      MYSQL_ROOT_PASSWORD: fitlife_dev_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - fitlife_mysql_data:/var/lib/mysql
+
+volumes:
+  fitlife_mysql_data:

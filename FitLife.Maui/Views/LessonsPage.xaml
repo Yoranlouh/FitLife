@@ -2,10 +2,48 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
+             xmlns:responses="clr-namespace:SharedLibrary.DTOs.Responses;assembly=SharedLibrary"
              x:Class="FitLife.Maui.Views.LessonsPage"
              x:DataType="vm:LessonsViewModel"
              Title="{Binding Title}">
-    <VerticalStackLayout Spacing="10" Padding="20">
-        <Label Text="Hier komt het lesaanbod" VerticalOptions="Center" HorizontalOptions="Center" />
-    </VerticalStackLayout>
+
+    <Grid RowDefinitions="*">
+        <RefreshView Command="{Binding LoadLessonsCommand}" IsRefreshing="{Binding IsBusy}">
+            <CollectionView ItemsSource="{Binding Lessons}"
+                            SelectionMode="None">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="responses:LessonResponse">
+                        <Grid Padding="10">
+                            <Frame CornerRadius="10" HasShadow="True" Padding="15">
+                                <Frame.GestureRecognizers>
+                                    <TapGestureRecognizer 
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LessonsViewModel}}, Path=GoToDetailsCommand}"
+                                        CommandParameter="{Binding .}" />
+                                </Frame.GestureRecognizers>
+                                <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto">
+                                    <VerticalStackLayout Grid.Column="0">
+                                        <Label Text="{Binding WorkoutName}" FontSize="18" FontAttributes="Bold" />
+                                        <Label Text="{Binding InstructorName}" FontAttributes="Italic" TextColor="Gray" />
+                                        <Label Text="{Binding StartTime, StringFormat='{0:dddd dd MMMM HH:mm}'}" FontSize="12" />
+                                    </VerticalStackLayout>
+                                    <Label Grid.Column="1" VerticalOptions="Center" Text="{Binding LocationName}" />
+                                </Grid>
+                            </Frame>
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+                <CollectionView.EmptyView>
+                    <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="10">
+                        <Label Text="Geen lessen gevonden" HorizontalOptions="Center" />
+                        <Button Text="Vernieuwen" Command="{Binding LoadLessonsCommand}" />
+                    </VerticalStackLayout>
+                </CollectionView.EmptyView>
+            </CollectionView>
+        </RefreshView>
+
+        <ActivityIndicator IsRunning="{Binding IsBusy}"
+                           IsVisible="{Binding IsBusy}"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center" />
+    </Grid>
 </ContentPage>

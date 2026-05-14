@@ -9,4 +9,13 @@ public partial class LessonsPage : ContentPage
 		InitializeComponent();
 		BindingContext = viewModel;
 	}
+
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
+        if (BindingContext is LessonsViewModel vm)
+        {
+            await vm.LoadLessonsCommand.ExecuteAsync(null);
+        }
+    }
 }

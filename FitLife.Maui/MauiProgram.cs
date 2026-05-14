@@ -1,3 +1,4 @@
+using FitLife.Maui.Services;
 using Microsoft.Extensions.Logging;
 using FitLife.Maui.ViewModels;
 using FitLife.Maui.Views;
@@ -24,6 +25,14 @@ public static class MauiProgram
 #if DEBUG
 		builder.Logging.AddDebug();
 #endif
+
+		// Services
+		builder.Services.AddHttpClient<ILessonService, LessonService>(client =>
+		{
+			// Voor Android emulator gebruik 10.0.2.2 i.p.v. localhost
+			string baseUrl = DeviceInfo.Platform == DevicePlatform.Android ? "https://10.0.2.2:7245/" : "https://localhost:7245/";
+			client.BaseAddress = new Uri(baseUrl);
+		});
 
 		// ViewModels
 		builder.Services.AddTransient<HomeViewModel>();

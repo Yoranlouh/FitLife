@@ -4,28 +4,99 @@
              xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
              xmlns:models="clr-namespace:SharedLibrary.DTOs.Responses;assembly=SharedLibrary"
              x:Class="FitLife.Maui.Views.WeekPage"
-             Title="{Binding Title}"
+             Shell.NavBarIsVisible="False"
              x:DataType="vm:WeekViewModel">
 
-    <Grid RowDefinitions="Auto, *">
-        <Button Text="Refresh" Command="{Binding LoadLessonsCommand}" Grid.Row="0" Margin="10"/>
-        
-        <CollectionView Grid.Row="1" ItemsSource="{Binding Lessons}">
-            <CollectionView.ItemTemplate>
-                <DataTemplate x:DataType="models:LessonResponse">
-                    <Frame Margin="10" Padding="15" HasShadow="True">
-                        <Frame.GestureRecognizers>
-                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:WeekViewModel}}, Path=GoToDetailsCommand}" 
-                                                  CommandParameter="{Binding .}"/>
-                        </Frame.GestureRecognizers>
-                        <StackLayout>
-                            <Label Text="{Binding WorkoutName}" FontSize="20" FontAttributes="Bold" />
-                            <Label Text="{Binding StartTime, StringFormat='{0:dddd dd MMMM HH:mm}'}" />
-                            <Label Text="{Binding InstructorName}" FontAttributes="Italic" />
-                        </StackLayout>
-                    </Frame>
-                </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
+    <Grid RowDefinitions="Auto, Auto, Auto, *">
+        <!-- Header -->
+        <Grid Grid.Row="0" BackgroundColor="Black" Padding="10, 5" ColumnDefinitions="Auto, *, Auto">
+            <ImageButton Source="back_icon.png" WidthRequest="20" HeightRequest="20" VerticalOptions="Center"/>
+            <StackLayout Grid.Column="1" HorizontalOptions="Center">
+                <Label Text="Crossfit NIMBL." TextColor="White" FontAttributes="Bold" HorizontalOptions="Center"/>
+                <Label Text="- Selecteer ander rooster -" TextColor="Gray" FontSize="10" HorizontalOptions="Center"/>
+            </StackLayout>
+            <ImageButton Grid.Column="2" Source="calendar_icon.png" WidthRequest="20" HeightRequest="20" VerticalOptions="Center"/>
+        </Grid>
+
+        <!-- View Selector -->
+        <Grid Grid.Row="1" BackgroundColor="Black" Padding="10, 10" ColumnDefinitions="*, *">
+            <HorizontalStackLayout HorizontalOptions="Center" Spacing="5">
+                <Image Source="calendar_small.png" WidthRequest="15" HeightRequest="15"/>
+                <Label Text="Kalenderweergave" TextColor="White" VerticalOptions="Center"/>
+            </HorizontalStackLayout>
+            <HorizontalStackLayout Grid.Column="1" HorizontalOptions="Center" Spacing="5">
+                <Image Source="list_icon.png" WidthRequest="15" HeightRequest="15"/>
+                <Label Text="Lijstweergave" TextColor="White" VerticalOptions="Center"/>
+            </HorizontalStackLayout>
+        </Grid>
+
+        <!-- Week Navigation -->
+        <Grid Grid.Row="2" BackgroundColor="Black" Padding="10, 10" ColumnDefinitions="Auto, *, Auto">
+            <Button Text="◀" TextColor="White" BackgroundColor="Transparent" Command="{Binding PreviousWeekCommand}"/>
+            <Label Grid.Column="1" Text="{Binding WeekRangeText}" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center"/>
+            <Button Grid.Column="2" Text="▶" TextColor="White" BackgroundColor="Transparent" Command="{Binding NextWeekCommand}"/>
+        </Grid>
+
+        <!-- Main Content -->
+        <ScrollView Grid.Row="3">
+            <Grid ColumnDefinitions="50, *" RowDefinitions="Auto, *">
+                <!-- Day Headers -->
+                <Grid Grid.Column="1" Grid.Row="0" ColumnDefinitions="*, *, *, *, *, *, *" BackgroundColor="White">
+                    <BindableLayout.ItemsSource>
+                        <x:Array Type="{x:Type x:String}">
+                            <x:String>info</x:String>
+                        </x:Array>
+                    </BindableLayout.ItemsSource>
+                    <!-- Info icon cell -->
+                    <Border Grid.Column="0" Stroke="LightGray" StrokeThickness="0.5">
+                         <Image Source="info_icon.png" WidthRequest="20" HeightRequest="20" HorizontalOptions="Center" VerticalOptions="Center"/>
+                    </Border>
+                    
+                    <!-- Days of week -->
+                    <Grid Grid.Column="1" ColumnDefinitions="*, *, *, *, *, *, *">
+                        <BindableLayout.ItemsSource>
+                            <Binding Path="WeekDays" />
+                        </BindableLayout.ItemsSource>
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DayHeaderViewModel">
+                                <Border Stroke="LightGray" StrokeThickness="0.5">
+                                    <StackLayout VerticalOptions="Center" HorizontalOptions="Center">
+                                        <Label Text="{Binding DayName}" FontSize="10" HorizontalOptions="Center"/>
+                                        <Label Text="{Binding DayNumber}" FontSize="12" HorizontalOptions="Center"/>
+                                    </StackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </Grid>
+                </Grid>
+
+                <!-- Grid Body -->
+                <Grid x:Name="LessonGrid" Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="50, *, *, *, *, *, *, *" RowDefinitions="50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50" BackgroundColor="#E0E0E0">
+                    <!-- Background Grid Borders -->
+                    <Border Grid.Row="0" Grid.Column="1" Stroke="LightGray" StrokeThickness="0.5"/>
+                    <Border Grid.Row="0" Grid.Column="2" Stroke="LightGray" StrokeThickness="0.5"/>
+                    <Border Grid.Row="0" Grid.Column="3" Stroke="LightGray" StrokeThickness="0.5"/>
+                    <Border Grid.Row="0" Grid.Column="4" Stroke="LightGray" StrokeThickness="0.5"/>
+                    <Border Grid.Row="0" Grid.Column="5" Stroke="LightGray" StrokeThickness="0.5"/>
+                    <Border Grid.Row="0" Grid.Column="6" Stroke="LightGray" StrokeThickness="0.5"/>
+                    <Border Grid.Row="0" Grid.Column="7" Stroke="LightGray" StrokeThickness="0.5"/>
+                    <!-- Repeat for other rows if needed, but for now let's just make sure we have the grid name -->
+                    
+                    <!-- Time labels -->
+                    <Label Grid.Row="0" Grid.Column="0" Text="6:00" HorizontalOptions="Center" VerticalOptions="Center" FontSize="12" TextColor="Black"/>
+                    <Label Grid.Row="1" Grid.Column="0" Text="7:00" HorizontalOptions="Center" VerticalOptions="Center" FontSize="12" TextColor="Black"/>
+                    <Label Grid.Row="2" Grid.Column="0" Text="8:00" HorizontalOptions="Center" VerticalOptions="Center" FontSize="12" TextColor="Black"/>
+                    <Label Grid.Row="3" Grid.Column="0" Text="9:00" HorizontalOptions="Center" VerticalOptions="Center" FontSize="12" TextColor="Black"/>
+                    <Label Grid.Row="4" Grid.Column="0" Text="10:00" HorizontalOptions="Center" VerticalOptions="Center" FontSize="12" TextColor="Black"/>
+                    <Label Grid.Row="5" Grid.Column="0" Text="11:00" HorizontalOptions="Center" VerticalOptions="Center" FontSize="12" TextColor="Black"/>
+                    <Label Grid.Row="6" Grid.Column="0" Text="12:00" HorizontalOptions="Center" VerticalOptions="Center" FontSize="12" TextColor="Black"/>
+                    <Label Grid.Row="7" Grid.Column="0" Text="13:00" HorizontalOptions="Center" VerticalOptions="Center" FontSize="12" TextColor="Black"/>
+                    <Label Grid.Row="8" Grid.Column="0" Text="14:00" HorizontalOptions="Center" VerticalOptions="Center" FontSize="12" TextColor="Black"/>
+                    <Label Grid.Row="9" Grid.Column="0" Text="15:00" HorizontalOptions="Center" VerticalOptions="Center" FontSize="12" TextColor="Black"/>
+                    <Label Grid.Row="10" Grid.Column="0" Text="16:00" HorizontalOptions="Center" VerticalOptions="Center" FontSize="12" TextColor="Black"/>
+                    <Label Grid.Row="11" Grid.Column="0" Text="17:00" HorizontalOptions="Center" VerticalOptions="Center" FontSize="12" TextColor="Black"/>
+                </Grid>
+            </Grid>
+        </ScrollView>
     </Grid>
 </ContentPage>

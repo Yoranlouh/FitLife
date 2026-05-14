@@ -14,9 +14,9 @@
         <CollectionView Grid.Row="2" ItemsSource="{Binding Lessons}">
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="models:LessonResponse">
-                    <Frame Margin="10" Padding="15" HasShadow="True">
+                    <Frame Margin="10" Padding="15" HasShadow="True" x:Name="LessonFrame">
                         <Frame.GestureRecognizers>
-                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DayViewModel}}, Path=GoToDetailsCommand}" 
+                            <TapGestureRecognizer Command="{Binding Source={x:Reference LessonFrame}, Path=BindingContext.GoToDetailsCommand}" 
                                                   CommandParameter="{Binding .}"/>
                         </Frame.GestureRecognizers>
                         <StackLayout>

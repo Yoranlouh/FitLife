@@ -1,69 +1,73 @@
-using FitLife.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
+using MySqlConnector;
+using SharedLibrary.DTOs.Responses;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
-
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    
-    // Automatisch database aanmaken in development
-    using (var scope = app.Services.CreateScope())
-    {
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        db.Database.EnsureCreated();
-    }
 }
 
 app.UseHttpsRedirection();
 
-app.MapGet("/users", async (ApplicationDbContext dbContext) =>
+app.MapGet("/lessons", async (IConfiguration configuration) =>
 {
-    var users = await dbContext.Users.ToListAsync();
-    if (!users.Any())
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+
+    if (string.IsNullOrWhiteSpace(connectionString))
     {
-        // Voeg test data toe als de database leeg is
-        dbContext.Users.Add(new FitLife.Domain.Entities.User { Id = Guid.NewGuid(), Name = "Test Gebruiker", Email = "test@fitlife.nl" });
-        await dbContext.SaveChangesAsync();
-        users = await dbContext.Users.ToListAsync();
+        return Results.Problem("Connection string 'DefaultConnection' is niet gevonden.");
     }
-    return users;
-})
-.WithName("GetUsers");
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    var lessons = new List<LessonResponse>();
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+    await using var connection = new MySqlConnection(connectionString);
+    await connection.OpenAsync();
+
+    const string sql = """
+        SELECT
+            l.id,
+            l.start_time,
+            l.end_time,
+            l.max_participants,
+            l.workout_id,
+            w.name AS workout_name,
+            l.instructor_id,
+            CONCAT(u.first_name, ' ', u.last_name) AS instructor_name,
+            l.location_id,
+            loc.name AS location_name
+        FROM lessons l
+        INNER JOIN workouts w ON w.id = l.workout_id
+        INNER JOIN users u ON u.id = l.instructor_id
+        INNER JOIN locations loc ON loc.id = l.location_id
+        ORDER BY l.start_time;
+        """;
+
+    await using var command = new MySqlCommand(sql, connection);
+    await using var reader = await command.ExecuteReaderAsync();
+
+    while (await reader.ReadAsync())
+    {
+        lessons.Add(new LessonResponse
+        {
+            Id = reader.GetInt32("id"),
+            StartTime = reader.GetDateTime("start_time"),
+            EndTime = reader.GetDateTime("end_time"),
+            MaxParticipants = reader.GetInt32("max_participants"),
+            WorkoutId = reader.GetInt32("workout_id"),
+            WorkoutName = reader.GetString("workout_name"),
+            InstructorId = reader.GetInt32("instructor_id"),
+            InstructorName = reader.GetString("instructor_name"),
+            LocationId = reader.GetInt32("location_id"),
+            LocationName = reader.GetString("location_name")
+        });
+    }
+
+    return Results.Ok(lessons);
+});
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
