@@ -4,26 +4,92 @@
              xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
              x:Class="FitLife.Maui.Views.HomePage"
              x:DataType="vm:HomeViewModel"
+             Shell.NavBarIsVisible="False"
              Title="{Binding Title}">
-    
-    <ScrollView>
-        <VerticalStackLayout Spacing="25" Padding="30,0" VerticalOptions="Center">
-            <Label 
-                Text="Welkom bij FitLife!"
-                FontSize="32"
-                HorizontalOptions="Center" />
-            
-            <Label 
-                Text="Jouw reis naar een gezonder en fitter leven begint hier."
-                FontSize="18"
-                HorizontalOptions="Center"
-                HorizontalTextAlignment="Center" />
 
-            <Button
-                Text="Bekijk Lesaanbod"
-                SemanticProperties.Hint="Toont het huidige lesaanbod"
-                HorizontalOptions="Center"
-                Clicked="OnViewLessonsClicked" />
-        </VerticalStackLayout>
-    </ScrollView>
+    <Grid RowDefinitions="Auto, *">
+        <!-- Header -->
+        <Grid Grid.Row="0"
+              Style="{StaticResource HeaderGrid}"
+              ColumnDefinitions="Auto,*,Auto">
+
+            <Label Grid.Column="0"
+                   Text="☰"
+                   TextColor="{StaticResource White}"
+                   FontSize="34"
+                   VerticalOptions="Center" />
+
+            <VerticalStackLayout Grid.Column="1"
+                                 Spacing="0"
+                                 HorizontalOptions="Center"
+                                 VerticalOptions="Center">
+                <Label Text="Crossfit NIMBL."
+                       Style="{StaticResource HeaderTitle}"
+                       FontSize="24" />
+            </VerticalStackLayout>
+
+            <Label Grid.Column="2"
+                   Text="✉"
+                   TextColor="{StaticResource White}"
+                   FontSize="34"
+                   VerticalOptions="Center" />
+        </Grid>
+
+        <!-- Tiles -->
+        <ScrollView Grid.Row="1" BackgroundColor="{StaticResource LightGray}">
+            <VerticalStackLayout Spacing="0">
+                <!-- Logo section -->
+                <Grid HeightRequest="200" BackgroundColor="White">
+                    <Label Text="NIMBL." 
+                           TextColor="{StaticResource Primary}" 
+                           FontSize="48" 
+                           FontAttributes="Bold" 
+                           HorizontalOptions="Center" 
+                           VerticalOptions="Center" />
+                </Grid>
+
+                <!-- Tiles Grid -->
+                <Grid ColumnDefinitions="*,*" RowDefinitions="250">
+                    <!-- Rooster & Events -->
+                    <Border Grid.Column="0" 
+                            Stroke="{StaticResource MediumGray}" 
+                            StrokeThickness="1"
+                            BackgroundColor="White">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnViewLessonsClicked" />
+                        </Border.GestureRecognizers>
+                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="20">
+                            <Label Text="📅" FontSize="60" HorizontalOptions="Center" TextColor="{StaticResource Black}" />
+                            <Label Text="Rooster &amp; Events" 
+                                   FontSize="20" 
+                                   TextColor="{StaticResource Black}" 
+                                   HorizontalOptions="Center" 
+                                   HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- Afspraken & reserveringen -->
+                    <Border Grid.Column="1" 
+                            Stroke="{StaticResource MediumGray}" 
+                            StrokeThickness="1"
+                            BackgroundColor="White">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnReservationsClicked" />
+                        </Border.GestureRecognizers>
+                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="20">
+                            <Label Text="✅" FontSize="60" HorizontalOptions="Center" TextColor="{StaticResource Black}" />
+                            <Label Text="Afspraken &amp; reserveringen" 
+                                   FontSize="20" 
+                                   TextColor="{StaticResource Black}" 
+                                   HorizontalOptions="Center" 
+                                   HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+                </Grid>
+                
+                <!-- Placeholder for the rest of the empty space -->
+                <BoxView HeightRequest="500" Color="{StaticResource LightGray}" />
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
 </ContentPage>

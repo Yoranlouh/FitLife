@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SharedLibrary.DTOs.Responses;
 using System.Globalization;
+using CommunityToolkit.Maui.Views;
 
 namespace FitLife.Maui.ViewModels;
 
@@ -95,6 +96,13 @@ public partial class WeekViewModel : BaseViewModel
         {
             { "Lesson", lesson }
         });
+    }
+
+    [RelayCommand]
+    private async Task ShowLegend()
+    {
+        var popup = new Views.LegendPopup();
+        await Application.Current!.Windows[0].Page!.ShowPopupAsync(popup);
     }
 }
 

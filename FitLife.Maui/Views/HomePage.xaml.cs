@@ -14,4 +14,9 @@ public partial class HomePage : ContentPage
     {
         await Shell.Current.GoToAsync("//LessonsPage");
     }
+
+    private async void OnReservationsClicked(object sender, EventArgs e)
+    {
+        await Shell.Current.GoToAsync("//MyLessonsPage");
+    }
 }

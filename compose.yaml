@@ -1,14 +1,37 @@
 services:
-  mysql:
-    image: mysql:8.4
-    container_name: fitlife_mysql
+  api:
+    build:
+      context: .
+      dockerfile: FitLife.API/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_URLS: "http://+:8080"
+      ConnectionStrings__DefaultConnection: "Server=db;Port=3306;Database=fitlife_db;User=local_user;Password=local_pass;"
+    depends_on:
+      - db
+
+  db:
+    image: fitlife-db:local
+    ports:
+      - "3306:3306"
     environment:
       MYSQL_DATABASE: fitlife_db
-      MYSQL_ROOT_PASSWORD: fitlife_dev_password
-    ports:
-      - "3307:3306"
+      MYSQL_USER: local_user
+      MYSQL_PASSWORD: local_pass
+      MYSQL_ROOT_PASSWORD: root
     volumes:
-      - fitlife_mysql_data:/var/lib/mysql
+      - api_mysql_data:/var/lib/mysql
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    ports:
+      - "8082:80"
+    environment:
+      PMA_HOST: db
+    depends_on:
+      - db
 
 volumes:
-  fitlife_mysql_data:
+  api_mysql_data:
+    external: true

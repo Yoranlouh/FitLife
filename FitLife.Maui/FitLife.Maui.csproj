@@ -33,6 +33,7 @@
 	<PropertyGroup Condition="'$(TargetFramework)' == 'net9.0-android'">
 		<EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
 		<AndroidUseSharedRuntime>false</AndroidUseSharedRuntime>
+		<AndroidEnableFastDeployment>false</AndroidEnableFastDeployment>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -65,6 +66,10 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\SharedLibrary\SharedLibrary.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Views\FitLife.Maui\" />
 	</ItemGroup>
 
 </Project>

@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
+             x:Class="FitLife.Maui.Views.ParticipantsPage"
+             Title="{Binding Title}"
+             x:DataType="vm:ParticipantsViewModel">
+
+    <ScrollView>
+        <VerticalStackLayout Spacing="0">
+            <!-- Header Section -->
+            <VerticalStackLayout Padding="20" Spacing="5">
+                <Label Text="{Binding Lesson.WorkoutName}" FontSize="24" FontAttributes="Bold" />
+
+                <Grid ColumnDefinitions="*, Auto">
+                    <VerticalStackLayout Grid.Column="0">
+                        <Label Text="{Binding Lesson.StartTime, StringFormat='{0:dddd, dd MMM. yyyy}'}" FontSize="16" />
+
+                        <HorizontalStackLayout Spacing="5">
+                            <Image Source="location_icon.png" WidthRequest="16" HeightRequest="16" VerticalOptions="Center" />
+                            <Label Text="{Binding Lesson.LocationName}" FontSize="14" TextColor="Gray" />
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+
+                    <Label Grid.Column="1"
+                           Text="{Binding Lesson.StartTime, StringFormat='{0:HH:mm}'}"
+                           FontSize="32"
+                           VerticalOptions="Center" />
+                </Grid>
+            </VerticalStackLayout>
+
+            <BoxView HeightRequest="1" Color="LightGray" />
+
+            <!-- Stats Bar -->
+            <Grid Padding="20, 10" BackgroundColor="#F0F0F0" ColumnDefinitions="*, Auto">
+                <Label Text="{Binding ParticipantStats}" VerticalOptions="Center" FontAttributes="Bold" />
+                <Label Grid.Column="1" Text="Buddies" VerticalOptions="Center" TextColor="Gray" />
+            </Grid>
+
+            <ActivityIndicator IsRunning="{Binding IsLoading}"
+                               IsVisible="{Binding IsLoading}"
+                               Margin="20" />
+
+            <!-- Participants List -->
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Participants}">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ParticipantItemViewModel">
+                        <VerticalStackLayout>
+                            <Grid Padding="20, 10" ColumnDefinitions="Auto, *, Auto" ColumnSpacing="15">
+                                <Frame CornerRadius="25"
+                                       HeightRequest="50"
+                                       WidthRequest="50"
+                                       Padding="0"
+                                       IsClippedToBounds="True"
+                                       HasShadow="False"
+                                       BorderColor="Transparent">
+                                    <Image Source="{Binding ImageUrl}" Aspect="AspectFill" />
+                                </Frame>
+
+                                <Label Grid.Column="1"
+                                       Text="{Binding Name}"
+                                       VerticalOptions="Center"
+                                       FontSize="18" />
+
+                                <Image Grid.Column="2"
+                                       Source="buddy_icon.png"
+                                       WidthRequest="24"
+                                       HeightRequest="24"
+                                       IsVisible="{Binding IsBuddyVisible}"
+                                       VerticalOptions="Center" />
+                            </Grid>
+
+                            <BoxView HeightRequest="1" Color="LightGray" Margin="85, 0, 0, 0" />
+                        </VerticalStackLayout>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+
+            <!-- Waitlist Section -->
+            <Grid BackgroundColor="Black" Padding="20, 5">
+                <Label Text="Wachtlijst"
+                       TextColor="White"
+                       HorizontalOptions="Center"
+                       FontAttributes="Bold" />
+            </Grid>
+
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Waitlist}">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ParticipantItemViewModel">
+                        <VerticalStackLayout>
+                            <Grid Padding="20, 10" ColumnDefinitions="Auto, *, Auto" ColumnSpacing="15">
+                                <Frame CornerRadius="25"
+                                       HeightRequest="50"
+                                       WidthRequest="50"
+                                       Padding="0"
+                                       IsClippedToBounds="True"
+                                       HasShadow="False"
+                                       BorderColor="Transparent">
+                                    <Image Source="{Binding ImageUrl}" Aspect="AspectFill" />
+                                </Frame>
+
+                                <Label Grid.Column="1"
+                                       Text="{Binding Name}"
+                                       VerticalOptions="Center"
+                                       FontSize="18" />
+
+                                <Image Grid.Column="2"
+                                       Source="buddy_icon.png"
+                                       WidthRequest="24"
+                                       HeightRequest="24"
+                                       IsVisible="{Binding IsBuddyVisible}"
+                                       VerticalOptions="Center" />
+                            </Grid>
+
+                            <BoxView HeightRequest="1" Color="LightGray" Margin="85, 0, 0, 0" />
+                        </VerticalStackLayout>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

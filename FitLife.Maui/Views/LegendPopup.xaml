@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<toolkit:Popup xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+               xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+               xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+               x:Class="FitLife.Maui.Views.LegendPopup"
+               Color="Transparent">
+    
+    <Border BackgroundColor="White" 
+            StrokeShape="RoundRectangle 16" 
+            Padding="20"
+            WidthRequest="340">
+        <VerticalStackLayout Spacing="16">
+            
+            <!-- Status row -->
+            <Grid ColumnDefinitions="*, *" ColumnSpacing="12">
+                <Border Stroke="#E0E0E0" StrokeThickness="1" StrokeShape="RoundRectangle 8" Padding="12,10">
+                    <HorizontalStackLayout Spacing="10">
+                        <Label Text="✓" FontSize="18"/>
+                        <Label Text="Aangemeld" FontSize="14" VerticalOptions="Center"/>
+                    </HorizontalStackLayout>
+                </Border>
+                <Border Grid.Column="1" Stroke="#E0E0E0" StrokeThickness="1" StrokeShape="RoundRectangle 8" Padding="12,10">
+                    <HorizontalStackLayout Spacing="10">
+                        <Label Text="W" FontSize="18" FontAttributes="Bold"/>
+                        <Label Text="Op wachtlijst" FontSize="14" VerticalOptions="Center"/>
+                    </HorizontalStackLayout>
+                </Border>
+            </Grid>
+            
+            <!-- Workout types -->
+            <Grid ColumnDefinitions="*, *" RowDefinitions="Auto,Auto,Auto" RowSpacing="12" ColumnSpacing="12">
+                <HorizontalStackLayout Spacing="10">
+                    <BoxView WidthRequest="22" HeightRequest="22" Color="#6B7B3C" CornerRadius="3"/>
+                    <Label Text="CrossFit" VerticalOptions="Center"/>
+                </HorizontalStackLayout>
+                <HorizontalStackLayout Grid.Column="1" Spacing="10">
+                    <BoxView WidthRequest="22" HeightRequest="22" Color="#E07850" CornerRadius="3"/>
+                    <Label Text="Spinning" VerticalOptions="Center"/>
+                </HorizontalStackLayout>
+                
+                <HorizontalStackLayout Grid.Row="1" Spacing="10">
+                    <BoxView WidthRequest="22" HeightRequest="22" Color="#C2185B" CornerRadius="3"/>
+                    <Label Text="Sweat Club" VerticalOptions="Center"/>
+                </HorizontalStackLayout>
+                <HorizontalStackLayout Grid.Row="1" Grid.Column="1" Spacing="10">
+                    <BoxView WidthRequest="22" HeightRequest="22" Color="#4CAF50" CornerRadius="3"/>
+                    <Label Text="Open Gym" VerticalOptions="Center"/>
+                </HorizontalStackLayout>
+                
+                <HorizontalStackLayout Grid.Row="2" Spacing="10">
+                    <BoxView WidthRequest="22" HeightRequest="22" Color="#FFEB3B" CornerRadius="3"/>
+                    <Label Text="HYROX" VerticalOptions="Center"/>
+                </HorizontalStackLayout>
+                <HorizontalStackLayout Grid.Row="2" Grid.Column="1" Spacing="10">
+                    <BoxView WidthRequest="22" HeightRequest="22" Color="#3F51B5" CornerRadius="3"/>
+                    <Label Text="Gymnastics" VerticalOptions="Center"/>
+                </HorizontalStackLayout>
+            </Grid>
+        </VerticalStackLayout>
+    </Border>
+</toolkit:Popup>

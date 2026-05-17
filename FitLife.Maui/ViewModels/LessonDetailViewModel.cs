@@ -14,11 +14,20 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
     private bool _isReserved;
 
     [ObservableProperty]
+    private string _instructorPhone = "06-23109457";
+
+    [ObservableProperty]
+    private string _paymentMethod = "1 credit";
+
+    [ObservableProperty]
+    private int _participantCount = 10;
+
+    [ObservableProperty]
     private bool _isOnWaitlist;
 
     public LessonDetailViewModel()
     {
-        Title = "Les Details";
+        Title = "Groepsevent";
     }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
@@ -26,8 +35,9 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
         if (query.TryGetValue("Lesson", out var lessonObj) && lessonObj is LessonResponse lesson)
         {
             Lesson = lesson;
-            Title = lesson.WorkoutName;
+            // Title blijft "Groepsevent" zoals in de screenshot
             // Hier zou je checken of de gebruiker al gereserveerd heeft
+            IsReserved = true; // Voor de demo/screenshot matchen
         }
     }
 
@@ -53,5 +63,15 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
         // Mock wachtlijst
         IsOnWaitlist = true;
         await Shell.Current.DisplayAlert("Wachtlijst", "Je staat nu op de wachtlijst.", "OK");
+    }
+
+    [RelayCommand]
+    private async Task GoToParticipants()
+    {
+        var navigationParameter = new Dictionary<string, object>
+        {
+            { "Lesson", Lesson! }
+        };
+        await Shell.Current.GoToAsync("ParticipantsPage", navigationParameter);
     }
 }

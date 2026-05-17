@@ -36,6 +36,11 @@
             <Line X2="400" Stroke="Gray" StrokeThickness="1"/>
 
             <VerticalStackLayout Spacing="10">
+                <Button Text="Deelnemers"
+                        Command="{Binding GoToParticipantsCommand}"
+                        BackgroundColor="LightGray"
+                        TextColor="Black" />
+
                 <Button Text="Reserveren" 
                         Command="{Binding ReserveCommand}" 
                         IsVisible="{Binding IsReserved, Converter={StaticResource InvertedBoolConverter}}" />
