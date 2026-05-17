@@ -17,7 +17,6 @@ public partial class SubscriptionViewModel : BaseViewModel
     public SubscriptionViewModel()
     {
         Title = "Abonnement Beheren";
-        LoadSubscriptions();
     }
 
     private void LoadSubscriptions()

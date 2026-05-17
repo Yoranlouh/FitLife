@@ -16,7 +16,6 @@ public partial class InstructorParticipantListViewModel : BaseViewModel
     public InstructorParticipantListViewModel()
     {
         Title = "Deelnemerslijst";
-        LoadParticipants();
     }
 
     private void LoadParticipants()

@@ -10,7 +10,6 @@ public partial class MyLessonsViewModel : BaseViewModel
     public MyLessonsViewModel()
     {
         Title = "Mijn Lessen";
-        LoadMyLessons();
     }
 
     private void LoadMyLessons()

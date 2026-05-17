@@ -24,7 +24,6 @@ public partial class WeekViewModel : BaseViewModel
     public WeekViewModel()
     {
         Title = "Weekoverzicht";
-        UpdateWeekInfo();
     }
 
     private void UpdateWeekInfo()

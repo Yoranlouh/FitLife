@@ -12,7 +12,9 @@ public static class MauiProgram
 {
 	public static MauiApp CreateMauiApp()
 	{
-		var builder = MauiApp.CreateBuilder();
+		try
+		{
+			var builder = MauiApp.CreateBuilder();
 		builder
 			.UseMauiApp<App>()
 			.UseMauiCommunityToolkit()
@@ -24,6 +26,7 @@ public static class MauiProgram
 
 #if DEBUG
 		builder.Logging.AddDebug();
+		builder.Logging.SetMinimumLevel(LogLevel.Trace);
 #endif
 
         // Services
@@ -50,29 +53,35 @@ public static class MauiProgram
         });
 
         // ViewModels
-        builder.Services.AddTransient<HomeViewModel>();
-        builder.Services.AddTransient<LessonsViewModel>();
-        builder.Services.AddTransient<ProfileViewModel>();
-		builder.Services.AddTransient<SubscriptionViewModel>();
-		builder.Services.AddTransient<MyLessonsViewModel>();
-		builder.Services.AddTransient<InstructorParticipantListViewModel>();
-		builder.Services.AddTransient<WeekViewModel>();
+        builder.Services.AddSingleton<HomeViewModel>();
+        builder.Services.AddSingleton<LessonsViewModel>();
+        builder.Services.AddSingleton<ProfileViewModel>();
+		builder.Services.AddSingleton<SubscriptionViewModel>();
+		builder.Services.AddSingleton<MyLessonsViewModel>();
+		builder.Services.AddSingleton<InstructorParticipantListViewModel>();
+		builder.Services.AddSingleton<WeekViewModel>();
 		builder.Services.AddTransient<DayViewModel>();
 		builder.Services.AddTransient<LessonDetailViewModel>();
 		builder.Services.AddTransient<ParticipantsViewModel>();
 
 		// Pages
-		builder.Services.AddTransient<HomePage>();
-		builder.Services.AddTransient<LessonsPage>();
-		builder.Services.AddTransient<ProfilePage>();
-		builder.Services.AddTransient<SubscriptionPage>();
-		builder.Services.AddTransient<MyLessonsPage>();
-		builder.Services.AddTransient<InstructorParticipantListPage>();
-		builder.Services.AddTransient<WeekPage>();
+		builder.Services.AddSingleton<HomePage>();
+		builder.Services.AddSingleton<LessonsPage>();
+		builder.Services.AddSingleton<ProfilePage>();
+		builder.Services.AddSingleton<SubscriptionPage>();
+		builder.Services.AddSingleton<MyLessonsPage>();
+		builder.Services.AddSingleton<InstructorParticipantListPage>();
+		builder.Services.AddSingleton<WeekPage>();
 		builder.Services.AddTransient<DayPage>();
 		builder.Services.AddTransient<LessonDetailPage>();
 		builder.Services.AddTransient<ParticipantsPage>();
 
-		return builder.Build();
+			return builder.Build();
+		}
+		catch (Exception ex)
+		{
+			System.Diagnostics.Debug.WriteLine($"STARTUP ERROR: {ex}");
+			throw;
+		}
 	}
 }
