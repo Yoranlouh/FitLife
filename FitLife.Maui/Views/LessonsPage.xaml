@@ -15,151 +15,115 @@
         <Grid Grid.Row="0"
               Style="{StaticResource HeaderGrid}"
               ColumnDefinitions="Auto,*,Auto"
-              RowDefinitions="Auto,Auto">
+              Padding="10,5">
 
-            <Label Grid.RowSpan="2"
-                   Grid.Column="0"
-                   Text="‹"
-                   TextColor="{StaticResource White}"
-                   FontSize="56"
-                   VerticalOptions="Center"
-                   HorizontalOptions="Start" />
+            <ImageButton Source="back_icon.png"
+                         WidthRequest="20"
+                         HeightRequest="20"
+                         VerticalOptions="Center">
+                <ImageButton.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding GoToWeekViewCommand}" />
+                </ImageButton.GestureRecognizers>
+            </ImageButton>
 
-            <VerticalStackLayout Grid.Column="1"
-                                 Spacing="0"
-                                 HorizontalOptions="Center"
-                                 VerticalOptions="Center">
-                <Label Text="Crossfit FitLife"
-                       Style="{StaticResource HeaderTitle}" />
+            <StackLayout Grid.Column="1" HorizontalOptions="Center">
+                <Label Text="Crossfit FitLife."
+                       Style="{StaticResource HeaderTitle}"
+                       FontSize="14" />
                 <Label Text="- Selecteer ander rooster -"
-                       Style="{StaticResource HeaderSubtitle}" />
-            </VerticalStackLayout>
+                       Style="{StaticResource HeaderSubtitle}"
+                       FontSize="10" />
+            </StackLayout>
 
-            <Label Grid.RowSpan="2"
-                   Grid.Column="2"
-                   Text="▣"
-                   TextColor="{StaticResource White}"
-                   FontSize="34"
-                   VerticalOptions="Center"
-                   HorizontalOptions="End" />
+            <ImageButton Grid.Column="2"
+                         Source="calendar_icon.png"
+                         WidthRequest="20"
+                         HeightRequest="20"
+                         VerticalOptions="Center" />
         </Grid>
 
-        <!-- View switch -->
+        <!-- View Selector -->
         <Grid Grid.Row="1"
-              HeightRequest="72"
+              BackgroundColor="{StaticResource Black}"
+              Padding="10,10"
               ColumnDefinitions="*,*">
-            <Grid Grid.Column="0"
-                  BackgroundColor="{StaticResource MediumGray}"
-                  Padding="18,0">
-                <HorizontalStackLayout Spacing="12"
-                                       HorizontalOptions="Center"
-                                       VerticalOptions="Center">
-                    <Label Text="▣"
-                           TextColor="{StaticResource Black}"
-                           FontSize="24"
-                           VerticalOptions="Center" />
-                    <Label Text="Kalenderweergave"
-                           TextColor="{StaticResource Black}"
-                           FontSize="22"
-                           VerticalOptions="Center" />
-                </HorizontalStackLayout>
-            </Grid>
-
-            <Grid Grid.Column="1"
-                  BackgroundColor="{StaticResource LightGray}"
-                  Padding="18,0">
-                <HorizontalStackLayout Spacing="12"
-                                       HorizontalOptions="Center"
-                                       VerticalOptions="Center">
-                    <Label Text="≡"
-                           TextColor="{StaticResource Black}"
-                           FontSize="28"
-                           FontAttributes="Bold"
-                           VerticalOptions="Center" />
-                    <Label Text="Lijstweergave"
-                           TextColor="{StaticResource Black}"
-                           FontSize="22"
-                           VerticalOptions="Center" />
-                </HorizontalStackLayout>
-            </Grid>
+            <HorizontalStackLayout HorizontalOptions="Center" Spacing="5">
+                <HorizontalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding GoToWeekViewCommand}" />
+                </HorizontalStackLayout.GestureRecognizers>
+                <Image Source="calendar_small.png" WidthRequest="15" HeightRequest="15"/>
+                <Label Text="Kalenderweergave"
+                       TextColor="{StaticResource White}"
+                       VerticalOptions="Center"/>
+            </HorizontalStackLayout>
+            <HorizontalStackLayout Grid.Column="1" HorizontalOptions="Center" Spacing="5">
+                <Image Source="list_icon.png" WidthRequest="15" HeightRequest="15"/>
+                <Label Text="Lijstweergave"
+                       TextColor="{StaticResource White}"
+                       VerticalOptions="Center"/>
+            </HorizontalStackLayout>
         </Grid>
 
-        <!-- Week selector -->
+        <!-- Week Navigation -->
         <Grid Grid.Row="2"
               BackgroundColor="{StaticResource Black}"
-              HeightRequest="76"
-              ColumnDefinitions="Auto,*,Auto"
-              Padding="28,0">
-            <Label Grid.Column="0"
-                   Text="‹"
-                   TextColor="{StaticResource White}"
-                   FontSize="34"
-                   VerticalOptions="Center" />
-
+              Padding="10,10"
+              ColumnDefinitions="Auto,*,Auto">
+            <Button Text="◀"
+                    TextColor="{StaticResource White}"
+                    BackgroundColor="Transparent"
+                    Command="{Binding PreviousWeekCommand}"/>
             <Label Grid.Column="1"
-                   Text="Week 18, april 2026"
+                   Text="{Binding WeekRangeText}"
                    TextColor="{StaticResource White}"
-                   FontSize="24"
-                   FontAttributes="Bold"
                    HorizontalOptions="Center"
-                   VerticalOptions="Center" />
-
-            <Label Grid.Column="2"
-                   Text="›"
-                   TextColor="{StaticResource White}"
-                   FontSize="34"
-                   VerticalOptions="Center" />
+                   VerticalOptions="Center"/>
+            <Button Grid.Column="2"
+                    Text="▶"
+                    TextColor="{StaticResource White}"
+                    BackgroundColor="Transparent"
+                    Command="{Binding NextWeekCommand}"/>
         </Grid>
 
-        <!-- Days -->
-        <Grid Grid.Row="3"
-              BackgroundColor="{StaticResource White}"
-              Padding="16,18,16,20"
-              ColumnDefinitions="*,*,*,*,*,*,*">
-            <VerticalStackLayout Grid.Column="0" Spacing="2" HorizontalOptions="Center">
-                <Label Text="MA" FontSize="18" TextColor="{StaticResource DarkGray}" HorizontalTextAlignment="Center" />
-                <Label Text="27" FontSize="18" TextColor="{StaticResource DarkGray}" HorizontalTextAlignment="Center" />
-            </VerticalStackLayout>
-
-            <VerticalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="Center">
-                <Label Text="DI" FontSize="18" TextColor="{StaticResource DarkGray}" HorizontalTextAlignment="Center" />
-                <Label Text="28" FontSize="18" TextColor="{StaticResource DarkGray}" HorizontalTextAlignment="Center" />
-            </VerticalStackLayout>
-
-            <Border Grid.Column="2"
-                    BackgroundColor="{StaticResource Secondary}"
-                    StrokeThickness="0"
-                    Padding="22,10"
-                    HorizontalOptions="Center">
-                <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="24" />
-                </Border.StrokeShape>
-                <VerticalStackLayout Spacing="2">
-                    <Label Text="WO" FontSize="18" TextColor="{StaticResource DarkGray}" HorizontalTextAlignment="Center" />
-                    <Label Text="29" FontSize="18" TextColor="{StaticResource DarkGray}" HorizontalTextAlignment="Center" />
-                </VerticalStackLayout>
-            </Border>
-
-            <VerticalStackLayout Grid.Column="3" Spacing="2" HorizontalOptions="Center">
-                <Label Text="DO" FontSize="18" TextColor="{StaticResource DarkGray}" HorizontalTextAlignment="Center" />
-                <Label Text="30" FontSize="18" TextColor="{StaticResource DarkGray}" HorizontalTextAlignment="Center" />
-            </VerticalStackLayout>
-
-            <VerticalStackLayout Grid.Column="4" Spacing="2" HorizontalOptions="Center">
-                <Label Text="VR" FontSize="18" TextColor="{StaticResource DarkGray}" HorizontalTextAlignment="Center" />
-                <Label Text="1" FontSize="18" TextColor="{StaticResource DarkGray}" HorizontalTextAlignment="Center" />
-            </VerticalStackLayout>
-
-            <VerticalStackLayout Grid.Column="5" Spacing="2" HorizontalOptions="Center">
-                <Label Text="ZA" FontSize="18" TextColor="{StaticResource DarkGray}" HorizontalTextAlignment="Center" />
-                <Label Text="2" FontSize="18" TextColor="{StaticResource DarkGray}" HorizontalTextAlignment="Center" />
-            </VerticalStackLayout>
-
-            <VerticalStackLayout Grid.Column="6" Spacing="2" HorizontalOptions="Center">
-                <Label Text="ZO" FontSize="18" TextColor="{StaticResource DarkGray}" HorizontalTextAlignment="Center" />
-                <Label Text="3" FontSize="18" TextColor="{StaticResource DarkGray}" HorizontalTextAlignment="Center" />
-            </VerticalStackLayout>
-        </Grid>
+        <!-- Days - Dynamic binding -->
+        <CollectionView Grid.Row="3"
+                        ItemsSource="{Binding WeekDays}"
+                        SelectionMode="None"
+                        HeightRequest="50"
+                        BackgroundColor="{StaticResource White}">
+            <CollectionView.ItemsLayout>
+                <GridItemsLayout Orientation="Horizontal" Span="1" />
+            </CollectionView.ItemsLayout>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:DayHeaderViewModel">
+                    <Border WidthRequest="50"
+                            Margin="2,4"
+                            BackgroundColor="{Binding IsSelected, Converter={StaticResource BoolToColorConverter}}"
+                            StrokeThickness="0"
+                            Padding="4,6">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12" />
+                        </Border.StrokeShape>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer
+                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LessonsViewModel}}, Path=SelectDayCommand}"
+                                CommandParameter="{Binding Date}" />
+                        </Border.GestureRecognizers>
+                        <VerticalStackLayout Spacing="1" HorizontalOptions="Center" VerticalOptions="Center">
+                            <Label Text="{Binding DayName}"
+                                   FontSize="10"
+                                   TextColor="{StaticResource DarkGray}"
+                                   HorizontalTextAlignment="Center" />
+                            <Label Text="{Binding DayNumber}"
+                                   FontSize="12"
+                                   FontAttributes="Bold"
+                                   TextColor="{StaticResource DarkGray}"
+                                   HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
 
         <!-- Lesson list -->
         <Grid Grid.Row="4"
@@ -168,7 +132,7 @@
 
             <Grid Grid.Row="0"
                   Style="{StaticResource SectionHeaderGrid}">
-                <Label Text="woensdag, 29 apr. 2026"
+                <Label Text="{Binding SelectedDateText}"
                        Style="{StaticResource SectionHeaderText}" />
             </Grid>
 
@@ -187,22 +151,22 @@
                                         CommandParameter="{Binding .}" />
                                 </Grid.GestureRecognizers>
 
-                                <Grid Padding="24,22"
-                                      ColumnDefinitions="98,*,Auto"
+                                <Grid Padding="12,10"
+                                      ColumnDefinitions="60,*,Auto"
                                       RowDefinitions="Auto,Auto,Auto"
-                                      ColumnSpacing="24">
+                                      ColumnSpacing="12">
 
                                     <!-- Capacity block -->
                                     <Border Grid.RowSpan="3"
                                             Grid.Column="0"
-                                            WidthRequest="98"
-                                            HeightRequest="98"
+                                            WidthRequest="60"
+                                            HeightRequest="60"
                                             BackgroundColor="{StaticResource Primary}"
                                             StrokeThickness="0"
                                             VerticalOptions="Center">
                                         <Label Text="11 / 12"
                                                TextColor="{StaticResource White}"
-                                               FontSize="25"
+                                               FontSize="14"
                                                HorizontalOptions="Center"
                                                VerticalOptions="Center" />
                                     </Border>
@@ -210,33 +174,33 @@
                                     <!-- Time and workout -->
                                     <HorizontalStackLayout Grid.Column="1"
                                                            Grid.Row="0"
-                                                           Spacing="14">
+                                                           Spacing="6">
                                         <Label Text="{Binding StartTime, StringFormat='{0:HH:mm}'}"
                                                TextColor="{StaticResource Tertiary}"
-                                               FontSize="28"
+                                               FontSize="16"
                                                VerticalOptions="Center" />
 
                                         <Label Text=" - "
                                                TextColor="{StaticResource Tertiary}"
-                                               FontSize="28"
+                                               FontSize="16"
                                                VerticalOptions="Center" />
 
                                         <Label Text="{Binding EndTime, StringFormat='{0:HH:mm}'}"
                                                TextColor="{StaticResource Tertiary}"
-                                               FontSize="28"
+                                               FontSize="16"
                                                VerticalOptions="Center" />
 
                                         <Border BackgroundColor="{StaticResource Secondary}"
                                                 StrokeThickness="0"
-                                                Padding="11,4"
+                                                Padding="6,2"
                                                 VerticalOptions="Center">
                                             <Border.StrokeShape>
-                                                <RoundRectangle CornerRadius="9" />
+                                                <RoundRectangle CornerRadius="6" />
                                             </Border.StrokeShape>
                                             <Label Text="{Binding WorkoutName}"
                                                    TextColor="{StaticResource Tertiary}"
-                                                   FontSize="20"
-                                                   CharacterSpacing="2" />
+                                                   FontSize="12"
+                                                   CharacterSpacing="1" />
                                         </Border>
                                     </HorizontalStackLayout>
 
@@ -245,21 +209,21 @@
                                            Grid.Row="1"
                                            Text="{Binding InstructorName}"
                                            TextColor="{StaticResource OffBlack}"
-                                           FontSize="22"
-                                           Margin="0,4,0,0" />
+                                           FontSize="14"
+                                           Margin="0,2,0,0" />
 
                                     <!-- Location -->
                                     <HorizontalStackLayout Grid.Column="1"
                                                            Grid.Row="2"
-                                                           Spacing="8"
-                                                           Margin="0,8,0,0">
+                                                           Spacing="4"
+                                                           Margin="0,4,0,0">
                                         <Label Text="●"
                                                TextColor="{StaticResource DarkGray}"
-                                               FontSize="18"
+                                               FontSize="10"
                                                VerticalOptions="Center" />
                                         <Label Text="{Binding LocationName}"
                                                TextColor="{StaticResource DarkGray}"
-                                               FontSize="18"
+                                               FontSize="12"
                                                LineBreakMode="TailTruncation"
                                                VerticalOptions="Center" />
                                     </HorizontalStackLayout>
@@ -269,7 +233,7 @@
                                            Grid.RowSpan="3"
                                            Text="›"
                                            TextColor="{StaticResource Black}"
-                                           FontSize="42"
+                                           FontSize="24"
                                            VerticalOptions="Center"
                                            HorizontalOptions="End" />
                                 </Grid>
@@ -284,14 +248,16 @@
                     <CollectionView.EmptyView>
                         <VerticalStackLayout HorizontalOptions="Center"
                                              VerticalOptions="Center"
-                                             Spacing="12"
-                                             Padding="24">
+                                             Spacing="8"
+                                             Padding="12">
                             <Label Text="Geen lessen gevonden"
                                    TextColor="{StaticResource Black}"
-                                   FontSize="18"
+                                   FontSize="14"
                                    HorizontalOptions="Center" />
                             <Button Text="Vernieuwen"
-                                    Command="{Binding LoadLessonsCommand}" />
+                                    Command="{Binding LoadLessonsCommand}"
+                                    FontSize="12"
+                                    Padding="8,4" />
                         </VerticalStackLayout>
                     </CollectionView.EmptyView>
                 </CollectionView>

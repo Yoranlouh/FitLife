@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FitLife.Application\FitLife.Application.csproj" />
+    <ProjectReference Include="..\SharedLibrary\SharedLibrary.csproj" />
   </ItemGroup>
 
   <ItemGroup>

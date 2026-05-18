@@ -4,11 +4,14 @@ using CommunityToolkit.Mvvm.Input;
 using SharedLibrary.DTOs.Responses;
 using System.Globalization;
 using CommunityToolkit.Maui.Views;
+using FitLife.Maui.Services;
 
 namespace FitLife.Maui.ViewModels;
 
 public partial class WeekViewModel : BaseViewModel
 {
+    private readonly ILessonService _lessonService;
+
     [ObservableProperty]
     private ObservableCollection<LessonResponse> _lessons = new();
 
@@ -21,32 +24,78 @@ public partial class WeekViewModel : BaseViewModel
     [ObservableProperty]
     private ObservableCollection<DayHeaderViewModel> _weekDays = new();
 
-    public WeekViewModel()
+    [ObservableProperty]
+    private DateTime _selectedDate = DateTime.Today;
+
+    [ObservableProperty]
+    private ObservableCollection<LessonResponse> _selectedDayLessons = new();
+
+    private DateTime _startOfWeek;
+    private IEnumerable<LessonResponse> _allLessons = [];
+
+    public WeekViewModel(ILessonService lessonService)
     {
+        _lessonService = lessonService;
         Title = "Weekoverzicht";
+        UpdateWeekInfo();
     }
 
     private void UpdateWeekInfo()
     {
-        var firstDayOfWeek = CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek;
-        var diff = (7 + (CurrentDate.Date.DayOfWeek - firstDayOfWeek)) % 7;
-        var startOfWeek = CurrentDate.Date.AddDays(-1 * diff);
+        var diff = (7 + ((int)CurrentDate.DayOfWeek - (int)DayOfWeek.Monday)) % 7;
+        _startOfWeek = CurrentDate.Date.AddDays(-diff);
 
-        var weekNumber = CultureInfo.CurrentCulture.Calendar.GetWeekOfYear(startOfWeek, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
-        WeekRangeText = $"Week {weekNumber}, {startOfWeek:MMMM yyyy}";
+        var weekNumber = CultureInfo.CurrentCulture.Calendar.GetWeekOfYear(
+            _startOfWeek, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
+        WeekRangeText = $"Week {weekNumber}, {_startOfWeek:MMMM yyyy}";
 
         WeekDays.Clear();
         for (int i = 0; i < 7; i++)
         {
-            var day = startOfWeek.AddDays(i);
+            var day = _startOfWeek.AddDays(i);
             WeekDays.Add(new DayHeaderViewModel 
             { 
-                DayName = day.ToString("ddd", CultureInfo.CurrentCulture).Substring(0, 2).ToLower(), 
-                DayNumber = day.Day.ToString("00") 
+                Date = day,
+                DayName = day.ToString("ddd", new CultureInfo("nl-NL")).ToUpper().Replace(".", ""), 
+                DayNumber = day.Day.ToString(),
+                IsSelected = day.Date == SelectedDate.Date
             });
         }
+    }
 
-        LoadLessons();
+    partial void OnSelectedDateChanged(DateTime value)
+    {
+        UpdateWeekDaySelection();
+        FilterLessonsForSelectedDay();
+    }
+
+    private void UpdateWeekDaySelection()
+    {
+        // Voorkom oneindige loops door alleen te updaten als de waarde verandert
+        foreach (var day in WeekDays)
+        {
+            var shouldBeSelected = day.Date.Date == SelectedDate.Date;
+            if (day.IsSelected != shouldBeSelected)
+            {
+                day.IsSelected = shouldBeSelected;
+            }
+        }
+    }
+
+    private void FilterLessonsForSelectedDay()
+    {
+        SelectedDayLessons.Clear();
+        foreach (var lesson in Lessons.Where(l => l.StartTime.Date == SelectedDate.Date)
+                                      .OrderBy(l => l.StartTime))
+        {
+            SelectedDayLessons.Add(lesson);
+        }
+    }
+
+    [RelayCommand]
+    private void SelectDay(DateTime date)
+    {
+        SelectedDate = date;
     }
 
     [RelayCommand]
@@ -54,6 +103,7 @@ public partial class WeekViewModel : BaseViewModel
     {
         CurrentDate = CurrentDate.AddDays(-7);
         UpdateWeekInfo();
+        _ = LoadLessons();
     }
 
     [RelayCommand]
@@ -61,25 +111,43 @@ public partial class WeekViewModel : BaseViewModel
     {
         CurrentDate = CurrentDate.AddDays(7);
         UpdateWeekInfo();
+        _ = LoadLessons();
     }
 
     [RelayCommand]
-    private void LoadLessons()
+    private async Task LoadLessons()
     {
-        // Mock data
-        Lessons.Clear();
-        
-        var firstDayOfWeek = CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek;
-        var diff = (7 + (CurrentDate.Date.DayOfWeek - firstDayOfWeek)) % 7;
-        var startOfWeek = CurrentDate.Date.AddDays(-1 * diff);
+        if (IsBusy) return;
 
-        // Add some mock lessons matching the image style
-        Lessons.Add(new LessonResponse { WorkoutName = "W1", StartTime = startOfWeek.AddDays(2).AddHours(6), InstructorName = "Jan", LocationName = "Zaal 1" }); // Wo 6:00
-        Lessons.Add(new LessonResponse { WorkoutName = "W2", StartTime = startOfWeek.AddDays(4).AddHours(6), InstructorName = "Piet", LocationName = "Zaal 2" }); // Vr 6:00
-        Lessons.Add(new LessonResponse { WorkoutName = "W7", StartTime = startOfWeek.AddDays(2).AddHours(8), InstructorName = "Jan", LocationName = "Zaal 1" }); // Wo 8:00
-        Lessons.Add(new LessonResponse { WorkoutName = "W0", StartTime = startOfWeek.AddDays(4).AddHours(8), InstructorName = "Piet", LocationName = "Zaal 2" }); // Vr 8:00
-        
-        // Add more mock data as needed to match the image
+        IsBusy = true;
+        try
+        {
+            var lessons = await _lessonService.GetLessonsAsync();
+            _allLessons = lessons.ToList();
+
+            // Filter voor de huidige week
+            var endOfWeek = _startOfWeek.AddDays(7);
+            var filteredLessons = _allLessons
+                .Where(l => l.StartTime >= _startOfWeek && l.StartTime < endOfWeek)
+                .OrderBy(l => l.StartTime)
+                .ToList();
+
+            Lessons.Clear();
+            foreach (var lesson in filteredLessons)
+            {
+                Lessons.Add(lesson);
+            }
+
+            FilterLessonsForSelectedDay();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading lessons: {ex.Message}");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
@@ -89,7 +157,7 @@ public partial class WeekViewModel : BaseViewModel
     }
 
     [RelayCommand]
-    private async Task GoToDetails(LessonResponse lesson)
+    public async Task GoToDetails(LessonResponse lesson)
     {
         await Shell.Current.GoToAsync($"LessonDetailPage", new Dictionary<string, object>
         {
@@ -101,12 +169,16 @@ public partial class WeekViewModel : BaseViewModel
     private async Task ShowLegend()
     {
         var popup = new Views.LegendPopup();
-        await Application.Current!.Windows[0].Page!.ShowPopupAsync(popup);
+        await Shell.Current.CurrentPage.ShowPopupAsync(popup);
     }
 }
 
-public class DayHeaderViewModel
+public partial class DayHeaderViewModel : ObservableObject
 {
+    public DateTime Date { get; set; }
     public string DayName { get; set; } = string.Empty;
     public string DayNumber { get; set; } = string.Empty;
+    
+    [ObservableProperty]
+    private bool _isSelected;
 }

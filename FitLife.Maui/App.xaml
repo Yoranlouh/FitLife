@@ -13,6 +13,7 @@
 
             <converters:InvertedBoolConverter x:Key="InvertedBoolConverter" />
             <converters:StatusToColorConverter x:Key="StatusToColorConverter" />
+            <converters:BoolToColorConverter x:Key="BoolToColorConverter" />
 
             <Color x:Key="Primary">#512BD4</Color>
             <Color x:Key="Secondary">#DFD8F7</Color>

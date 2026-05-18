@@ -28,6 +28,14 @@
     <Color x:Key="Gray600">#404040</Color>
     <Color x:Key="Gray900">#212121</Color>
     <Color x:Key="Gray950">#141414</Color>
+    
+    <!-- Workout Colors -->
+    <Color x:Key="WorkoutCrossfit">#6B7B3C</Color>
+    <Color x:Key="WorkoutSpinning">#E07850</Color>
+    <Color x:Key="WorkoutSweatClub">#C2185B</Color>
+    <Color x:Key="WorkoutOpenGym">#4CAF50</Color>
+    <Color x:Key="WorkoutHyrox">#FFEB3B</Color>
+    <Color x:Key="WorkoutGymnastics">#3F51B5</Color>
 
     <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}"/>
     <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource Secondary}"/>

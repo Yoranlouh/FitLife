@@ -21,16 +21,10 @@
         <!-- View Selector -->
         <Grid Grid.Row="1" BackgroundColor="{StaticResource Black}" Padding="10, 10" ColumnDefinitions="*, *">
             <HorizontalStackLayout HorizontalOptions="Center" Spacing="5">
-                <HorizontalStackLayout.GestureRecognizers>
-                    <TapGestureRecognizer Command="{Binding GoToWeekCommand}" />
-                </HorizontalStackLayout.GestureRecognizers>
                 <Image Source="calendar_small.png" WidthRequest="15" HeightRequest="15"/>
                 <Label Text="Kalenderweergave" TextColor="{StaticResource White}" VerticalOptions="Center"/>
             </HorizontalStackLayout>
             <HorizontalStackLayout Grid.Column="1" HorizontalOptions="Center" Spacing="5">
-                <HorizontalStackLayout.GestureRecognizers>
-                    <TapGestureRecognizer Command="{Binding GoToLessonsCommand}" />
-                </HorizontalStackLayout.GestureRecognizers>
                 <Image Source="list_icon.png" WidthRequest="15" HeightRequest="15"/>
                 <Label Text="Lijstweergave" TextColor="{StaticResource White}" VerticalOptions="Center"/>
             </HorizontalStackLayout>
@@ -64,35 +58,69 @@
                            Padding="0"
                            HasShadow="False"
                            HorizontalOptions="Center" 
-                           VerticalOptions="Center">
+                           VerticalOptions="Center"
+                           InputTransparent="True">
                         <Label Text="i" 
                                FontSize="16" 
                                FontAttributes="Italic"
                                TextColor="{StaticResource Black}"
                                HorizontalOptions="Center" 
-                               VerticalOptions="Center"/>
+                               VerticalOptions="Center"
+                               InputTransparent="True"/>
                     </Frame>
                 </Border>
 
                 <!-- Day Headers -->
-                <Grid Grid.Column="1" Grid.Row="0" ColumnDefinitions="*, *, *, *, *, *, *" BackgroundColor="{StaticResource White}">
+                <FlexLayout Grid.Column="1" Grid.Row="0"
+                           Direction="Row"
+                           JustifyContent="SpaceEvenly"
+                           BackgroundColor="{StaticResource White}"
+                           HeightRequest="50">
                     <BindableLayout.ItemsSource>
                         <Binding Path="WeekDays" />
                     </BindableLayout.ItemsSource>
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="vm:DayHeaderViewModel">
-                            <Border Stroke="{StaticResource Gray200}" StrokeThickness="0.5">
-                                <StackLayout VerticalOptions="Center" HorizontalOptions="Center" Padding="0,10">
-                                    <Label Text="{Binding DayName}" FontSize="10" TextColor="{StaticResource Black}" HorizontalOptions="Center"/>
-                                    <Label Text="{Binding DayNumber}" FontSize="12" TextColor="{StaticResource Black}" HorizontalOptions="Center"/>
-                                </StackLayout>
+                            <Border Stroke="{StaticResource Gray200}"
+                                    StrokeThickness="0.5"
+                                    HorizontalOptions="FillAndExpand"
+                                    VerticalOptions="FillAndExpand"
+                                    WidthRequest="50">
+                                <VerticalStackLayout VerticalOptions="Center"
+                                                     HorizontalOptions="Center"
+                                                     Padding="0,10"
+                                                     Spacing="2">
+                                    <Label Text="{Binding DayName}"
+                                           FontSize="10"
+                                           TextColor="{StaticResource Black}"
+                                           HorizontalOptions="Center"/>
+                                    <Label Text="{Binding DayNumber}"
+                                           FontSize="12"
+                                           TextColor="{StaticResource Black}"
+                                           HorizontalOptions="Center"/>
+                                </VerticalStackLayout>
                             </Border>
                         </DataTemplate>
                     </BindableLayout.ItemTemplate>
-                </Grid>
+                </FlexLayout>
 
-                <!-- Grid Body -->
-                <Grid x:Name="LessonGrid" Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="50, *, *, *, *, *, *, *" RowDefinitions="50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50" BackgroundColor="{StaticResource LightGray}">
+                <!-- Grid Body - Time column + 7 equal day columns -->
+                <Grid x:Name="LessonGrid"
+                      Grid.Row="1"
+                      Grid.ColumnSpan="2"
+                      ColumnDefinitions="50,*,*,*,*,*,*,*"
+                      RowDefinitions="50,50,50,50,50,50,50,50,50,50,50,50"
+                      BackgroundColor="#e8e8e8">
+
+                    <!-- Static background borders (veel sneller dan code-behind) -->
+                    <BoxView Grid.Column="1" Grid.RowSpan="12" BackgroundColor="#e8e8e8" />
+                    <BoxView Grid.Column="2" Grid.RowSpan="12" BackgroundColor="#e8e8e8" />
+                    <BoxView Grid.Column="3" Grid.RowSpan="12" BackgroundColor="#e8e8e8" />
+                    <BoxView Grid.Column="4" Grid.RowSpan="12" BackgroundColor="#e8e8e8" />
+                    <BoxView Grid.Column="5" Grid.RowSpan="12" BackgroundColor="#e8e8e8" />
+                    <BoxView Grid.Column="6" Grid.RowSpan="12" BackgroundColor="#e8e8e8" />
+                    <BoxView Grid.Column="7" Grid.RowSpan="12" BackgroundColor="#e8e8e8" />
+
                     <!-- Lesson items will be added dynamically here -->
                 </Grid>
             </Grid>

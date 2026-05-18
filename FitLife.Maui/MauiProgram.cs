@@ -52,26 +52,26 @@ public static class MauiProgram
             client.BaseAddress = new Uri(baseUrl);
         });
 
-        // ViewModels
+        // ViewModels - Use Transient for pages that need fresh state on each navigation
         builder.Services.AddSingleton<HomeViewModel>();
-        builder.Services.AddSingleton<LessonsViewModel>();
+        builder.Services.AddTransient<LessonsViewModel>();
         builder.Services.AddSingleton<ProfileViewModel>();
 		builder.Services.AddSingleton<SubscriptionViewModel>();
 		builder.Services.AddSingleton<MyLessonsViewModel>();
 		builder.Services.AddSingleton<InstructorParticipantListViewModel>();
-		builder.Services.AddSingleton<WeekViewModel>();
+		builder.Services.AddTransient<WeekViewModel>();
 		builder.Services.AddTransient<DayViewModel>();
 		builder.Services.AddTransient<LessonDetailViewModel>();
 		builder.Services.AddTransient<ParticipantsViewModel>();
 
-		// Pages
+		// Pages - Match ViewModel lifecycle
 		builder.Services.AddSingleton<HomePage>();
-		builder.Services.AddSingleton<LessonsPage>();
+		builder.Services.AddTransient<LessonsPage>();
 		builder.Services.AddSingleton<ProfilePage>();
 		builder.Services.AddSingleton<SubscriptionPage>();
 		builder.Services.AddSingleton<MyLessonsPage>();
 		builder.Services.AddSingleton<InstructorParticipantListPage>();
-		builder.Services.AddSingleton<WeekPage>();
+		builder.Services.AddTransient<WeekPage>();
 		builder.Services.AddTransient<DayPage>();
 		builder.Services.AddTransient<LessonDetailPage>();
 		builder.Services.AddTransient<ParticipantsPage>();

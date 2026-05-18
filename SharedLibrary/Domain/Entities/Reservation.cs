@@ -14,7 +14,12 @@ namespace SharedLibrary.Domain.Entities
         // Relaties
         [Required]
         public int MemberId { get; set; }
-        public Member Member { get; set; } = null!;
+        
+        // Navigatie property naar User (member role)
+        public User? MemberUser { get; set; }
+        
+        // Legacy property - wordt genegeerd door EF
+        public Member? Member { get; set; }
 
         [Required]
         public int LessonId { get; set; }

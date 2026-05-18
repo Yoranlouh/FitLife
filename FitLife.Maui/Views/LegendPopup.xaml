@@ -30,29 +30,29 @@
             <!-- Workout types -->
             <Grid ColumnDefinitions="*, *" RowDefinitions="Auto,Auto,Auto" RowSpacing="12" ColumnSpacing="12">
                 <HorizontalStackLayout Spacing="10">
-                    <BoxView WidthRequest="22" HeightRequest="22" Color="#6B7B3C" CornerRadius="3"/>
+                    <BoxView WidthRequest="22" HeightRequest="22" Color="{StaticResource WorkoutCrossfit}" CornerRadius="3"/>
                     <Label Text="CrossFit" VerticalOptions="Center"/>
                 </HorizontalStackLayout>
                 <HorizontalStackLayout Grid.Column="1" Spacing="10">
-                    <BoxView WidthRequest="22" HeightRequest="22" Color="#E07850" CornerRadius="3"/>
+                    <BoxView WidthRequest="22" HeightRequest="22" Color="{StaticResource WorkoutSpinning}" CornerRadius="3"/>
                     <Label Text="Spinning" VerticalOptions="Center"/>
                 </HorizontalStackLayout>
                 
                 <HorizontalStackLayout Grid.Row="1" Spacing="10">
-                    <BoxView WidthRequest="22" HeightRequest="22" Color="#C2185B" CornerRadius="3"/>
+                    <BoxView WidthRequest="22" HeightRequest="22" Color="{StaticResource WorkoutSweatClub}" CornerRadius="3"/>
                     <Label Text="Sweat Club" VerticalOptions="Center"/>
                 </HorizontalStackLayout>
                 <HorizontalStackLayout Grid.Row="1" Grid.Column="1" Spacing="10">
-                    <BoxView WidthRequest="22" HeightRequest="22" Color="#4CAF50" CornerRadius="3"/>
+                    <BoxView WidthRequest="22" HeightRequest="22" Color="{StaticResource WorkoutOpenGym}" CornerRadius="3"/>
                     <Label Text="Open Gym" VerticalOptions="Center"/>
                 </HorizontalStackLayout>
                 
                 <HorizontalStackLayout Grid.Row="2" Spacing="10">
-                    <BoxView WidthRequest="22" HeightRequest="22" Color="#FFEB3B" CornerRadius="3"/>
+                    <BoxView WidthRequest="22" HeightRequest="22" Color="{StaticResource WorkoutHyrox}" CornerRadius="3"/>
                     <Label Text="HYROX" VerticalOptions="Center"/>
                 </HorizontalStackLayout>
                 <HorizontalStackLayout Grid.Row="2" Grid.Column="1" Spacing="10">
-                    <BoxView WidthRequest="22" HeightRequest="22" Color="#3F51B5" CornerRadius="3"/>
+                    <BoxView WidthRequest="22" HeightRequest="22" Color="{StaticResource WorkoutGymnastics}" CornerRadius="3"/>
                     <Label Text="Gymnastics" VerticalOptions="Center"/>
                 </HorizontalStackLayout>
             </Grid>

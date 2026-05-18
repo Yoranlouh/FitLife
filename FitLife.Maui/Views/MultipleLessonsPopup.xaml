@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<toolkit:Popup xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+           xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+           xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+           xmlns:models="clr-namespace:SharedLibrary.DTOs.Responses;assembly=SharedLibrary"
+           xmlns:converters="clr-namespace:FitLife.Maui.Converters"
+           x:Class="FitLife.Maui.Views.MultipleLessonsPopup"
+           Color="Transparent">
+
+    <toolkit:Popup.Resources>
+        <converters:WorkoutColorConverter x:Key="WorkoutColorConverter" />
+    </toolkit:Popup.Resources>
+
+    <Border StrokeShape="RoundRectangle 20,20,0,0"
+            BackgroundColor="White"
+            VerticalOptions="End"
+            MaximumHeightRequest="600"
+            Padding="20">
+        <VerticalStackLayout Spacing="10">
+            <!-- Handle indicator for sliding feel -->
+            <BoxView HeightRequest="4" 
+                     WidthRequest="40" 
+                     CornerRadius="2" 
+                     BackgroundColor="{StaticResource Gray200}" 
+                     HorizontalOptions="Center"
+                     Margin="0,0,0,10"/>
+
+            <CollectionView x:Name="LessonsListView"
+                            SelectionMode="None">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:LessonResponse">
+                        <Grid ColumnDefinitions="Auto, *, Auto" Padding="0,15" RowDefinitions="Auto">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnLessonTapped" CommandParameter="{Binding .}"/>
+                            </Grid.GestureRecognizers>
+
+                            <!-- Left Color Block with Participant Count -->
+                            <Border Grid.Column="0" 
+                                    WidthRequest="60" 
+                                    HeightRequest="60" 
+                                    StrokeThickness="0"
+                                    BackgroundColor="{Binding WorkoutName, Converter={StaticResource WorkoutColorConverter}}">
+                                <HorizontalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="2">
+                                    <Label Text="3" 
+                                           TextColor="White" 
+                                           FontSize="12" 
+                                           FontAttributes="Bold"/>
+                                    <Label Text="/" 
+                                           TextColor="White" 
+                                           FontSize="12"/>
+                                    <Label Text="{Binding MaxParticipants}" 
+                                           TextColor="White" 
+                                           FontSize="12"/>
+                                </HorizontalStackLayout>
+                            </Border>
+
+                            <!-- Middle Info Section -->
+                            <VerticalStackLayout Grid.Column="1" Margin="15,0" Spacing="2">
+                                <HorizontalStackLayout Spacing="10">
+                                    <Label FontSize="16" 
+                                           FontAttributes="Bold" 
+                                           TextColor="Black">
+                                        <Label.Text>
+                                            <MultiBinding StringFormat="{}{0:HH:mm} - {1:HH:mm}">
+                                                <Binding Path="StartTime" />
+                                                <Binding Path="EndTime" />
+                                            </MultiBinding>
+                                        </Label.Text>
+                                    </Label>
+                                    
+                                    <Border BackgroundColor="{StaticResource Gray100}" 
+                                            Padding="8,2" 
+                                            StrokeThickness="0"
+                                            StrokeShape="RoundRectangle 5">
+                                        <Label Text="{Binding WorkoutName}" 
+                                               FontSize="10" 
+                                               TextColor="{StaticResource Gray600}"/>
+                                    </Border>
+                                </HorizontalStackLayout>
+                                
+                                <Label Text="{Binding InstructorName}" 
+                                       FontSize="14" 
+                                       TextColor="{StaticResource Gray600}"/>
+                                
+                                <HorizontalStackLayout Spacing="5">
+                                    <Label Text="📍" FontSize="12" VerticalOptions="Center"/>
+                                    <Label Text="{Binding LocationName}" 
+                                           FontSize="12" 
+                                           TextColor="{StaticResource Gray500}"
+                                           LineBreakMode="TailTruncation"/>
+                                </HorizontalStackLayout>
+                            </VerticalStackLayout>
+
+                            <!-- Right Arrow -->
+                            <Label Grid.Column="2" 
+                                   Text="›" 
+                                   FontSize="24" 
+                                   TextColor="{StaticResource Gray400}" 
+                                   VerticalOptions="Center"/>
+                            
+                            <!-- Separator -->
+                            <BoxView Grid.Row="1" Grid.ColumnSpan="3" HeightRequest="1" BackgroundColor="{StaticResource Gray100}" Margin="0,15,0,0" />
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </VerticalStackLayout>
+    </Border>
+</toolkit:Popup>

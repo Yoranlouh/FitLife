@@ -23,7 +23,7 @@
                                  Spacing="0"
                                  HorizontalOptions="Center"
                                  VerticalOptions="Center">
-                <Label Text="Crossfit NIMBL."
+                <Label Text="FitLife."
                        Style="{StaticResource HeaderTitle}"
                        FontSize="24" />
             </VerticalStackLayout>
@@ -40,7 +40,7 @@
             <VerticalStackLayout Spacing="0">
                 <!-- Logo section -->
                 <Grid HeightRequest="200" BackgroundColor="White">
-                    <Label Text="NIMBL." 
+                    <Label Text="FitLife" 
                            TextColor="{StaticResource Primary}" 
                            FontSize="48" 
                            FontAttributes="Bold" 
