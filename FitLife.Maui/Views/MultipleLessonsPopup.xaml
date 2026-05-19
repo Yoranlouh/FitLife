@@ -9,6 +9,7 @@
 
     <toolkit:Popup.Resources>
         <converters:WorkoutColorConverter x:Key="WorkoutColorConverter" />
+        <converters:IntegerToBoolConverter x:Key="IntegerToBoolConverter" />
     </toolkit:Popup.Resources>
 
     <Border StrokeShape="RoundRectangle 20,20,0,0"
@@ -40,18 +41,25 @@
                                     HeightRequest="60" 
                                     StrokeThickness="0"
                                     BackgroundColor="{Binding WorkoutName, Converter={StaticResource WorkoutColorConverter}}">
-                                <HorizontalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="2">
-                                    <Label Text="3" 
-                                           TextColor="White" 
-                                           FontSize="12" 
-                                           FontAttributes="Bold"/>
-                                    <Label Text="/" 
-                                           TextColor="White" 
-                                           FontSize="12"/>
-                                    <Label Text="{Binding MaxParticipants}" 
-                                           TextColor="White" 
-                                           FontSize="12"/>
-                                </HorizontalStackLayout>
+                                <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="0">
+                                    <HorizontalStackLayout HorizontalOptions="Center" Spacing="2">
+                                        <Label Text="{Binding CurrentParticipantCount}" 
+                                               TextColor="White" 
+                                               FontSize="12" 
+                                               FontAttributes="Bold"/>
+                                        <Label Text="/" 
+                                               TextColor="White" 
+                                               FontSize="12"/>
+                                        <Label Text="{Binding MaxParticipants}" 
+                                               TextColor="White" 
+                                               FontSize="12"/>
+                                    </HorizontalStackLayout>
+                                    <Label Text="{Binding WaitlistCount, StringFormat='+{0}'}"
+                                           TextColor="White"
+                                           FontSize="10"
+                                           HorizontalOptions="Center"
+                                           IsVisible="{Binding WaitlistCount, Converter={StaticResource IntegerToBoolConverter}}"/>
+                                </VerticalStackLayout>
                             </Border>
 
                             <!-- Middle Info Section -->

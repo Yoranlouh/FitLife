@@ -171,6 +171,8 @@ public partial class WeekViewModel : BaseViewModel
         var popup = new Views.LegendPopup();
         await Shell.Current.CurrentPage.ShowPopupAsync(popup);
     }
+
+    // Note: GoToLessonsCommand is inherited from BaseViewModel
 }
 
 public partial class DayHeaderViewModel : ObservableObject

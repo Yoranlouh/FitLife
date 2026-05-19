@@ -14,10 +14,13 @@
             <converters:InvertedBoolConverter x:Key="InvertedBoolConverter" />
             <converters:StatusToColorConverter x:Key="StatusToColorConverter" />
             <converters:BoolToColorConverter x:Key="BoolToColorConverter" />
+            <converters:IntegerToBoolConverter x:Key="IntegerToBoolConverter" />
+            <converters:WorkoutColorConverter x:Key="WorkoutColorConverter" />
+            <converters:StringNotEmptyConverter x:Key="StringNotEmptyConverter" />
 
-            <Color x:Key="Primary">#512BD4</Color>
-            <Color x:Key="Secondary">#DFD8F7</Color>
-            <Color x:Key="Tertiary">#2B0B98</Color>
+            <Color x:Key="Primary">#5B6636</Color>
+            <Color x:Key="Secondary">#DEDEDE</Color>
+            <Color x:Key="Tertiary">#1F1F1F</Color>
 
         </ResourceDictionary>
     </Application.Resources>

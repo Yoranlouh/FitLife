@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:FitLife.Maui.ViewModels"
+             x:Class="FitLife.Maui.Views.LoginPage"
+             x:DataType="viewmodels:LoginViewModel"
+             BackgroundColor="{StaticResource Black}"
+             NavigationPage.HasNavigationBar="False"
+             Shell.NavBarIsVisible="False">
+
+    <Grid Padding="30" RowDefinitions="Auto,*,Auto">
+
+        <!-- Logo Section -->
+        <VerticalStackLayout Grid.Row="0"
+                           Spacing="20"
+                           Margin="0,60,0,0">
+            <Label Text="FitLife"
+                   FontSize="56"
+                   FontAttributes="Bold"
+                   TextColor="White"
+                   HorizontalOptions="Center" />
+            <Label Text="Log in om verder te gaan"
+                   FontSize="16"
+                   TextColor="{StaticResource GrayText}"
+                   HorizontalOptions="Center" />
+        </VerticalStackLayout>
+
+        <!-- Login Form -->
+        <VerticalStackLayout Grid.Row="1"
+                           Spacing="20"
+                           VerticalOptions="Center">
+
+            <!-- Email Input -->
+            <Border BackgroundColor="{StaticResource DarkGray}"
+                    StrokeThickness="0"
+                    Padding="15,10">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="8"/>
+                </Border.StrokeShape>
+                <Entry Text="{Binding Email}"
+                       Placeholder="Email adres"
+                       PlaceholderColor="{StaticResource Gray500}"
+                       TextColor="White"
+                       Keyboard="Email"
+                       ReturnType="Next"
+                       FontSize="16"/>
+            </Border>
+
+            <!-- Password Input -->
+            <Border BackgroundColor="{StaticResource DarkGray}"
+                    StrokeThickness="0"
+                    Padding="15,10">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="8"/>
+                </Border.StrokeShape>
+                <Entry Text="{Binding Password}"
+                       Placeholder="Wachtwoord"
+                       PlaceholderColor="{StaticResource Gray500}"
+                       TextColor="White"
+                       IsPassword="True"
+                       ReturnType="Done"
+                       FontSize="16"/>
+            </Border>
+
+            <!-- Error Message -->
+            <Label Text="{Binding ErrorMessage}"
+                   TextColor="#FF6B6B"
+                   FontSize="14"
+                   HorizontalOptions="Center"
+                   IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyConverter}}"/>
+
+            <!-- Login Button -->
+            <Button Text="Inloggen"
+                    Command="{Binding LoginCommand}"
+                    BackgroundColor="{StaticResource Primary}"
+                    TextColor="White"
+                    FontSize="18"
+                    FontAttributes="Bold"
+                    HeightRequest="55"
+                    CornerRadius="8"
+                    Margin="0,20,0,0"
+                    IsEnabled="{Binding IsLoggingIn, Converter={StaticResource InvertedBoolConverter}}">
+                <Button.Shadow>
+                    <Shadow Brush="{StaticResource PrimaryBrush}"
+                            Opacity="0.3"
+                            Radius="10"
+                            Offset="0,4"/>
+                </Button.Shadow>
+            </Button>
+
+            <!-- Loading Indicator -->
+            <ActivityIndicator IsRunning="{Binding IsLoggingIn}"
+                             IsVisible="{Binding IsLoggingIn}"
+                             Color="{StaticResource Primary}"
+                             HeightRequest="40"/>
+        </VerticalStackLayout>
+
+        <!-- Footer -->
+        <Label Grid.Row="2"
+               Text="Nog geen account? Neem contact op met FitLife"
+               FontSize="12"
+               TextColor="{StaticResource Gray500}"
+               HorizontalOptions="Center"
+               Margin="0,0,0,30"/>
+    </Grid>
+</ContentPage>

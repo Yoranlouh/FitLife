@@ -12,8 +12,7 @@
         <Grid Grid.Row="0" Style="{StaticResource HeaderGrid}" ColumnDefinitions="Auto, *, Auto" Padding="10, 5">
             <ImageButton Source="back_icon.png" WidthRequest="20" HeightRequest="20" VerticalOptions="Center"/>
             <StackLayout Grid.Column="1" HorizontalOptions="Center">
-                <Label Text="Crossfit FitLife." Style="{StaticResource HeaderTitle}" FontSize="14"/>
-                <Label Text="- Selecteer ander rooster -" Style="{StaticResource HeaderSubtitle}" FontSize="10"/>
+                <Label Text="FitLife" Style="{StaticResource HeaderTitle}" FontSize="14"/>
             </StackLayout>
             <ImageButton Grid.Column="2" Source="calendar_icon.png" WidthRequest="20" HeightRequest="20" VerticalOptions="Center"/>
         </Grid>
@@ -25,6 +24,9 @@
                 <Label Text="Kalenderweergave" TextColor="{StaticResource White}" VerticalOptions="Center"/>
             </HorizontalStackLayout>
             <HorizontalStackLayout Grid.Column="1" HorizontalOptions="Center" Spacing="5">
+                <HorizontalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding GoToLessonsCommand}" />
+                </HorizontalStackLayout.GestureRecognizers>
                 <Image Source="list_icon.png" WidthRequest="15" HeightRequest="15"/>
                 <Label Text="Lijstweergave" TextColor="{StaticResource White}" VerticalOptions="Center"/>
             </HorizontalStackLayout>

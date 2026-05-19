@@ -52,7 +52,19 @@ public static class MauiProgram
             client.BaseAddress = new Uri(baseUrl);
         });
 
+        builder.Services.AddHttpClient<IAuthenticationService, AuthenticationService>(client =>
+        {
+            // Docker API draait op poort 8080.
+            // Android emulator gebruikt 10.0.2.2 om de hostmachine te bereiken.
+            string baseUrl = DeviceInfo.Platform == DevicePlatform.Android
+                ? "http://10.0.2.2:8080/"
+                : "http://localhost:8080/";
+
+            client.BaseAddress = new Uri(baseUrl);
+        });
+
         // ViewModels - Use Transient for pages that need fresh state on each navigation
+        builder.Services.AddTransient<LoginViewModel>();
         builder.Services.AddSingleton<HomeViewModel>();
         builder.Services.AddTransient<LessonsViewModel>();
         builder.Services.AddSingleton<ProfileViewModel>();
@@ -65,6 +77,8 @@ public static class MauiProgram
 		builder.Services.AddTransient<ParticipantsViewModel>();
 
 		// Pages - Match ViewModel lifecycle
+		builder.Services.AddTransient<SplashPage>();
+		builder.Services.AddTransient<LoginPage>();
 		builder.Services.AddSingleton<HomePage>();
 		builder.Services.AddTransient<LessonsPage>();
 		builder.Services.AddSingleton<ProfilePage>();

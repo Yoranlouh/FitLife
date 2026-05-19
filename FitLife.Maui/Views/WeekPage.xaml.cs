@@ -252,9 +252,10 @@ public partial class WeekPage : ContentPage
 
     private static Color GetResourceColor(string key)
     {
-        if (Application.Current!.Resources.TryGetValue(key, out var color))
+        // Use null-conditional operator to prevent crashes during app initialization
+        if (Application.Current?.Resources.TryGetValue(key, out var color) == true)
             return (Color)color;
-        
+
         return Colors.Gray;
     }
 }

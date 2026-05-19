@@ -20,5 +20,8 @@ namespace SharedLibrary.DTOs.Responses
         public DateTime? RecurrenceEndDate { get; set; }
         public int? RecurrenceCount { get; set; }
         public int? ParentLessonId { get; set; }
+
+        public int CurrentParticipantCount { get; set; }
+        public int WaitlistCount { get; set; }
     }
 }

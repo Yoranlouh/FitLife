@@ -89,21 +89,39 @@ public partial class LessonsViewModel : BaseViewModel
         }
     }
 
+    /// <summary>
+    /// Filter lessons collection to only show lessons for the selected day
+    /// </summary>
     private void FilterLessonsForSelectedDay()
     {
+        System.Diagnostics.Debug.WriteLine($"LessonsViewModel: FilterLessonsForSelectedDay called. SelectedDate: {SelectedDate:yyyy-MM-dd}, Total lessons: {_allLessons.Count()}");
+
         Lessons.Clear();
-        foreach (var lesson in _allLessons
+        var filteredLessons = _allLessons
             .Where(l => l.StartTime.Date == SelectedDate.Date)
-            .OrderBy(l => l.StartTime))
+            .OrderBy(l => l.StartTime)
+            .ToList();
+
+        System.Diagnostics.Debug.WriteLine($"LessonsViewModel: Found {filteredLessons.Count} lessons for {SelectedDate:yyyy-MM-dd}");
+
+        foreach (var lesson in filteredLessons)
         {
+            System.Diagnostics.Debug.WriteLine($"  - {lesson.StartTime:HH:mm} {lesson.WorkoutName} ({lesson.CurrentParticipantCount}/{lesson.MaxParticipants})");
             Lessons.Add(lesson);
         }
+
+        System.Diagnostics.Debug.WriteLine($"LessonsViewModel: Lessons.Count after filter: {Lessons.Count}");
     }
 
+    /// <summary>
+    /// Select a specific day and filter lessons for that day
+    /// </summary>
     [RelayCommand]
     private void SelectDay(DateTime date)
     {
+        System.Diagnostics.Debug.WriteLine($"LessonsViewModel: SelectDay called with date: {date:yyyy-MM-dd}");
         SelectedDate = date;
+        System.Diagnostics.Debug.WriteLine($"LessonsViewModel: SelectedDate updated. Lessons count: {Lessons.Count}");
     }
 
     [RelayCommand]
@@ -148,15 +166,33 @@ public partial class LessonsViewModel : BaseViewModel
         }
     }
 
+    /// <summary>
+    /// Navigate to lesson detail page
+    /// </summary>
     [RelayCommand]
     private async Task GoToDetails(LessonResponse lesson)
     {
-        if (lesson == null) return;
+        System.Diagnostics.Debug.WriteLine($"LessonsViewModel: GoToDetails called with lesson: {lesson?.WorkoutName ?? "null"}");
 
-        await Shell.Current.GoToAsync("LessonDetailPage", new Dictionary<string, object>
+        if (lesson == null)
         {
-            { "Lesson", lesson }
-        });
+            System.Diagnostics.Debug.WriteLine("LessonsViewModel: Lesson is null, cannot navigate");
+            return;
+        }
+
+        try
+        {
+            System.Diagnostics.Debug.WriteLine($"LessonsViewModel: Navigating to LessonDetailPage for lesson ID: {lesson.Id}");
+            await Shell.Current.GoToAsync("LessonDetailPage", new Dictionary<string, object>
+            {
+                { "Lesson", lesson }
+            });
+            System.Diagnostics.Debug.WriteLine("LessonsViewModel: Navigation completed");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"LessonsViewModel: Navigation error: {ex.Message}");
+        }
     }
 
     [RelayCommand]

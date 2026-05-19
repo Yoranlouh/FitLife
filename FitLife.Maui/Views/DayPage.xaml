@@ -13,7 +13,7 @@
         
         <CollectionView Grid.Row="2" ItemsSource="{Binding Lessons}">
             <CollectionView.ItemTemplate>
-                <DataTemplate x:DataType="models:LessonResponse">
+                <DataTemplate>
                     <Frame Margin="10" Padding="15" HasShadow="True">
                         <Frame.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DayViewModel}}, Path=GoToDetailsCommand}"
