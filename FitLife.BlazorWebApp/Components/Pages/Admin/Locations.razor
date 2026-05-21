@@ -1,0 +1,258 @@
+@page "/admin/locations"
+@attribute [Authorize(Roles = "admin")]
+@inject ILocationService LocationService
+@inject Blazored.Toast.Services.IToastService ToastService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Locaties Beheer - FitLife Admin</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-6 fw-bold">Locaties Beheer</h1>
+            <p class="text-muted">Beheer alle locaties</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="OpenCreateModal">
+                <i class="bi bi-plus-circle me-2"></i>Nieuwe Locatie
+            </button>
+        </div>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-center my-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-3 text-muted">Locaties laden...</p>
+        </div>
+    }
+    else if (_locations.Any())
+    {
+        <div class="row g-4">
+            @foreach (var location in _locations)
+            {
+                <div class="col-md-6 col-lg-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <h5 class="card-title fw-bold mb-2">
+                                        <i class="bi bi-geo-alt-fill text-danger me-2"></i>@location.Name
+                                    </h5>
+                                    @if (!string.IsNullOrEmpty(location.Address))
+                                    {
+                                        <p class="text-muted small mb-0">
+                                            <i class="bi bi-pin-map me-1"></i>@location.Address
+                                        </p>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="row text-center mb-3">
+                                <div class="col-6">
+                                    <div class="border rounded p-2 bg-light">
+                                        <i class="bi bi-people-fill text-primary fs-4"></i>
+                                        <h5 class="mb-0 mt-1">@location.Capacity</h5>
+                                        <small class="text-muted">Max Capaciteit</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="border rounded p-2 bg-light">
+                                        <i class="bi bi-calendar-event text-success fs-4"></i>
+                                        <h5 class="mb-0 mt-1">@location.TotalLessons</h5>
+                                        <small class="text-muted">Geplande Lessen</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-primary btn-sm" @onclick="() => OpenEditModal(location)">
+                                    <i class="bi bi-pencil me-1"></i>Bewerken
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteLocation(location.Id)">
+                                    <i class="bi bi-trash me-1"></i>Verwijderen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>Geen locaties gevonden. Voeg een nieuwe locatie toe.
+        </div>
+    }
+</div>
+
+@* Modal for Create/Edit Location *@
+@if (_showModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_editingLocation.Id == 0 ? "Nieuwe Locatie Aanmaken" : "Locatie Bewerken")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="@_editingLocation" OnValidSubmit="SaveLocation">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Naam *</label>
+                            <InputText @bind-Value="_editingLocation.Name" class="form-control" placeholder="Studio A, Zaal 1..." />
+                            <ValidationMessage For="@(() => _editingLocation.Name)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Adres</label>
+                            <InputText @bind-Value="_editingLocation.Address" class="form-control" placeholder="Straat 123, 1234 AB Plaats" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Maximale Capaciteit *</label>
+                            <InputNumber @bind-Value="_editingLocation.Capacity" class="form-control" />
+                            <ValidationMessage For="@(() => _editingLocation.Capacity)" />
+                            <small class="form-text text-muted">Maximum aantal deelnemers voor deze locatie</small>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseModal">Annuleren</button>
+                            <button type="submit" class="btn btn-primary" disabled="@_isSaving">
+                                @(_isSaving ? "Opslaan..." : "Opslaan")
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<LocationDto> _locations = new();
+    private bool _isLoading = true;
+    private bool _isSaving = false;
+    private bool _showModal = false;
+    private LocationDto _editingLocation = new();
+
+    /// <summary>
+    /// Loads all locations when component initializes
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    /// <summary>
+    /// Loads locations from the database
+    /// </summary>
+    private async Task LoadData()
+    {
+        _isLoading = true;
+        try
+        {
+            _locations = await LocationService.GetAllLocationsAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading locations: {ex.Message}");
+            ToastService.ShowError("Fout bij laden van locaties.");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Opens modal for creating a new location
+    /// </summary>
+    private void OpenCreateModal()
+    {
+        _editingLocation = new LocationDto { Capacity = 20 };
+        _showModal = true;
+    }
+
+    /// <summary>
+    /// Opens modal for editing an existing location
+    /// </summary>
+    private void OpenEditModal(LocationDto location)
+    {
+        _editingLocation = new LocationDto
+        {
+            Id = location.Id,
+            Name = location.Name,
+            Address = location.Address,
+            Capacity = location.Capacity
+        };
+        _showModal = true;
+    }
+
+    /// <summary>
+    /// Closes the modal and resets state
+    /// </summary>
+    private void CloseModal()
+    {
+        _showModal = false;
+        _editingLocation = new();
+    }
+
+    /// <summary>
+    /// Saves location (create or update) to database
+    /// </summary>
+    private async Task SaveLocation()
+    {
+        _isSaving = true;
+        try
+        {
+            var (success, message) = _editingLocation.Id == 0
+                ? await LocationService.CreateLocationAsync(_editingLocation)
+                : await LocationService.UpdateLocationAsync(_editingLocation);
+
+            if (success)
+            {
+                ToastService.ShowSuccess(message);
+                CloseModal();
+                await LoadData();
+            }
+            else
+            {
+                ToastService.ShowError(message);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving location: {ex.Message}");
+            ToastService.ShowError("Fout bij opslaan van locatie.");
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    /// <summary>
+    /// Deletes a location after validation
+    /// </summary>
+    private async Task DeleteLocation(int locationId)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Weet je zeker dat je deze locatie wilt verwijderen?"))
+            return;
+
+        var (success, message) = await LocationService.DeleteLocationAsync(locationId);
+        
+        if (success)
+        {
+            ToastService.ShowSuccess(message);
+            await LoadData();
+        }
+        else
+        {
+            ToastService.ShowError(message);
+        }
+    }
+}

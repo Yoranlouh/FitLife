@@ -1,0 +1,157 @@
+@page "/admin/login"
+@using FitLife.BlazorWebApp.Services
+@using FitLife.BlazorWebApp.Models
+@using Microsoft.AspNetCore.Components.Authorization
+@inject IAuthService AuthService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+@inject IToastService ToastService
+
+<PageTitle>Login - FitLife Admin</PageTitle>
+
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow">
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <h2 class="fw-bold">FitLife Admin</h2>
+                        <p class="text-muted">Login voor Admins en Instructeurs</p>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            @_errorMessage
+                        </div>
+                    }
+
+                    <EditForm Model="@_loginModel" OnValidSubmit="HandleLogin">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <InputText @bind-Value="_loginModel.Email" 
+                                       class="form-control" 
+                                       id="email" 
+                                       placeholder="naam@fitlife.nl" />
+                            <ValidationMessage For="@(() => _loginModel.Email)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Wachtwoord</label>
+                            <InputText @bind-Value="_loginModel.Password" 
+                                       type="password" 
+                                       class="form-control" 
+                                       id="password" 
+                                       placeholder="Wachtwoord" />
+                            <ValidationMessage For="@(() => _loginModel.Password)" />
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg" disabled="@_isLoading">
+                                @if (_isLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    <span>Inloggen...</span>
+                                }
+                                else
+                                {
+                                    <span>Inloggen</span>
+                                }
+                            </button>
+                        </div>
+                    </EditForm>
+
+                    <div class="text-center mt-3">
+                        <small class="text-muted">
+                            Alleen voor medewerkers · <a href="/">Terug naar website</a>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    /// <summary>
+    /// Model for the login form with email and password fields
+    /// </summary>
+    private LoginModel _loginModel = new();
+    private string _errorMessage = string.Empty;
+    private bool _isLoading = false;
+
+    /// <summary>
+    /// Checks if user is already authenticated on page load, redirects to dashboard if so
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            NavigationManager.NavigateTo("/admin/dashboard");
+        }
+    }
+
+    /// <summary>
+    /// Handles the login form submission, authenticates user and redirects to dashboard on success
+    /// </summary>
+    private async Task HandleLogin()
+    {
+        _isLoading = true;
+        _errorMessage = string.Empty;
+
+        try
+        {
+            var (success, message, user) = await AuthService.LoginAsync(_loginModel.Email, _loginModel.Password);
+
+            if (success && user != null)
+            {
+                // Notify authentication state provider that user logged in
+                ((CustomAuthenticationStateProvider)AuthStateProvider).NotifyAuthenticationStateChanged();
+                
+                ToastService.ShowSuccess("Login succesvol! Welkom terug.");
+                
+                // Redirect based on role
+                if (user.Role == "instructor")
+                {
+                    NavigationManager.NavigateTo("/instructor/dashboard");
+                }
+                else
+                {
+                    NavigationManager.NavigateTo("/admin/dashboard");
+                }
+            }
+            else
+            {
+                _errorMessage = message;
+                ToastService.ShowError(message);
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Er is een fout opgetreden bij het inloggen. Probeer het later opnieuw.";
+            ToastService.ShowError(_errorMessage);
+            Console.WriteLine($"Login error: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Internal model class for login form binding with validation attributes
+    /// </summary>
+    private class LoginModel
+    {
+        [Required(ErrorMessage = "Email is verplicht")]
+        [EmailAddress(ErrorMessage = "Ongeldig email adres")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Wachtwoord is verplicht")]
+        [MinLength(3, ErrorMessage = "Wachtwoord moet minimaal 3 tekens bevatten")]
+        public string Password { get; set; } = string.Empty;
+    }
+}

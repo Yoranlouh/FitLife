@@ -1,0 +1,275 @@
+@page "/admin/instructors"
+@attribute [Authorize(Roles = "admin")]
+@inject IInstructorService InstructorService
+@inject Blazored.Toast.Services.IToastService ToastService
+
+<PageTitle>Instructeurs Beheer - FitLife Admin</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-6 fw-bold">Instructeurs Beheer</h1>
+            <p class="text-muted">Beheer alle instructeurs</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="OpenCreateModal">
+                <i class="bi bi-plus-circle me-2"></i>Nieuwe Instructeur
+            </button>
+        </div>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-center my-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-3 text-muted">Instructeurs laden...</p>
+        </div>
+    }
+    else if (_instructors.Any())
+    {
+        <div class="row g-4">
+            @foreach (var instructor in _instructors)
+            {
+                <div class="col-md-6 col-lg-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start mb-3">
+                                <div class="flex-shrink-0">
+                                    @if (!string.IsNullOrEmpty(instructor.PhotoUrl))
+                                    {
+                                        <img src="@instructor.PhotoUrl" alt="@instructor.FullName" class="rounded-circle" style="width: 60px; height: 60px; object-fit: cover;" />
+                                    }
+                                    else
+                                    {
+                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                            <i class="bi bi-person-fill fs-3"></i>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h5 class="card-title mb-1">@instructor.FullName</h5>
+                                    @if (!string.IsNullOrEmpty(instructor.Specialization))
+                                    {
+                                        <p class="text-muted small mb-0">@instructor.Specialization</p>
+                                    }
+                                    @if (!string.IsNullOrEmpty(instructor.Email))
+                                    {
+                                        <p class="text-muted small mb-0"><i class="bi bi-envelope me-1"></i>@instructor.Email</p>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="row text-center mb-3">
+                                <div class="col-6">
+                                    <div class="border rounded p-2">
+                                        <h4 class="mb-0 text-primary">@instructor.TotalLessons</h4>
+                                        <small class="text-muted">Totaal Lessen</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="border rounded p-2">
+                                        <h4 class="mb-0 text-success">@instructor.UpcomingLessons</h4>
+                                        <small class="text-muted">Komende Lessen</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-primary btn-sm" @onclick="() => OpenEditModal(instructor)">
+                                    <i class="bi bi-pencil me-1"></i>Bewerken
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteInstructor(instructor.Id)">
+                                    <i class="bi bi-trash me-1"></i>Verwijderen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>Geen instructeurs gevonden. Voeg een nieuwe instructeur toe.
+        </div>
+    }
+</div>
+
+@* Modal for Create/Edit Instructor *@
+@if (_showModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_editingInstructor.Id == 0 ? "Nieuwe Instructeur Aanmaken" : "Instructeur Bewerken")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="@_editingInstructor" OnValidSubmit="SaveInstructor">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Voornaam *</label>
+                            <InputText @bind-Value="_editingInstructor.FirstName" class="form-control" placeholder="John" />
+                            <ValidationMessage For="@(() => _editingInstructor.FirstName)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Achternaam *</label>
+                            <InputText @bind-Value="_editingInstructor.LastName" class="form-control" placeholder="Doe" />
+                            <ValidationMessage For="@(() => _editingInstructor.LastName)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <InputText @bind-Value="_editingInstructor.Email" type="email" class="form-control" placeholder="john.doe@fitlife.nl" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Specialisatie</label>
+                            <InputText @bind-Value="_editingInstructor.Specialization" class="form-control" placeholder="Yoga, Spinning, CrossFit..." />
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseModal">Annuleren</button>
+                            <button type="submit" class="btn btn-primary" disabled="@_isSaving">
+                                @(_isSaving ? "Opslaan..." : "Opslaan")
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<InstructorDto> _instructors = new();
+    private bool _isLoading = true;
+    private bool _isSaving = false;
+    private bool _showModal = false;
+    private InstructorDto _editingInstructor = new();
+
+    /// <summary>
+    /// Loads all instructors when component initializes
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    /// <summary>
+    /// Loads instructors from the database
+    /// </summary>
+    private async Task LoadData()
+    {
+        _isLoading = true;
+        try
+        {
+            _instructors = await InstructorService.GetAllInstructorsAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading instructors: {ex.Message}");
+            ToastService.ShowError("Fout bij laden van instructeurs.");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Opens modal for creating a new instructor
+    /// </summary>
+    private void OpenCreateModal()
+    {
+        _editingInstructor = new InstructorDto();
+        _showModal = true;
+    }
+
+    /// <summary>
+    /// Opens modal for editing an existing instructor
+    /// </summary>
+    private void OpenEditModal(InstructorDto instructor)
+    {
+        _editingInstructor = new InstructorDto
+        {
+            Id = instructor.Id,
+            FirstName = instructor.FirstName,
+            LastName = instructor.LastName,
+            Email = instructor.Email,
+            Specialization = instructor.Specialization,
+            PhotoUrl = instructor.PhotoUrl
+        };
+        _showModal = true;
+    }
+
+    /// <summary>
+    /// Closes the modal and resets state
+    /// </summary>
+    private void CloseModal()
+    {
+        _showModal = false;
+        _editingInstructor = new();
+    }
+
+    /// <summary>
+    /// Saves instructor (create or update) to database
+    /// </summary>
+    private async Task SaveInstructor()
+    {
+        _isSaving = true;
+        try
+        {
+            var (success, message) = _editingInstructor.Id == 0
+                ? await InstructorService.CreateInstructorAsync(_editingInstructor)
+                : await InstructorService.UpdateInstructorAsync(_editingInstructor);
+
+            if (success)
+            {
+                ToastService.ShowSuccess(message);
+                CloseModal();
+                await LoadData();
+            }
+            else
+            {
+                ToastService.ShowError(message);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving instructor: {ex.Message}");
+            ToastService.ShowError("Fout bij opslaan van instructeur.");
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    /// <summary>
+    /// Deletes an instructor after validation
+    /// </summary>
+    private async Task DeleteInstructor(int instructorId)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Weet je zeker dat je deze instructeur wilt verwijderen?"))
+            return;
+
+        var (success, message) = await InstructorService.DeleteInstructorAsync(instructorId);
+        
+        if (success)
+        {
+            ToastService.ShowSuccess(message);
+            await LoadData();
+        }
+        else
+        {
+            ToastService.ShowError(message);
+        }
+    }
+
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+}

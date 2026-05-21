@@ -23,5 +23,6 @@ namespace SharedLibrary.DTOs.Responses
 
         public int CurrentParticipantCount { get; set; }
         public int WaitlistCount { get; set; }
+        public bool IsBooked { get; set; }
     }
 }

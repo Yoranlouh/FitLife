@@ -157,52 +157,118 @@ public partial class WeekPage : ContentPage
                 int col = slot.Key.Day + 1;
                 int row = slot.Key.Hour - StartHour;
 
-                System.Diagnostics.Debug.WriteLine($"Slot: Day={slot.Key.Day}, Hour={slot.Key.Hour}, Col={col}, Row={row}");
-
                 if (col < 1 || col > 7 || row < 0 || row >= TotalRows)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Skipping slot - out of bounds: Day={slot.Key.Day}, Hour={slot.Key.Hour}, Col={col}, Row={row}");
                     continue;
                 }
 
                 var lessonsInSlot = slot.Value;
                 int count = lessonsInSlot.Count;
 
-                // Toon de naam van de les als er maar één is, anders het aantal
-                string displayText = count == 1 ? (lessonsInSlot.First().WorkoutName ?? "Les") : count.ToString();
-                var workoutName = lessonsInSlot.First()?.WorkoutName ?? "Unknown";
-                var color = GetWorkoutColor(workoutName);
+                // Bereken totaal aantal beschikbare plekken
+                int totalAvailableSpots = lessonsInSlot.Sum(l => Math.Max(0, l.MaxParticipants - l.CurrentParticipantCount));
+                bool isAnyBooked = lessonsInSlot.Any(l => l.IsBooked);
 
                 var border = new Border
                 {
                     StyleId = "LessonBlock",
-                    BackgroundColor = color,
                     StrokeThickness = 0,
                     Margin = new Thickness(1),
-                    Content = new Label
+                    BackgroundColor = Colors.Transparent // Achtergrond wordt gevuld door shapes of Grid
+                };
+
+                var cellGrid = new Grid();
+                border.Content = cellGrid;
+
+                // Kleuren instellen
+                if (count == 1)
+                {
+                    border.BackgroundColor = GetWorkoutColor(lessonsInSlot.First().WorkoutName);
+                }
+                else
+                {
+                    var colors = lessonsInSlot.Select(l => GetWorkoutColor(l.WorkoutName)).ToList();
+                    AddDiagonalBackground(cellGrid, colors);
+                }
+
+                // Cirkel met nummer of vinkje
+                var circleSize = 30;
+                var circleContainer = new Grid
+                {
+                    HorizontalOptions = LayoutOptions.Center,
+                    VerticalOptions = LayoutOptions.Center,
+                    WidthRequest = circleSize,
+                    HeightRequest = circleSize
+                };
+
+                var circle = new Border
+                {
+                    BackgroundColor = Colors.White,
+                    StrokeShape = new RoundRectangle { CornerRadius = circleSize / 2 },
+                    WidthRequest = circleSize,
+                    HeightRequest = circleSize,
+                    Padding = 0,
+                    HorizontalOptions = LayoutOptions.Center,
+                    VerticalOptions = LayoutOptions.Center
+                };
+
+                if (isAnyBooked)
+                {
+                    // Toon vinkje ipv getal
+                    circle.Content = new Label
                     {
-                        Text = displayText,
-                        TextColor = Colors.White,
+                        Text = "✓",
+                        TextColor = Colors.Black,
+                        FontSize = 18,
+                        FontAttributes = FontAttributes.Bold,
                         HorizontalOptions = LayoutOptions.Center,
                         VerticalOptions = LayoutOptions.Center,
-                        FontSize = count == 1 ? 10 : 14,
+                        HorizontalTextAlignment = TextAlignment.Center,
+                        VerticalTextAlignment = TextAlignment.Center
+                    };
+
+                    // Toon poppetje icon rechtsonder
+                    var personIcon = new Label
+                    {
+                        Text = "👤",
+                        TextColor = Colors.White,
+                        FontSize = 12,
+                        HorizontalOptions = LayoutOptions.End,
+                        VerticalOptions = LayoutOptions.End,
+                        TranslationX = 2,
+                        TranslationY = 2,
+                        Margin = new Thickness(0, 0, 2, 2)
+                    };
+                    cellGrid.Children.Add(personIcon);
+                }
+                else
+                {
+                    // Toon totaal aantal plekken
+                    circle.Content = new Label
+                    {
+                        Text = totalAvailableSpots.ToString(),
+                        TextColor = Colors.Black,
+                        FontSize = 13,
                         FontAttributes = FontAttributes.Bold,
-                        LineBreakMode = LineBreakMode.TailTruncation,
-                        HorizontalTextAlignment = TextAlignment.Center
-                    }
-                };
+                        HorizontalOptions = LayoutOptions.Center,
+                        VerticalOptions = LayoutOptions.Center,
+                        HorizontalTextAlignment = TextAlignment.Center,
+                        VerticalTextAlignment = TextAlignment.Center
+                    };
+                }
+
+                cellGrid.Children.Add(circleContainer);
+                circleContainer.Children.Add(circle);
 
                 var tapGesture = new TapGestureRecognizer();
                 tapGesture.Tapped += async (s, e) =>
                 {
                     if (count == 1)
                     {
-                        // Navigeer direct naar de les details
                         await viewModel.GoToDetailsCommand.ExecuteAsync(lessonsInSlot.First());
                     }
                     else
                     {
-                        // Toon pop-up met meerdere lessen
                         var popup = new MultipleLessonsPopup(lessonsInSlot);
                         var result = await Shell.Current.CurrentPage.ShowPopupAsync(popup);
 
@@ -217,7 +283,6 @@ public partial class WeekPage : ContentPage
                 Grid.SetRow(border, row);
                 Grid.SetColumn(border, col);
                 LessonGrid.Children.Add(border);
-                System.Diagnostics.Debug.WriteLine($"Added lesson block at Row={row}, Col={col}");
             }
 
             System.Diagnostics.Debug.WriteLine($"UpdateLessonGrid - Completed. Total children now: {LessonGrid.Children.Count}");
@@ -229,6 +294,54 @@ public partial class WeekPage : ContentPage
         finally
         {
             _isUpdating = false;
+        }
+    }
+
+    private void AddDiagonalBackground(Grid grid, List<Color> colors)
+    {
+        if (colors.Count == 2)
+        {
+            // Top-left driehoek
+            grid.Children.Add(new Polygon
+            {
+                Points = new PointCollection { new Point(0, 0), new Point(100, 0), new Point(0, 100) },
+                Fill = colors[0],
+                Aspect = Microsoft.Maui.Controls.Stretch.Fill
+            });
+            // Bottom-right driehoek
+            grid.Children.Add(new Polygon
+            {
+                Points = new PointCollection { new Point(100, 100), new Point(100, 0), new Point(0, 100) },
+                Fill = colors[1],
+                Aspect = Microsoft.Maui.Controls.Stretch.Fill
+            });
+        }
+        else if (colors.Count >= 3)
+        {
+            // Top-left
+            grid.Children.Add(new Polygon
+            {
+                Points = new PointCollection { new Point(0, 0), new Point(60, 0), new Point(0, 60) },
+                Fill = colors[0],
+                Aspect = Microsoft.Maui.Controls.Stretch.Fill
+            });
+            // Midden strook
+            grid.Children.Add(new Polygon
+            {
+                Points = new PointCollection { 
+                    new Point(60, 0), new Point(100, 0), new Point(100, 40), 
+                    new Point(40, 100), new Point(0, 100), new Point(0, 60) 
+                },
+                Fill = colors[1],
+                Aspect = Microsoft.Maui.Controls.Stretch.Fill
+            });
+            // Bottom-right
+            grid.Children.Add(new Polygon
+            {
+                Points = new PointCollection { new Point(100, 40), new Point(100, 100), new Point(40, 100) },
+                Fill = colors[2],
+                Aspect = Microsoft.Maui.Controls.Stretch.Fill
+            });
         }
     }
 

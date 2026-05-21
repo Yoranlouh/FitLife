@@ -105,7 +105,8 @@ app.MapGet("/lessons", async (IConfiguration configuration) =>
             LocationId = reader.GetInt32("location_id"),
             LocationName = reader.GetString("location_name"),
             CurrentParticipantCount = currentCount,
-            WaitlistCount = waitlistCount
+            WaitlistCount = waitlistCount,
+            IsBooked = random.Next(100) < 15 // 15% kans dat de gebruiker is aangemeld
         });
     }
 

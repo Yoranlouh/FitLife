@@ -1,0 +1,198 @@
+@page "/admin/reservations"
+@attribute [Authorize(Roles = "admin,instructor")]
+@inject IReservationService ReservationService
+@inject Blazored.Toast.Services.IToastService ToastService
+
+<PageTitle>Reserveringen - FitLife Admin</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-6 fw-bold">Reserveringen Overzicht</h1>
+            <p class="text-muted">Bekijk en beheer alle reserveringen</p>
+        </div>
+        <div class="col-auto">
+            <div class="btn-group" role="group">
+                <button type="button" class="btn @(_showCancelled ? "btn-outline-secondary" : "btn-primary")" @onclick="() => ToggleCancelled(false)">
+                    <i class="bi bi-check-circle me-1"></i>Actief
+                </button>
+                <button type="button" class="btn @(_showCancelled ? "btn-secondary" : "btn-outline-secondary")" @onclick="() => ToggleCancelled(true)">
+                    <i class="bi bi-x-circle me-1"></i>Geannuleerd
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-center my-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-3 text-muted">Reserveringen laden...</p>
+        </div>
+    }
+    else if (_displayedReservations.Any())
+    {
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Reserveringsdatum</th>
+                                <th>Lid</th>
+                                <th>Les Details</th>
+                                <th>Les Datum</th>
+                                <th>Status</th>
+                                <th class="text-end">Acties</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var reservation in _displayedReservations)
+                            {
+                                <tr class="@(reservation.IsCancelled ? "table-secondary" : "")">
+                                    <td>
+                                        <small class="text-muted">@reservation.ReservationDate.ToString("dd MMM yyyy HH:mm")</small>
+                                    </td>
+                                    <td>
+                                        <strong>@reservation.MemberName</strong>
+                                        @if (!string.IsNullOrEmpty(reservation.MemberEmail))
+                                        {
+                                            <br /><small class="text-muted">@reservation.MemberEmail</small>
+                                        }
+                                    </td>
+                                    <td>@reservation.LessonInfo</td>
+                                    <td>
+                                        <strong>@reservation.LessonStartTime.ToString("dd MMM yyyy")</strong>
+                                        <br /><small class="text-muted">@reservation.LessonStartTime.ToString("HH:mm")</small>
+                                    </td>
+                                    <td>
+                                        @if (reservation.IsCancelled)
+                                        {
+                                            <span class="badge bg-danger">
+                                                <i class="bi bi-x-circle me-1"></i>Geannuleerd
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle me-1"></i>Actief
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        @if (!reservation.IsCancelled)
+                                        {
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => CancelReservation(reservation.Id)">
+                                                <i class="bi bi-x-circle me-1"></i>Annuleren
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">Geen acties</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-3 text-muted">
+            <small>Toont @_displayedReservations.Count van @_allReservations.Count reserveringen</small>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>Geen reserveringen gevonden.
+        </div>
+    }
+</div>
+
+@code {
+    private List<ReservationDto> _allReservations = new();
+    private List<ReservationDto> _displayedReservations = new();
+    private bool _isLoading = true;
+    private bool _showCancelled = false;
+
+    /// <summary>
+    /// Loads all reservations when component initializes
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    /// <summary>
+    /// Loads reservations from the database
+    /// </summary>
+    private async Task LoadData()
+    {
+        _isLoading = true;
+        try
+        {
+            var fromDate = DateTime.Today.AddMonths(-1);
+            var toDate = DateTime.Today.AddMonths(2);
+            
+            _allReservations = await ReservationService.GetAllReservationsAsync(fromDate, toDate);
+            ApplyFilter();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading reservations: {ex.Message}");
+            ToastService.ShowError("Fout bij laden van reserveringen.");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Toggles between showing active or cancelled reservations
+    /// </summary>
+    private void ToggleCancelled(bool showCancelled)
+    {
+        _showCancelled = showCancelled;
+        ApplyFilter();
+    }
+
+    /// <summary>
+    /// Applies the current filter to the reservations list
+    /// </summary>
+    private void ApplyFilter()
+    {
+        _displayedReservations = _allReservations
+            .Where(r => r.IsCancelled == _showCancelled)
+            .OrderByDescending(r => r.ReservationDate)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Cancels a reservation
+    /// </summary>
+    private async Task CancelReservation(int reservationId)
+    {
+        try
+        {
+            var (success, message) = await ReservationService.CancelReservationAsync(reservationId);
+            
+            if (success)
+            {
+                ToastService.ShowSuccess(message);
+                await LoadData();
+            }
+            else
+            {
+                ToastService.ShowError(message);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cancelling reservation: {ex.Message}");
+            ToastService.ShowError("Fout bij annuleren van reservering.");
+        }
+    }
+}

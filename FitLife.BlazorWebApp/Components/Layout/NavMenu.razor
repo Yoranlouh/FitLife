@@ -1,6 +1,20 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+@using Microsoft.AspNetCore.Components.Authorization
+@using FitLife.BlazorWebApp.Services
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+@inject IAuthService AuthService
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">FitLife.BlazorWebApp</a>
+        <a class="navbar-brand" href="">FitLife</a>
+        <AuthorizeView>
+            <Authorized>
+                <span class="text-white me-3">@context.User.Identity?.Name</span>
+                <button class="btn btn-sm btn-outline-light" @onclick="Logout">
+                    <i class="bi bi-box-arrow-right"></i> Uitloggen
+                </button>
+            </Authorized>
+        </AuthorizeView>
     </div>
 </div>
 
@@ -8,29 +22,100 @@
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
+        <AuthorizeView>
+            <Authorized>
+                <!-- Admin/Instructor Navigation -->
+                <div class="nav-item px-3 mt-3">
+                    <h6 class="text-muted text-uppercase small">Admin Panel</h6>
+                </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="lesaanbod">
-                <span class="bi bi-list-stars-nav-menu" aria-hidden="true"></span> Lesaanbod
-            </NavLink>
-        </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="admin/dashboard">
+                        <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                    </NavLink>
+                </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="abonnementen">
-                <span class="bi bi-credit-card-nav-menu" aria-hidden="true"></span> Abonnementen
-            </NavLink>
-        </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="admin/lessons">
+                        <i class="bi bi-calendar-event me-2"></i> Lessen
+                    </NavLink>
+                </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="lid-worden">
-                <span class="bi bi-person-plus-nav-menu" aria-hidden="true"></span> Lid Worden
-            </NavLink>
-        </div>
+                <AuthorizeView Roles="admin">
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="admin/instructors">
+                            <i class="bi bi-person-badge me-2"></i> Instructeurs
+                        </NavLink>
+                    </div>
+
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="admin/workouts">
+                            <i class="bi bi-lightning me-2"></i> Workouts
+                        </NavLink>
+                    </div>
+
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="admin/locations">
+                            <i class="bi bi-geo-alt me-2"></i> Locaties
+                        </NavLink>
+                    </div>
+
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="admin/members">
+                            <i class="bi bi-people me-2"></i> Leden
+                        </NavLink>
+                    </div>
+                </AuthorizeView>
+
+                <hr class="my-3" />
+            </Authorized>
+
+            <NotAuthorized>
+                <!-- Public Navigation -->
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                        <i class="bi bi-house-door-fill me-2"></i> Home
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="lesaanbod">
+                        <i class="bi bi-list-stars me-2"></i> Lesaanbod
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="abonnementen">
+                        <i class="bi bi-credit-card me-2"></i> Abonnementen
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="lid-worden">
+                        <i class="bi bi-person-plus me-2"></i> Lid Worden
+                    </NavLink>
+                </div>
+
+                <hr class="my-3" />
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="admin/login">
+                        <i class="bi bi-box-arrow-in-right me-2"></i> Staff Login
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
     </nav>
 </div>
 
+@code {
+    /// <summary>
+    /// Handles user logout by clearing authentication state and redirecting to login page
+    /// </summary>
+    private async Task Logout()
+    {
+        await AuthService.LogoutAsync();
+        ((CustomAuthenticationStateProvider)AuthStateProvider).NotifyAuthenticationStateChanged();
+        NavigationManager.NavigateTo("/admin/login", true);
+    }
+}
