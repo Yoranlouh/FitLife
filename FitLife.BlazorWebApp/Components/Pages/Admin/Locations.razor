@@ -1,5 +1,5 @@
 @page "/admin/locations"
-@attribute [Authorize(Roles = "admin")]
+@attribute [Authorize(Roles = "employee,instructor")]
 @inject ILocationService LocationService
 @inject Blazored.Toast.Services.IToastService ToastService
 @inject IJSRuntime JSRuntime

@@ -7,34 +7,298 @@
              Title="{Binding Title}">
     <ScrollView>
         <VerticalStackLayout Spacing="20" Padding="20">
-            <Frame BackgroundColor="LightBlue" CornerRadius="10">
-                <VerticalStackLayout>
-                    <Label Text="Huidig Abonnement" FontAttributes="Bold" FontSize="18" />
-                    <Label Text="{Binding CurrentSubscription}" FontSize="22" />
-                    <Label Text="{Binding ExpiryDate, StringFormat='Verloopt op: {0:dd-MM-yyyy}'}" />
+
+            <!-- Current Subscription Card -->
+            <Frame BackgroundColor="{StaticResource Primary}"
+                   CornerRadius="10"
+                   Padding="20"
+                   HasShadow="True">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Huidig Abonnement"
+                           FontAttributes="Bold"
+                           FontSize="16"
+                           TextColor="White" />
+                    <Label Text="{Binding CurrentSubscription}"
+                           FontSize="24"
+                           FontAttributes="Bold"
+                           TextColor="White" />
+                    <Label Text="{Binding ExpiryDateDisplay}"
+                           FontSize="14"
+                           TextColor="White"
+                           Opacity="0.9" />
                 </VerticalStackLayout>
             </Frame>
 
-            <Label Text="Kies een Upgrade of Verlenging" FontSize="20" FontAttributes="Bold" Margin="0,10,0,0" />
+            <!-- Pending Change Warning (only visible if there's a pending change) -->
+            <Frame IsVisible="{Binding HasPendingChange}"
+                   BackgroundColor="Orange"
+                   CornerRadius="10"
+                   Padding="15"
+                   HasShadow="True">
+                <HorizontalStackLayout Spacing="10">
+                    <Label Text="⚠️"
+                           FontSize="24"
+                           VerticalOptions="Center" />
+                    <Label Text="{Binding PendingChangeMessage}"
+                           FontSize="14"
+                           TextColor="White"
+                           VerticalOptions="Center"
+                           LineBreakMode="WordWrap"
+                           HorizontalOptions="FillAndExpand" />
+                </HorizontalStackLayout>
+            </Frame>
 
-            <CollectionView ItemsSource="{Binding AvailableSubscriptions}">
+            <!-- Quick Actions Section -->
+            <Frame CornerRadius="10"
+                   Padding="15"
+                   HasShadow="True"
+                   BackgroundColor="White">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="⚙️ Beheer Huidig Abonnement"
+                           FontSize="16"
+                           FontAttributes="Bold"
+                           HorizontalOptions="Center" />
+
+                    <!-- Change Billing Cycle Button -->
+                    <Button Text="Wijzig factureringsperiode"
+                            Command="{Binding ChangeBillingCycleForCurrentSubscriptionCommand}"
+                            BackgroundColor="{StaticResource Primary}"
+                            TextColor="White"
+                            CornerRadius="5"
+                            FontSize="14" />
+
+                    <!-- Cancel Subscription Button -->
+                    <Button Text="Abonnement stopzetten"
+                            Command="{Binding CancelSubscriptionCommand}"
+                            BackgroundColor="Red"
+                            TextColor="White"
+                            CornerRadius="5"
+                            FontSize="14" />
+
+                    <Label Text="💡 Wijzigingen worden toegepast op je vernieuwingsdatum"
+                           FontSize="11"
+                           TextColor="Gray"
+                           HorizontalTextAlignment="Center"
+                           Margin="0,5,0,0" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Billing Cycle Toggle (for viewing/selecting new subscriptions) -->
+            <Frame CornerRadius="10"
+                   Padding="15"
+                   HasShadow="True"
+                   BackgroundColor="White">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Bekijk Prijzen"
+                           FontSize="16"
+                           FontAttributes="Bold"
+                           HorizontalOptions="Center" />
+
+                    <HorizontalStackLayout Spacing="15"
+                                          HorizontalOptions="Center">
+                        <Label Text="Maandelijks"
+                               FontSize="14"
+                               FontAttributes="{Binding IsYearly, Converter={StaticResource InverseBoolToFontAttributesConverter}}"
+                               TextColor="{Binding IsYearly, Converter={StaticResource InverseBoolToColorConverter}}"
+                               VerticalOptions="Center" />
+
+                        <Switch IsToggled="{Binding IsYearly}"
+                                OnColor="{StaticResource Primary}"
+                                ThumbColor="White" />
+
+                        <HorizontalStackLayout Spacing="5">
+                            <Label Text="Jaarlijks"
+                                   FontSize="14"
+                                   FontAttributes="{Binding IsYearly, Converter={StaticResource BoolToFontAttributesConverter}}"
+                                   TextColor="{Binding IsYearly, Converter={StaticResource BoolToColorConverter}}"
+                                   VerticalOptions="Center" />
+                            <Frame BackgroundColor="Green"
+                                   Padding="5,2"
+                                   CornerRadius="5"
+                                   HasShadow="False">
+                                <Label Text="Bespaar ~15%"
+                                       FontSize="10"
+                                       TextColor="White"
+                                       FontAttributes="Bold" />
+                            </Frame>
+                        </HorizontalStackLayout>
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Available Subscriptions Header -->
+            <Label Text="Kies een Abonnement"
+                   FontSize="20"
+                   FontAttributes="Bold"
+                   Margin="0,10,0,0" />
+
+            <!-- Loading Indicator -->
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                              IsVisible="{Binding IsBusy}"
+                              Color="{StaticResource Primary}"
+                              HeightRequest="50" />
+
+            <!-- Subscription Plans CollectionView -->
+            <CollectionView ItemsSource="{Binding AvailableSubscriptions}"
+                           IsVisible="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="vm:SubscriptionOption">
-                        <Frame Margin="0,5" Padding="15" CornerRadius="8" HasShadow="True">
-                            <HorizontalStackLayout Spacing="15">
-                                <VerticalStackLayout WidthRequest="200">
-                                    <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="18" />
-                                    <Label Text="{Binding Description}" FontSize="14" />
+                        <Frame Margin="0,10"
+                               Padding="20"
+                               CornerRadius="10"
+                               HasShadow="True"
+                               BackgroundColor="White">
+                            <VerticalStackLayout Spacing="12">
+                                <!-- Plan Name -->
+                                <Label Text="{Binding Name}"
+                                       FontAttributes="Bold"
+                                       FontSize="24"
+                                       HorizontalOptions="Center"
+                                       TextColor="{StaticResource Primary}" />
+
+                                <!-- Price Display (changes based on IsYearly toggle) -->
+                                <HorizontalStackLayout HorizontalOptions="Center" Spacing="0">
+                                    <Label Text="€"
+                                           FontSize="32"
+                                           FontAttributes="Bold"
+                                           TextColor="{StaticResource Primary}"
+                                           VerticalOptions="Center" />
+                                    <Label FontSize="32"
+                                           FontAttributes="Bold"
+                                           TextColor="{StaticResource Primary}"
+                                           VerticalOptions="Center">
+                                        <Label.Triggers>
+                                            <DataTrigger TargetType="Label"
+                                                        Binding="{Binding Source={RelativeSource AncestorType={x:Type vm:SubscriptionViewModel}}, Path=IsYearly}"
+                                                        Value="True">
+                                                <Setter Property="Text" Value="{Binding YearlyPrice, StringFormat='{0:F0}'}" />
+                                            </DataTrigger>
+                                            <DataTrigger TargetType="Label"
+                                                        Binding="{Binding Source={RelativeSource AncestorType={x:Type vm:SubscriptionViewModel}}, Path=IsYearly}"
+                                                        Value="False">
+                                                <Setter Property="Text" Value="{Binding MonthlyPrice, StringFormat='{0:F0}'}" />
+                                            </DataTrigger>
+                                        </Label.Triggers>
+                                    </Label>
+                                    <Label FontSize="16"
+                                           FontAttributes="Bold"
+                                           TextColor="{StaticResource Primary}"
+                                           VerticalOptions="Center"
+                                           Margin="0,8,0,0">
+                                        <Label.Triggers>
+                                            <DataTrigger TargetType="Label"
+                                                        Binding="{Binding Source={RelativeSource AncestorType={x:Type vm:SubscriptionViewModel}}, Path=IsYearly}"
+                                                        Value="True">
+                                                <Setter Property="Text" Value="/jr" />
+                                            </DataTrigger>
+                                            <DataTrigger TargetType="Label"
+                                                        Binding="{Binding Source={RelativeSource AncestorType={x:Type vm:SubscriptionViewModel}}, Path=IsYearly}"
+                                                        Value="False">
+                                                <Setter Property="Text" Value="/mnd" />
+                                            </DataTrigger>
+                                        </Label.Triggers>
+                                    </Label>
+                                </HorizontalStackLayout>
+
+                                <!-- Monthly price breakdown for yearly plans -->
+                                <Label IsVisible="{Binding Source={RelativeSource AncestorType={x:Type vm:SubscriptionViewModel}}, Path=IsYearly}"
+                                       HorizontalOptions="Center"
+                                       TextColor="Green"
+                                       FontSize="12"
+                                       FontAttributes="Bold">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="€" />
+                                            <Span Text="{Binding YearlyPrice, Converter={StaticResource YearlyToMonthlyConverter}}" />
+                                            <Span Text=" per maand" />
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+
+                                <!-- Credits Badge -->
+                                <Frame BackgroundColor="{StaticResource Primary}"
+                                       CornerRadius="5"
+                                       Padding="10"
+                                       HorizontalOptions="Center"
+                                       HasShadow="False">
+                                    <Label Text="{Binding CreditsDisplay}"
+                                           FontSize="16"
+                                           FontAttributes="Bold"
+                                           TextColor="White" />
+                                </Frame>
+
+                                <Label Text="1 credit = 1 les"
+                                       FontSize="12"
+                                       HorizontalOptions="Center"
+                                       TextColor="Gray" />
+
+                                <!-- Features List -->
+                                <VerticalStackLayout Spacing="8" Margin="0,10,0,0">
+                                    <HorizontalStackLayout Spacing="8">
+                                        <Label Text="✓" TextColor="Green" FontSize="18" FontAttributes="Bold" />
+                                        <Label Text="{Binding LessonsDisplay}" FontSize="14" VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
+                                    <HorizontalStackLayout Spacing="8">
+                                        <Label Text="✓" TextColor="Green" FontSize="18" FontAttributes="Bold" />
+                                        <Label Text="Toegang tot alle lessen" FontSize="14" VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
+                                    <HorizontalStackLayout Spacing="8">
+                                        <Label Text="✓" TextColor="Green" FontSize="18" FontAttributes="Bold" />
+                                        <Label Text="Online reserveren via app" FontSize="14" VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
+                                    <HorizontalStackLayout Spacing="8" IsVisible="{Binding IsUnlimited, Converter={StaticResource InverseBoolConverter}}">
+                                        <Label Text="✓" TextColor="Green" FontSize="18" FontAttributes="Bold" />
+                                        <Label Text="Credits rollen over (max 1 maand)" FontSize="14" VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
+                                    <HorizontalStackLayout Spacing="8" IsVisible="{Binding Name, Converter={StaticResource NameToShowDrinkConverter}}">
+                                        <Label Text="✓" TextColor="Green" FontSize="18" FontAttributes="Bold" />
+                                        <Label Text="Gratis sportdrank" FontSize="14" VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
+                                    <HorizontalStackLayout Spacing="8" IsVisible="{Binding Name, Converter={StaticResource NameIsAdvancedConverter}}">
+                                        <Label Text="✓" TextColor="Green" FontSize="18" FontAttributes="Bold" />
+                                        <Label Text="Prioriteit bij wachtlijsten" FontSize="14" VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
+                                    <HorizontalStackLayout Spacing="8" IsVisible="{Binding Name, Converter={StaticResource NameIsAdvancedConverter}}">
+                                        <Label Text="✓" TextColor="Green" FontSize="18" FontAttributes="Bold" />
+                                        <Label Text="1x per maand gastlid" FontSize="14" VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
                                 </VerticalStackLayout>
-                                <VerticalStackLayout VerticalOptions="Center">
-                                    <Label Text="{Binding Price, StringFormat='€{0:F2}/p.m.'}" FontAttributes="Bold" />
-                                    <Button Text="Kies" Margin="0,5,0,0" />
-                                </VerticalStackLayout>
-                            </HorizontalStackLayout>
+
+                                <!-- Select Button -->
+                                <Button Text="Kies dit abonnement"
+                                        Command="{Binding SelectSubscriptionCommand}"
+                                        Margin="0,15,0,0"
+                                        BackgroundColor="{StaticResource Primary}"
+                                        TextColor="White"
+                                        CornerRadius="5" />
+                            </VerticalStackLayout>
                         </Frame>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
+
+            <!-- Info Section -->
+            <Frame CornerRadius="10"
+                   Padding="15"
+                   HasShadow="True"
+                   BackgroundColor="LightBlue"
+                   Margin="0,10,0,20">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="ℹ️ Hoe werken abonnementswijzigingen?"
+                           FontSize="16"
+                           FontAttributes="Bold" />
+                    <Label FontSize="14" LineBreakMode="WordWrap">
+                        <Label.FormattedText>
+                            <FormattedString>
+                                <Span Text="• Je kunt op elk moment van abonnement wisselen&#x0a;" />
+                                <Span Text="• De wijziging wordt toegepast op je volgende vervaldatum&#x0a;" />
+                                <Span Text="• Je blijft je huidige abonnement gebruiken tot die datum&#x0a;" />
+                                <Span Text="• Credits worden automatisch aangepast bij verlenging" />
+                            </FormattedString>
+                        </Label.FormattedText>
+                    </Label>
+                </VerticalStackLayout>
+            </Frame>
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

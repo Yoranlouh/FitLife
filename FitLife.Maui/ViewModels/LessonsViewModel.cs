@@ -29,6 +29,9 @@ public partial class LessonsViewModel : BaseViewModel
     [ObservableProperty]
     private ObservableCollection<DayHeaderViewModel> _weekDays = new();
 
+    [ObservableProperty]
+    private LessonResponse? _selectedLesson;
+
     private DateTime _startOfWeek;
     private IEnumerable<LessonResponse> _allLessons = [];
 
@@ -113,56 +116,93 @@ public partial class LessonsViewModel : BaseViewModel
         System.Diagnostics.Debug.WriteLine($"LessonsViewModel: Lessons.Count after filter: {Lessons.Count}");
     }
 
-    /// <summary>
-    /// Select a specific day and filter lessons for that day
-    /// </summary>
     [RelayCommand]
-    private void SelectDay(DateTime date)
+    private void SelectDay(object dateParam)
     {
-        System.Diagnostics.Debug.WriteLine($"LessonsViewModel: SelectDay called with date: {date:yyyy-MM-dd}");
-        SelectedDate = date;
-        System.Diagnostics.Debug.WriteLine($"LessonsViewModel: SelectedDate updated. Lessons count: {Lessons.Count}");
+        DateTime date;
+        if (dateParam is DateTime dt)
+        {
+            date = dt;
+        }
+        else if (dateParam != null && DateTime.TryParse(dateParam.ToString(), out var parsedDate))
+        {
+            date = parsedDate;
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine($"[DEBUG_LOG] LessonsViewModel: SelectDay called with invalid parameter type: {dateParam?.GetType().Name}");
+            return;
+        }
+
+        System.Diagnostics.Debug.WriteLine($"[DEBUG_LOG] LessonsViewModel: SelectDay called with date: {date:yyyy-MM-dd}");
+        if (SelectedDate.Date != date.Date)
+        {
+            SelectedDate = date;
+            System.Diagnostics.Debug.WriteLine($"[DEBUG_LOG] LessonsViewModel: SelectedDate updated to {SelectedDate:yyyy-MM-dd}");
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine($"[DEBUG_LOG] LessonsViewModel: SelectedDate was already {date:yyyy-MM-dd}, still filtering to be sure");
+            FilterLessonsForSelectedDay();
+        }
     }
 
     [RelayCommand]
-    private void PreviousWeek()
+    private async Task PreviousWeek()
     {
+        System.Diagnostics.Debug.WriteLine("[DEBUG_LOG] LessonsViewModel: PreviousWeek called");
         CurrentDate = CurrentDate.AddDays(-7);
         UpdateWeekInfo();
         SelectedDate = _startOfWeek; // Selecteer eerste dag van nieuwe week
-        _ = LoadLessons();
+        await LoadLessons();
     }
 
     [RelayCommand]
-    private void NextWeek()
+    private async Task NextWeek()
     {
+        System.Diagnostics.Debug.WriteLine("[DEBUG_LOG] LessonsViewModel: NextWeek called");
         CurrentDate = CurrentDate.AddDays(7);
         UpdateWeekInfo();
         SelectedDate = _startOfWeek; // Selecteer eerste dag van nieuwe week
-        _ = LoadLessons();
+        await LoadLessons();
     }
 
     [RelayCommand]
-    public async Task LoadLessons()
+    private async Task LoadLessons()
     {
         if (IsBusy) return;
 
+        System.Diagnostics.Debug.WriteLine("[DEBUG_LOG] LessonsViewModel: LoadLessons started");
         try
         {
             IsBusy = true;
             var lessons = await _lessonService.GetLessonsAsync();
+            System.Diagnostics.Debug.WriteLine($"[DEBUG_LOG] LessonsViewModel: Received {lessons?.Count() ?? 0} lessons from service");
 
-            var endOfWeek = _startOfWeek.AddDays(7);
-            _allLessons = lessons
-                .Where(l => l.StartTime >= _startOfWeek && l.StartTime < endOfWeek)
-                .OrderBy(l => l.StartTime)
-                .ToList();
+            if (lessons == null)
+            {
+                _allLessons = Enumerable.Empty<LessonResponse>();
+            }
+            else
+            {
+                var endOfWeek = _startOfWeek.AddDays(7);
+                _allLessons = lessons
+                    .Where(l => l.StartTime.Date >= _startOfWeek.Date && l.StartTime.Date < endOfWeek.Date)
+                    .OrderBy(l => l.StartTime)
+                    .ToList();
+            }
 
+            System.Diagnostics.Debug.WriteLine($"[DEBUG_LOG] LessonsViewModel: Filtered for week: {_allLessons.Count()} lessons");
             FilterLessonsForSelectedDay();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[DEBUG_LOG] LessonsViewModel: Error in LoadLessons: {ex}");
         }
         finally
         {
             IsBusy = false;
+            System.Diagnostics.Debug.WriteLine("[DEBUG_LOG] LessonsViewModel: LoadLessons finished");
         }
     }
 
@@ -199,5 +239,39 @@ public partial class LessonsViewModel : BaseViewModel
     private async Task GoToWeekView()
     {
         await Shell.Current.GoToAsync("//WeekPage");
+    }
+
+    /// <summary>
+    /// Handle CollectionView selection changed
+    /// </summary>
+    [RelayCommand]
+    private async Task SelectionChanged(LessonResponse? lesson)
+    {
+        System.Diagnostics.Debug.WriteLine($"LessonsViewModel: SelectionChanged called with lesson: {lesson?.WorkoutName ?? "null"}");
+        
+        if (lesson != null)
+        {
+            // Navigate to detail page
+            await GoToDetails(lesson);
+            
+            // Clear selection so user can tap the same item again
+            SelectedLesson = null;
+        }
+    }
+
+    partial void OnSelectedLessonChanged(LessonResponse? value)
+    {
+        System.Diagnostics.Debug.WriteLine($"LessonsViewModel: SelectedLesson changed to: {value?.WorkoutName ?? "null"}");
+        
+        if (value != null)
+        {
+            // Alternative approach - navigate here instead of in SelectionChanged
+            Task.Run(async () =>
+            {
+                await GoToDetails(value);
+                // Clear selection
+                MainThread.BeginInvokeOnMainThread(() => SelectedLesson = null);
+            });
+        }
     }
 }

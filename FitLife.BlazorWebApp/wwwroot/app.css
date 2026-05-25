@@ -1,19 +1,46 @@
+/* FitLife Brand Colors - matching MAUI app */
+:root {
+    --fitlife-primary: #5B6636;
+    --fitlife-primary-dark: #4A542B;
+    --fitlife-primary-light: #7A8751;
+    --fitlife-secondary: #DEDEDE;
+    --fitlife-tertiary: #1F1F1F;
+    --fitlife-success: #4CAF50;
+    --fitlife-danger: #e50000;
+    --fitlife-warning: #FFEB3B;
+    --fitlife-info: #3F51B5;
+}
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
 a, .btn-link {
-    color: #006bb7;
+    color: var(--fitlife-primary);
+}
+
+a:hover, .btn-link:hover {
+    color: var(--fitlife-primary-dark);
 }
 
 .btn-primary {
     color: #fff;
-    background-color: #1b6ec2;
-    border-color: #1861ac;
+    background-color: var(--fitlife-primary);
+    border-color: var(--fitlife-primary-dark);
+}
+
+.btn-primary:hover {
+    background-color: var(--fitlife-primary-dark);
+    border-color: var(--fitlife-primary-dark);
+}
+
+.btn-success {
+    background-color: var(--fitlife-success);
+    border-color: var(--fitlife-success);
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem var(--fitlife-primary-light);
 }
 
 .content {
@@ -48,6 +75,53 @@ h1:focus {
 
 .darker-border-checkbox.form-check-input {
     border-color: #929292;
+}
+
+/* FitLife Custom Styling */
+.border-primary {
+    border-color: var(--fitlife-primary) !important;
+}
+
+.border-success {
+    border-color: var(--fitlife-success) !important;
+}
+
+.text-primary {
+    color: var(--fitlife-primary) !important;
+}
+
+.bg-primary {
+    background-color: var(--fitlife-primary) !important;
+}
+
+.badge.bg-primary {
+    background-color: var(--fitlife-primary) !important;
+}
+
+.badge.bg-success {
+    background-color: var(--fitlife-success) !important;
+}
+
+.badge.bg-warning {
+    background-color: var(--fitlife-warning) !important;
+    color: #000;
+}
+
+.badge.bg-info {
+    background-color: var(--fitlife-info) !important;
+}
+
+/* Card hover effect */
+.card:hover {
+    transform: translateY(-2px);
+    transition: transform 0.2s ease-in-out;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* Active nav link styling */
+.nav-link.active {
+    background-color: var(--fitlife-primary-light) !important;
+    color: white !important;
 }
 
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {

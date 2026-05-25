@@ -3,61 +3,134 @@
 <PageTitle>Abonnementen - FitLife</PageTitle>
 
 <div class="container mt-5">
-    <h2 class="text-center mb-4">Onze Abonnementen</h2>
-    <p class="text-center">Kies het abonnement dat het beste bij jouw levensstijl past.</p>
+    <div class="text-center mb-5">
+        <h1 class="display-5 fw-bold mb-3">Onze Abonnementen</h1>
+        <p class="lead">Kies het abonnement dat het beste bij jouw levensstijl past.</p>
+        <p class="text-muted">Betaal per les met credits - vol flexibiliteit!</p>
+        
+        <div class="d-flex justify-content-center align-items-center mt-4">
+            <span class="me-3 @(!isYearly ? "fw-bold" : "text-muted")">Maandelijks</span>
+            <div class="form-check form-switch fs-4">
+                <input class="form-check-input" type="checkbox" role="switch" id="billingToggle" @bind="isYearly" style="cursor: pointer;">
+            </div>
+            <span class="ms-3 @(isYearly ? "fw-bold" : "text-muted")">Jaarlijks <span class="badge bg-success">Bespaar ~15%</span></span>
+        </div>
+    </div>
 
     <div class="row row-cols-1 row-cols-md-3 g-4 mt-3">
-        @foreach (var sub in mockSubscriptions)
+        @foreach (var sub in subscriptions)
         {
+            var displayPrice = isYearly ? sub.YearlyPrice : sub.MonthlyPrice;
             <div class="col">
-                <div class="card h-100 shadow @(sub.Name == "Premium" ? "border-primary" : "")">
-                    @if (sub.Name == "Premium")
+                <div class="card h-100 shadow @(sub.Name == "Intermediate" ? "border-primary" : "")">
+                    @if (sub.Name == "Intermediate")
                     {
                         <div class="card-header bg-primary text-white text-center">
                             <strong>Meest Gekozen</strong>
                         </div>
                     }
                     <div class="card-body text-center">
-                        <h5 class="card-title">@sub.Name</h5>
-                        <h2 class="card-price">€@sub.Price<span class="text-muted small">/mnd</span></h2>
-                        <p class="text-muted">Looptijd: @sub.DurationInMonths maanden</p>
+                        <h5 class="card-title fw-bold">@sub.Name</h5>
+                        <h2 class="card-price text-primary fw-bold">
+                            €@displayPrice.ToString("F0")<span class="text-muted small fw-normal">/@(isYearly ? "jr" : "mnd")</span>
+                        </h2>
+                        @if (isYearly)
+                        {
+                            <p class="text-success small fw-bold">€@(Math.Round(sub.YearlyPrice / 12, 2).ToString("F2")) per maand</p>
+                        }
+
+                        <div class="alert alert-success mt-3 mb-3" role="alert">
+                            <i class="bi bi-credit-card"></i> <strong>@(sub.IsUnlimited ? "Onbeperkt" : sub.CreditsPerMonth.ToString()) credits</strong> per maand
+                        </div>
+
+                        <p class="text-muted small">@(sub.IsUnlimited ? "Nooit meer zonder credits!" : "1 credit = 1 les")</p>
                         <hr>
-                        <ul class="list-unstyled mb-4">
-                            <li><i class="bi bi-check2 text-success"></i> Onbeperkt toegang</li>
-                            <li><i class="bi bi-check2 text-success"></i> Toegang tot alle lessen</li>
-                            @if (sub.Name != "Basis")
+                        <ul class="list-unstyled mb-4 text-start">
+                            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> @(sub.IsUnlimited ? "Onbeperkt lessen" : $"{sub.CreditsPerMonth} lessen") per maand</li>
+                            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Toegang tot alle lessen</li>
+                            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Online reserveren via app</li>
+                            @if (!sub.IsUnlimited)
                             {
-                                <li><i class="bi bi-check2 text-success"></i> Gratis sportdrank</li>
-                                <li><i class="bi bi-check2 text-success"></i> 1 Gastbezoek per maand</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Credits rollen over*</li>
                             }
-                            @if (sub.Name == "Elite")
+                            @if (sub.Name != "Rookie")
                             {
-                                <li><i class="bi bi-check2 text-success"></i> Personal training (1u/mnd)</li>
-                                <li><i class="bi bi-check2 text-success"></i> Sauna & Wellness</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Gratis sportdrank</li>
+                            }
+                            @if (sub.Name == "Advanced")
+                            {
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Prioriteit bij wachtlijsten</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> 1x per maand gastlid</li>
                             }
                         </ul>
+                        @if (!sub.IsUnlimited)
+                        {
+                            <p class="text-muted small">*Max 1 maand geldig</p>
+                        }
                     </div>
                     <div class="card-footer bg-transparent border-top-0 pb-4">
-                        <a href="lid-worden?plan=@sub.Name" class="btn @(sub.Name == "Premium" ? "btn-primary" : "btn-outline-primary") w-100">Kies @sub.Name</a>
+                        <a href="lid-worden?plan=@sub.Name&yearly=@isYearly" class="btn @(sub.Name == "Intermediate" ? "btn-primary" : "btn-outline-primary") w-100">
+                            Kies @sub.Name
+                        </a>
                     </div>
                 </div>
             </div>
         }
     </div>
+
+    <div class="row mt-5">
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-info-circle text-primary"></i> Hoe werken credits?</h5>
+                    <ul class="mb-0">
+                        <li>Bij elke lesreservering wordt <strong>1 credit</strong> van je account afgeschreven</li>
+                        <li>Je kunt je resterende credits altijd zien in de FitLife app</li>
+                        <li>Credits worden automatisch maandelijks bijgevuld</li>
+                        <li>Ongebruikte credits blijven 1 maand geldig</li>
+                        <li>Annuleer je reservering? Dan krijg je je credit terug!</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 @code {
-    private List<SubscriptionData> mockSubscriptions = new()
+    private bool isYearly = false;
+
+    private List<SubscriptionData> subscriptions = new()
     {
-        new SubscriptionData { Name = "Basis", Price = 29.99m, DurationInMonths = 12 },
-        new SubscriptionData { Name = "Premium", Price = 39.99m, DurationInMonths = 12 },
-        new SubscriptionData { Name = "Elite", Price = 59.99m, DurationInMonths = 6 }
+        new SubscriptionData
+        {
+            Name = "Rookie",
+            MonthlyPrice = 45,
+            CreditsPerMonth = 9,
+            Description = "Ideaal voor beginners"
+        },
+        new SubscriptionData
+        {
+            Name = "Intermediate",
+            MonthlyPrice = 65,
+            CreditsPerMonth = 13,
+            Description = "Perfecte balans"
+        },
+        new SubscriptionData
+        {
+            Name = "Advanced",
+            MonthlyPrice = 85,
+            IsUnlimited = true,
+            Description = "Voor de fanatieke sporter"
+        }
     };
 
     private class SubscriptionData
     {
         public string Name { get; set; } = "";
-        public decimal Price { get; set; }
-        public int DurationInMonths { get; set; }
+        public decimal MonthlyPrice { get; set; }
+        public decimal YearlyPrice => Math.Round(MonthlyPrice * 12 * 0.85m, 2);
+        public int CreditsPerMonth { get; set; }
+        public bool IsUnlimited { get; set; }
+        public string Description { get; set; } = "";
     }
 }

@@ -1,5 +1,5 @@
 @page "/admin/instructors"
-@attribute [Authorize(Roles = "admin")]
+@attribute [Authorize(Roles = "employee,instructor")]
 @inject IInstructorService InstructorService
 @inject Blazored.Toast.Services.IToastService ToastService
 

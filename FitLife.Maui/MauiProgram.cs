@@ -52,7 +52,7 @@ public static class MauiProgram
             client.BaseAddress = new Uri(baseUrl);
         });
 
-        builder.Services.AddHttpClient<IAuthenticationService, AuthenticationService>(client =>
+        builder.Services.AddHttpClient<ISubscriptionService, SubscriptionService>(client =>
         {
             // Docker API draait op poort 8080.
             // Android emulator gebruikt 10.0.2.2 om de hostmachine te bereiken.
@@ -62,6 +62,27 @@ public static class MauiProgram
 
             client.BaseAddress = new Uri(baseUrl);
         });
+
+        // Register AuthenticationService as Singleton to maintain authentication state across the app
+        // This ensures that login information persists when navigating between pages
+        builder.Services.AddSingleton<IAuthenticationService>(serviceProvider =>
+        {
+            var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
+            var httpClient = httpClientFactory.CreateClient(nameof(AuthenticationService));
+
+            // Docker API draait op poort 8080.
+            // Android emulator gebruikt 10.0.2.2 om de hostmachine te bereiken.
+            string baseUrl = DeviceInfo.Platform == DevicePlatform.Android
+                ? "http://10.0.2.2:8080/"
+                : "http://localhost:8080/";
+
+            httpClient.BaseAddress = new Uri(baseUrl);
+
+            return new AuthenticationService(httpClient);
+        });
+
+        // Register HttpClient for AuthenticationService
+        builder.Services.AddHttpClient(nameof(AuthenticationService));
 
         // ViewModels - Use Transient for pages that need fresh state on each navigation
         builder.Services.AddTransient<LoginViewModel>();

@@ -3,7 +3,7 @@
 @using FitLife.BlazorWebApp.Models
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
-@attribute [Authorize(Roles = "admin")]
+@attribute [Authorize(Roles = "employee,instructor")]
 @inject IDashboardService DashboardService
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider

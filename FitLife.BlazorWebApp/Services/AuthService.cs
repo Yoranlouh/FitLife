@@ -2,7 +2,6 @@ using FitLife.BlazorWebApp.Models;
 using MySqlConnector;
 using System.Security.Cryptography;
 using System.Text;
-using Blazored.LocalStorage;
 
 namespace FitLife.BlazorWebApp.Services;
 
@@ -12,13 +11,61 @@ namespace FitLife.BlazorWebApp.Services;
 public class AuthService : IAuthService
 {
     private readonly IConfiguration _configuration;
-    private readonly ILocalStorageService _localStorage;
-    private const string UserSessionKey = "fitlife_admin_session";
+    private readonly ISessionService _sessionService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public AuthService(IConfiguration configuration, ILocalStorageService localStorage)
+    public AuthService(IConfiguration configuration, ISessionService sessionService, IHttpContextAccessor httpContextAccessor)
     {
         _configuration = configuration;
-        _localStorage = localStorage;
+        _sessionService = sessionService;
+        _httpContextAccessor = httpContextAccessor;
+    }
+
+    private string GetSessionId()
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext == null)
+            return string.Empty;
+
+        // Try to get existing auth token from cookie
+        if (httpContext.Request.Cookies.TryGetValue(".FitLife.Auth", out var existingToken))
+        {
+            return existingToken;
+        }
+
+        // Use or create a session ID as fallback
+        if (string.IsNullOrEmpty(httpContext.Session.Id))
+        {
+            // Force session to be created
+            httpContext.Session.SetString("init", "true");
+        }
+
+        return httpContext.Session.Id;
+    }
+
+    private void SetAuthCookie(string sessionId)
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext != null)
+        {
+            httpContext.Response.Cookies.Append(".FitLife.Auth", sessionId, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Lax,
+                IsEssential = true,
+                MaxAge = TimeSpan.FromHours(8)
+            });
+        }
+    }
+
+    private void RemoveAuthCookie()
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext != null)
+        {
+            httpContext.Response.Cookies.Delete(".FitLife.Auth");
+        }
     }
 
     /// <summary>
@@ -44,11 +91,11 @@ public class AuthService : IAuthService
             await using var connection = new MySqlConnection(connectionString);
             await connection.OpenAsync();
 
-            // Query to get user by email - only admin and instructor roles allowed
+            // Query to get user by email - only employee and instructor roles allowed
             const string sql = """
                 SELECT id, email, password_hash, display_name, role
                 FROM users
-                WHERE email = @email AND role IN ('admin', 'instructor')
+                WHERE email = @email AND role IN ('employee', 'instructor')
                 LIMIT 1;
                 """;
 
@@ -81,8 +128,14 @@ public class AuthService : IAuthService
                         IsAuthenticated = true
                     };
 
-                    // Store session in local storage
-                    await _localStorage.SetItemAsync(UserSessionKey, user);
+                    // Generate a unique session ID for this login
+                    var sessionId = Guid.NewGuid().ToString();
+                    
+                    // Store session in memory
+                    _sessionService.SetUserSession(sessionId, user);
+                    
+                    // Set authentication cookie
+                    SetAuthCookie(sessionId);
 
                     return (true, "Login succesvol!", user);
                 }
@@ -92,31 +145,35 @@ public class AuthService : IAuthService
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Login error: {ex.Message}");
             return (false, "Er is een fout opgetreden bij het inloggen.", null);
         }
     }
 
     /// <summary>
-    /// Removes the user session from local storage
+    /// Removes the user session from memory
     /// </summary>
-    public async Task LogoutAsync()
+    public Task LogoutAsync()
     {
-        await _localStorage.RemoveItemAsync(UserSessionKey);
+        var sessionId = GetSessionId();
+        _sessionService.RemoveUserSession(sessionId);
+        RemoveAuthCookie();
+        return Task.CompletedTask;
     }
 
     /// <summary>
-    /// Retrieves the current user session from local storage
+    /// Retrieves the current user session from memory
     /// </summary>
-    public async Task<UserSessionDto?> GetCurrentUserAsync()
+    public Task<UserSessionDto?> GetCurrentUserAsync()
     {
         try
         {
-            return await _localStorage.GetItemAsync<UserSessionDto>(UserSessionKey);
+            var sessionId = GetSessionId();
+            var user = _sessionService.GetUserSession(sessionId);
+            return Task.FromResult(user);
         }
         catch
         {
-            return null;
+            return Task.FromResult<UserSessionDto?>(null);
         }
     }
 

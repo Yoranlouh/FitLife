@@ -106,8 +106,6 @@
                                    TextColor="{StaticResource Gray400}" 
                                    VerticalOptions="Center"/>
                             
-                            <!-- Separator -->
-                            <BoxView Grid.Row="1" Grid.ColumnSpan="3" HeightRequest="1" BackgroundColor="{StaticResource Gray100}" Margin="0,15,0,0" />
                         </Grid>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>

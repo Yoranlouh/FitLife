@@ -1,31 +1,58 @@
 using System.Security.Claims;
-using Blazored.LocalStorage;
 using FitLife.BlazorWebApp.Models;
 using Microsoft.AspNetCore.Components.Authorization;
 
 namespace FitLife.BlazorWebApp.Services;
 
 /// <summary>
-/// Custom authentication state provider that uses local storage for session management
+/// Custom authentication state provider that uses in-memory session for session management
 /// </summary>
 public class CustomAuthenticationStateProvider : AuthenticationStateProvider
 {
-    private readonly ILocalStorageService _localStorage;
-    private const string UserSessionKey = "fitlife_admin_session";
+    private readonly ISessionService _sessionService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public CustomAuthenticationStateProvider(ILocalStorageService localStorage)
+    public CustomAuthenticationStateProvider(ISessionService sessionService, IHttpContextAccessor httpContextAccessor)
     {
-        _localStorage = localStorage;
+        _sessionService = sessionService;
+        _httpContextAccessor = httpContextAccessor;
+    }
+
+    private string GetSessionId()
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext == null)
+            return string.Empty;
+
+        // Try to get existing auth token from cookie
+        if (httpContext.Request.Cookies.TryGetValue(".FitLife.Auth", out var existingToken))
+        {
+            return existingToken;
+        }
+
+        // Fallback to session ID
+        if (string.IsNullOrEmpty(httpContext.Session.Id))
+        {
+            httpContext.Session.SetString("init", "true");
+        }
+
+        return httpContext.Session.Id;
     }
 
     /// <summary>
-    /// Gets the current authentication state from local storage
+    /// Gets the current authentication state from in-memory session
     /// </summary>
-    public override async Task<AuthenticationState> GetAuthenticationStateAsync()
+    public override Task<AuthenticationState> GetAuthenticationStateAsync()
     {
         try
         {
-            var userSession = await _localStorage.GetItemAsync<UserSessionDto>(UserSessionKey);
+            var sessionId = GetSessionId();
+            if (string.IsNullOrEmpty(sessionId))
+            {
+                return Task.FromResult(new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity())));
+            }
+
+            var userSession = _sessionService.GetUserSession(sessionId);
 
             if (userSession != null && userSession.IsAuthenticated)
             {
@@ -40,7 +67,7 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
                 var identity = new ClaimsIdentity(claims, "CustomAuth");
                 var user = new ClaimsPrincipal(identity);
 
-                return new AuthenticationState(user);
+                return Task.FromResult(new AuthenticationState(user));
             }
         }
         catch
@@ -48,7 +75,7 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
             // If there's an error reading from storage, return anonymous user
         }
 
-        return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+        return Task.FromResult(new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity())));
     }
 
     /// <summary>

@@ -97,7 +97,7 @@
 
         <!-- Footer -->
         <Label Grid.Row="2"
-               Text="Nog geen account? Neem contact op met FitLife"
+               Text="Lid worden? Meld je aan via de website."
                FontSize="12"
                TextColor="{StaticResource Gray500}"
                HorizontalOptions="Center"

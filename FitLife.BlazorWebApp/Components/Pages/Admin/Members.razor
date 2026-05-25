@@ -1,5 +1,5 @@
 @page "/admin/members"
-@attribute [Authorize(Roles = "admin")]
+@attribute [Authorize(Roles = "employee,instructor")]
 @inject IUserService UserService
 @inject Blazored.Toast.Services.IToastService ToastService
 
@@ -13,16 +13,16 @@
         </div>
         <div class="col-auto">
             <div class="btn-group" role="group">
-                <button type="button" class="btn @(_roleFilter == null ? "btn-primary" : "btn-outline-primary")" @onclick="() => FilterByRole(null)">
+                <button type="button" class="btn @(_roleFilter == null ? "btn-primary" : "btn-outline-primary")" @onclick='() => FilterByRole(null)'>
                     Alle (@_allUsers.Count)
                 </button>
-                <button type="button" class="btn @(_roleFilter == "member" ? "btn-primary" : "btn-outline-primary")" @onclick="() => FilterByRole("member")">
+                <button type="button" class="btn @(_roleFilter == "member" ? "btn-primary" : "btn-outline-primary")" @onclick='() => FilterByRole("member")'>
                     Leden (@_allUsers.Count(u => u.Role == "member"))
                 </button>
-                <button type="button" class="btn @(_roleFilter == "instructor" ? "btn-primary" : "btn-outline-primary")" @onclick="() => FilterByRole("instructor")">
+                <button type="button" class="btn @(_roleFilter == "instructor" ? "btn-primary" : "btn-outline-primary")" @onclick='() => FilterByRole("instructor")'>
                     Instructeurs (@_allUsers.Count(u => u.Role == "instructor"))
                 </button>
-                <button type="button" class="btn @(_roleFilter == "admin" ? "btn-primary" : "btn-outline-primary")" @onclick="() => FilterByRole("admin")">
+                <button type="button" class="btn @(_roleFilter == "admin" ? "btn-primary" : "btn-outline-primary")" @onclick='() => FilterByRole("admin")'>
                     Admins (@_allUsers.Count(u => u.Role == "admin"))
                 </button>
             </div>
@@ -108,13 +108,13 @@
                                             </button>
                                             <ul class="dropdown-menu">
                                                 <li><h6 class="dropdown-header">Wijzig Rol</h6></li>
-                                                <li><button class="dropdown-item" @onclick="() => UpdateUserRole(user.Id, "member")">
+                                                <li><button class="dropdown-item" @onclick='() => UpdateUserRole(user.Id, "member")'>
                                                     <i class="bi bi-person me-2"></i>Lid
                                                 </button></li>
-                                                <li><button class="dropdown-item" @onclick="() => UpdateUserRole(user.Id, "instructor")">
+                                                <li><button class="dropdown-item" @onclick='() => UpdateUserRole(user.Id, "instructor")'>
                                                     <i class="bi bi-person-badge me-2"></i>Instructeur
                                                 </button></li>
-                                                <li><button class="dropdown-item" @onclick="() => UpdateUserRole(user.Id, "admin")">
+                                                <li><button class="dropdown-item" @onclick='() => UpdateUserRole(user.Id, "admin")'>
                                                     <i class="bi bi-shield-check me-2"></i>Admin
                                                 </button></li>
                                             </ul>

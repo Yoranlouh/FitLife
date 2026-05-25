@@ -1,3 +1,5 @@
+using FitLife.BlazorWebApp.Models;
+
 namespace FitLife.BlazorWebApp.Services;
 
 /// <summary>

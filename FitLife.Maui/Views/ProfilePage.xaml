@@ -34,21 +34,61 @@
                 </VerticalStackLayout>
             </Frame>
 
+            <!-- Credits Sectie -->
+            <Frame CornerRadius="10" Padding="20" HasShadow="True" BackgroundColor="{StaticResource Primary}">
+                <VerticalStackLayout Spacing="10" HorizontalOptions="Center">
+                    <Label Text="Resterende Credits" 
+                           FontSize="16" 
+                           TextColor="White"
+                           HorizontalOptions="Center" />
+                    <Label Text="{Binding Credits}" 
+                           FontSize="48" 
+                           FontAttributes="Bold" 
+                           TextColor="White"
+                           HorizontalOptions="Center" />
+                    <Label Text="1 credit = 1 les" 
+                           FontSize="12" 
+                           TextColor="White"
+                           Opacity="0.8"
+                           HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </Frame>
+
             <!-- Abonnement Sectie -->
             <Label Text="Mijn Abonnement" FontSize="20" FontAttributes="Bold" />
             <Frame CornerRadius="10" Padding="15" HasShadow="True">
-                <VerticalStackLayout Spacing="5">
+                <VerticalStackLayout Spacing="8">
                     <HorizontalStackLayout Spacing="10">
-                        <Label Text="Status:" FontAttributes="Bold" />
-                        <Label Text="{Binding SubscriptionName}" TextColor="Green" />
+                        <Label Text="Type:" FontAttributes="Bold" />
+                        <Label Text="{Binding SubscriptionName}" TextColor="Green" FontAttributes="Bold" />
                     </HorizontalStackLayout>
-                    
+
                     <HorizontalStackLayout Spacing="10">
-                        <Label Text="Geldig tot:" FontAttributes="Bold" />
+                        <Label Text="Vernieuwing:" FontAttributes="Bold" />
                         <Label Text="{Binding SubscriptionEndDate, StringFormat='{0:dd-MM-yyyy}'}" />
                     </HorizontalStackLayout>
-                    
-                    <Button Text="Abonnement Beheren" 
+
+                    <!-- Pending Change Warning -->
+                    <Frame IsVisible="{Binding HasPendingSubscriptionChange}"
+                           BackgroundColor="Orange"
+                           Padding="10"
+                           CornerRadius="5"
+                           HasShadow="False"
+                           Margin="0,5,0,0">
+                        <HorizontalStackLayout Spacing="8">
+                            <Label Text="⚠️"
+                                   FontSize="16"
+                                   VerticalOptions="Center" />
+                            <Label Text="{Binding PendingSubscriptionInfo}"
+                                   FontSize="12"
+                                   TextColor="White"
+                                   VerticalOptions="Center"
+                                   LineBreakMode="WordWrap"
+                                   HorizontalOptions="FillAndExpand" />
+                        </HorizontalStackLayout>
+                    </Frame>
+
+                    <Button Text="Abonnement Beheren"
                             Clicked="OnManageSubscriptionClicked"
                             Margin="0,10,0,0" />
                 </VerticalStackLayout>
@@ -56,6 +96,12 @@
 
             <Button Text="Mijn Lessen Bekijken" 
                     Clicked="OnViewMyLessonsClicked" />
+
+            <Button Text="Uitloggen"
+                    Command="{Binding LogoutCommand}"
+                    BackgroundColor="Red"
+                    TextColor="White"
+                    Margin="0,20,0,0" />
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

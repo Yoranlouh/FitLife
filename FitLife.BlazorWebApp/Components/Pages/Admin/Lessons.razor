@@ -2,7 +2,7 @@
 @using FitLife.BlazorWebApp.Services
 @using FitLife.BlazorWebApp.Models
 @using Microsoft.AspNetCore.Authorization
-@attribute [Authorize(Roles = "admin,instructor")]
+@attribute [Authorize(Roles = "employee,instructor")]
 @inject ILessonService LessonService
 @inject IWorkoutService WorkoutService
 @inject IInstructorService InstructorService

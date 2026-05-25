@@ -26,7 +26,7 @@
                         </div>
                     }
 
-                    <EditForm Model="@_loginModel" OnValidSubmit="HandleLogin">
+                    <EditForm Model="@_loginModel" OnValidSubmit="HandleLogin" FormName="LoginForm">
                         <DataAnnotationsValidator />
 
                         <div class="mb-3">
@@ -78,7 +78,9 @@
     /// <summary>
     /// Model for the login form with email and password fields
     /// </summary>
-    private LoginModel _loginModel = new();
+    [SupplyParameterFromForm]
+    private LoginModel _loginModel { get; set; } = new();
+
     private string _errorMessage = string.Empty;
     private bool _isLoading = false;
 
@@ -110,17 +112,17 @@
             {
                 // Notify authentication state provider that user logged in
                 ((CustomAuthenticationStateProvider)AuthStateProvider).NotifyAuthenticationStateChanged();
-                
+
                 ToastService.ShowSuccess("Login succesvol! Welkom terug.");
-                
-                // Redirect based on role
+
+                // Redirect based on role - forceLoad to avoid NavigationException
                 if (user.Role == "instructor")
                 {
-                    NavigationManager.NavigateTo("/instructor/dashboard");
+                    NavigationManager.NavigateTo("/instructor/dashboard", forceLoad: true);
                 }
                 else
                 {
-                    NavigationManager.NavigateTo("/admin/dashboard");
+                    NavigationManager.NavigateTo("/admin/dashboard", forceLoad: true);
                 }
             }
             else
@@ -128,6 +130,10 @@
                 _errorMessage = message;
                 ToastService.ShowError(message);
             }
+        }
+        catch (Microsoft.AspNetCore.Components.NavigationException)
+        {
+            // NavigationException is expected when using NavigateTo, ignore it
         }
         catch (Exception ex)
         {

@@ -38,11 +38,24 @@
                             </div>
 
                             <div class="mb-3">
+                                <label class="form-label">Factureringsperiode</label>
+                                <div class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="billingPeriod" id="monthly" autocomplete="off" 
+                                           checked="@(!registrationModel.IsYearly)" @onclick="() => SetYearly(false)">
+                                    <label class="btn btn-outline-success" for="monthly">Maandelijks</label>
+
+                                    <input type="radio" class="btn-check" name="billingPeriod" id="yearly" autocomplete="off" 
+                                           checked="@registrationModel.IsYearly)" @onclick="() => SetYearly(true)">
+                                    <label class="btn btn-outline-success" for="yearly">Jaarlijks (Bespaar ~15%)</label>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
                                 <label class="form-label">Gekozen Abonnement</label>
                                 <InputSelect @bind-Value="registrationModel.SelectedPlan" class="form-select">
-                                    <option value="Basis">Basis (€29,99/mnd)</option>
-                                    <option value="Premium">Premium (€39,99/mnd)</option>
-                                    <option value="Elite">Elite (€59,99/mnd)</option>
+                                    <option value="Rookie">Rookie (9 credits - €@(registrationModel.IsYearly ? $"{Math.Round(45 * 12 * 0.85m, 0)}/jr" : "45/mnd"))</option>
+                                    <option value="Intermediate">Intermediate (13 credits - €@(registrationModel.IsYearly ? $"{Math.Round(65 * 12 * 0.85m, 0)}/jr" : "65/mnd"))</option>
+                                    <option value="Advanced">Advanced (Unlimited - €@(registrationModel.IsYearly ? $"{Math.Round(85 * 12 * 0.85m, 0)}/jr" : "85/mnd"))</option>
                                 </InputSelect>
                             </div>
 
@@ -108,12 +121,23 @@
     [SupplyParameterFromQuery]
     public string? Plan { get; set; }
 
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public bool Yearly { get; set; }
+
     protected override void OnInitialized()
     {
         if (!string.IsNullOrEmpty(Plan))
         {
             registrationModel.SelectedPlan = Plan;
         }
+        registrationModel.IsYearly = Yearly;
+    }
+
+    private void SetYearly(bool yearly)
+    {
+        registrationModel.IsYearly = yearly;
+        StateHasChanged();
     }
 
     private async Task HandleRegistration()
@@ -145,6 +169,8 @@
         public string Email { get; set; } = "";
 
         [Required]
-        public string SelectedPlan { get; set; } = "Basis";
+        public string SelectedPlan { get; set; } = "Rookie";
+
+        public bool IsYearly { get; set; }
     }
 }

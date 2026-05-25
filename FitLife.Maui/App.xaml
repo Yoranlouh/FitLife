@@ -12,11 +12,18 @@
             </ResourceDictionary.MergedDictionaries>
 
             <converters:InvertedBoolConverter x:Key="InvertedBoolConverter" />
+            <converters:InvertedBoolConverter x:Key="InverseBoolConverter" />
             <converters:StatusToColorConverter x:Key="StatusToColorConverter" />
             <converters:BoolToColorConverter x:Key="BoolToColorConverter" />
             <converters:IntegerToBoolConverter x:Key="IntegerToBoolConverter" />
             <converters:WorkoutColorConverter x:Key="WorkoutColorConverter" />
             <converters:StringNotEmptyConverter x:Key="StringNotEmptyConverter" />
+            <converters:YearlyToMonthlyConverter x:Key="YearlyToMonthlyConverter" />
+            <converters:InverseBoolToFontAttributesConverter x:Key="InverseBoolToFontAttributesConverter" />
+            <converters:BoolToFontAttributesConverter x:Key="BoolToFontAttributesConverter" />
+            <converters:InverseBoolToColorConverter x:Key="InverseBoolToColorConverter" />
+            <converters:NameToShowDrinkConverter x:Key="NameToShowDrinkConverter" />
+            <converters:NameIsAdvancedConverter x:Key="NameIsAdvancedConverter" />
 
             <Color x:Key="Primary">#5B6636</Color>
             <Color x:Key="Secondary">#DEDEDE</Color>

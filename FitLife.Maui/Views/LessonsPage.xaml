@@ -86,27 +86,23 @@
                     HorizontalScrollBarVisibility="Never"
                     BackgroundColor="{StaticResource White}"
                     HeightRequest="70">
-            <HorizontalStackLayout Spacing="8" Padding="10,10">
-                <BindableLayout.ItemsSource>
-                    <Binding Path="WeekDays" />
-                </BindableLayout.ItemsSource>
+            <FlexLayout x:Name="DayHeadersContainer"
+                        BindableLayout.ItemsSource="{Binding WeekDays}"
+                        Direction="Row"
+                        JustifyContent="SpaceEvenly"
+                        Padding="10,10">
                 <BindableLayout.ItemTemplate>
                     <DataTemplate x:DataType="vm:DayHeaderViewModel">
-                        <!-- Day button with tap gesture - all child elements are InputTransparent to let taps through -->
-                        <Border WidthRequest="50"
+                        <!-- Day button with tap gesture -->
+                        <Border WidthRequest="55"
                                 HeightRequest="50"
                                 BackgroundColor="{Binding IsSelected, Converter={StaticResource BoolToColorConverter}}"
-                                StrokeThickness="0">
+                                StrokeThickness="0"
+                                Margin="4,0">
                             <Border.StrokeShape>
                                 <RoundRectangle CornerRadius="12" />
                             </Border.StrokeShape>
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer
-                                    Command="{Binding Source={x:Reference LessonsRoot}, Path=BindingContext.SelectDayCommand}"
-                                    CommandParameter="{Binding Date}" />
-                            </Border.GestureRecognizers>
-                            <!-- All content must be InputTransparent so taps reach the Border -->
-                            <Grid InputTransparent="True">
+                            <Grid VerticalOptions="Center" HorizontalOptions="Center" InputTransparent="True">
                                 <VerticalStackLayout Spacing="2"
                                                    HorizontalOptions="Center"
                                                    VerticalOptions="Center"
@@ -127,7 +123,7 @@
                         </Border>
                     </DataTemplate>
                 </BindableLayout.ItemTemplate>
-            </HorizontalStackLayout>
+            </FlexLayout>
         </ScrollView>
 
         <!-- Lesson list - Each lesson item is tappable to navigate to detail page -->
@@ -146,20 +142,19 @@
             <RefreshView Grid.Row="1"
                          Command="{Binding LoadLessonsCommand}"
                          IsRefreshing="{Binding IsBusy}">
-                <CollectionView ItemsSource="{Binding Lessons}"
+                <CollectionView x:Name="LessonsCollectionView"
+                                ItemsSource="{Binding Lessons}"
                                 SelectionMode="None">
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="responses:LessonResponse">
-                            <!-- Single Grid with tap gesture - all children are InputTransparent -->
+                            <!-- Single Grid with tap gesture -->
                             <Grid Padding="12,10"
-                                  BackgroundColor="{StaticResource White}"
+                                  BackgroundColor="Transparent"
                                   ColumnDefinitions="60,*,Auto"
                                   RowDefinitions="Auto,Auto,Auto"
                                   ColumnSpacing="12">
                                 <Grid.GestureRecognizers>
-                                    <TapGestureRecognizer
-                                        Command="{Binding Source={x:Reference LessonsRoot}, Path=BindingContext.GoToDetailsCommand}"
-                                        CommandParameter="{Binding .}" />
+                                    <TapGestureRecognizer Tapped="OnLessonTapped" CommandParameter="{Binding .}" />
                                 </Grid.GestureRecognizers>
 
                                 <!-- Capacity block - displays current/max participants with workout color -->
@@ -268,12 +263,6 @@
                                        HorizontalOptions="End"
                                        InputTransparent="True" />
 
-                                <!-- Separator line -->
-                                <BoxView Grid.ColumnSpan="3"
-                                         HeightRequest="1"
-                                         BackgroundColor="{StaticResource SeparatorGray}"
-                                         VerticalOptions="End"
-                                         InputTransparent="True" />
                             </Grid>
                         </DataTemplate>
                     </CollectionView.ItemTemplate>

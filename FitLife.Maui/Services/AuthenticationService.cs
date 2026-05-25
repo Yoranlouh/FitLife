@@ -32,11 +32,23 @@ public class LoginResponse
     [JsonPropertyName("displayName")]
     public string? DisplayName { get; set; }
 
+    [JsonPropertyName("photoUrl")]
+    public string? PhotoUrl { get; set; }
+
     [JsonPropertyName("email")]
     public string? Email { get; set; }
 
     [JsonPropertyName("role")]
     public string? Role { get; set; }
+
+    [JsonPropertyName("credits")]
+    public int? Credits { get; set; }
+
+    [JsonPropertyName("subscriptionType")]
+    public string? SubscriptionType { get; set; }
+
+    [JsonPropertyName("subscriptionRenewalDate")]
+    public string? SubscriptionRenewalDate { get; set; }
 }
 
 /// <summary>
@@ -48,7 +60,11 @@ public interface IAuthenticationService
     Task LogoutAsync();
     bool IsAuthenticated { get; }
     string? CurrentUserName { get; }
+    string? CurrentUserPhotoUrl { get; }
     int? CurrentUserId { get; }
+    int? CurrentUserCredits { get; }
+    string? CurrentUserSubscriptionType { get; }
+    string? CurrentUserSubscriptionRenewalDate { get; }
 }
 
 /// <summary>
@@ -75,9 +91,29 @@ public class AuthenticationService : IAuthenticationService
     public string? CurrentUserName => _currentUser?.DisplayName;
 
     /// <summary>
+    /// Get the current user's profile photo URL
+    /// </summary>
+    public string? CurrentUserPhotoUrl => _currentUser?.PhotoUrl;
+
+    /// <summary>
     /// Get the current user's ID
     /// </summary>
     public int? CurrentUserId => _currentUser?.UserId;
+
+    /// <summary>
+    /// Get the current user's remaining credits
+    /// </summary>
+    public int? CurrentUserCredits => _currentUser?.Credits;
+
+    /// <summary>
+    /// Get the current user's subscription type
+    /// </summary>
+    public string? CurrentUserSubscriptionType => _currentUser?.SubscriptionType;
+
+    /// <summary>
+    /// Get the current user's subscription renewal date
+    /// </summary>
+    public string? CurrentUserSubscriptionRenewalDate => _currentUser?.SubscriptionRenewalDate;
 
     /// <summary>
     /// Attempt to login with email and password
@@ -87,6 +123,10 @@ public class AuthenticationService : IAuthenticationService
     {
         try
         {
+            System.Diagnostics.Debug.WriteLine($"[AuthenticationService] LoginAsync called for email: {email}");
+            System.Diagnostics.Debug.WriteLine($"[AuthenticationService] HttpClient BaseAddress: {_httpClient.BaseAddress}");
+            System.Diagnostics.Debug.WriteLine($"[AuthenticationService] AuthenticationService instance: {this.GetHashCode()}");
+
             // Create login request
             var loginRequest = new LoginRequest
             {
@@ -96,16 +136,30 @@ public class AuthenticationService : IAuthenticationService
 
             // Send POST request to API
             var response = await _httpClient.PostAsJsonAsync("auth/login", loginRequest);
+            System.Diagnostics.Debug.WriteLine($"[AuthenticationService] API Response Status: {response.StatusCode}");
 
             if (response.IsSuccessStatusCode)
             {
-                // Parse response
+                var responseContent = await response.Content.ReadAsStringAsync();
+                System.Diagnostics.Debug.WriteLine($"[AuthenticationService] API Response Body: {responseContent}");
+
+                // Parse response - need to reset stream position
+                response = await _httpClient.PostAsJsonAsync("auth/login", loginRequest);
                 var loginResponse = await response.Content.ReadFromJsonAsync<LoginResponse>();
 
                 if (loginResponse != null && loginResponse.Success)
                 {
                     // Store current user information
                     _currentUser = loginResponse;
+                    System.Diagnostics.Debug.WriteLine($"[AuthenticationService] Login successful!");
+                    System.Diagnostics.Debug.WriteLine($"[AuthenticationService]   UserId: {loginResponse.UserId}");
+                    System.Diagnostics.Debug.WriteLine($"[AuthenticationService]   DisplayName: '{loginResponse.DisplayName}'");
+                    System.Diagnostics.Debug.WriteLine($"[AuthenticationService]   Email: {loginResponse.Email}");
+                    System.Diagnostics.Debug.WriteLine($"[AuthenticationService]   Role: {loginResponse.Role}");
+                    System.Diagnostics.Debug.WriteLine($"[AuthenticationService]   Credits: {loginResponse.Credits}");
+                    System.Diagnostics.Debug.WriteLine($"[AuthenticationService]   SubscriptionType: '{loginResponse.SubscriptionType}'");
+                    System.Diagnostics.Debug.WriteLine($"[AuthenticationService]   _currentUser is now set: {_currentUser != null}");
+                    System.Diagnostics.Debug.WriteLine($"[AuthenticationService]   IsAuthenticated: {IsAuthenticated}");
                     return loginResponse;
                 }
 
