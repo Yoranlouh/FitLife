@@ -63,6 +63,19 @@ public static class MauiProgram
             client.BaseAddress = new Uri(baseUrl);
         });
 
+        // Reservation service used by MyLessonsViewModel and LessonDetailViewModel
+        // to cancel reservations server-side via the FitLife.API.
+        builder.Services.AddHttpClient<IReservationService, ReservationService>(client =>
+        {
+            // Docker API draait op poort 8080.
+            // Android emulator gebruikt 10.0.2.2 om de hostmachine te bereiken.
+            string baseUrl = DeviceInfo.Platform == DevicePlatform.Android
+                ? "http://10.0.2.2:8080/"
+                : "http://localhost:8080/";
+
+            client.BaseAddress = new Uri(baseUrl);
+        });
+
         // Register AuthenticationService as Singleton to maintain authentication state across the app
         // This ensures that login information persists when navigating between pages
         builder.Services.AddSingleton<IAuthenticationService>(serviceProvider =>

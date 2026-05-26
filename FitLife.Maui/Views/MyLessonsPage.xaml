@@ -5,28 +5,64 @@
              x:Class="FitLife.Maui.Views.MyLessonsPage"
              x:DataType="vm:MyLessonsViewModel"
              Title="{Binding Title}">
-    <CollectionView ItemsSource="{Binding EnrolledLessons}">
-        <CollectionView.ItemTemplate>
-            <DataTemplate x:DataType="vm:UserLesson">
-                <Frame Margin="0,5" Padding="15" CornerRadius="8" HasShadow="True">
-                    <VerticalStackLayout Spacing="5">
-                        <Label Text="{Binding Name}" FontSize="20" FontAttributes="Bold" />
-                        <HorizontalStackLayout Spacing="10">
-                            <Label Text="Datum:" FontAttributes="Bold" />
-                            <Label Text="{Binding Time, StringFormat='{0:dd-MM-yyyy HH:mm}'}" />
-                        </HorizontalStackLayout>
-                        <HorizontalStackLayout Spacing="10">
-                            <Label Text="Instructeur:" FontAttributes="Bold" />
-                            <Label Text="{Binding Instructor}" />
-                        </HorizontalStackLayout>
-                        <HorizontalStackLayout Spacing="10">
-                            <Label Text="Locatie:" FontAttributes="Bold" />
-                            <Label Text="{Binding Location}" />
-                        </HorizontalStackLayout>
-                        <Button Text="Reservering Annuleren" Margin="0,10,0,0" />
-                    </VerticalStackLayout>
-                </Frame>
-            </DataTemplate>
-        </CollectionView.ItemTemplate>
-    </CollectionView>
+
+    <!--
+        Root grid lets us overlay a global busy indicator on top of the list
+        while a server-side cancellation is in progress.
+    -->
+    <Grid>
+        <CollectionView ItemsSource="{Binding EnrolledLessons}">
+            <CollectionView.EmptyView>
+                <Label Text="Je hebt geen lessen gereserveerd."
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center"
+                       HorizontalTextAlignment="Center"
+                       TextColor="Gray"
+                       Margin="20" />
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:UserLesson">
+                    <Frame Margin="0,5" Padding="15" CornerRadius="8" HasShadow="True">
+                        <VerticalStackLayout Spacing="5">
+                            <!-- Lesson name -->
+                            <Label Text="{Binding Name}" FontSize="20" FontAttributes="Bold" />
+
+                            <!-- Lesson date/time -->
+                            <HorizontalStackLayout Spacing="10">
+                                <Label Text="Datum:" FontAttributes="Bold" />
+                                <Label Text="{Binding Time, StringFormat='{0:dd-MM-yyyy HH:mm}'}" />
+                            </HorizontalStackLayout>
+
+                            <!-- Instructor -->
+                            <HorizontalStackLayout Spacing="10">
+                                <Label Text="Instructeur:" FontAttributes="Bold" />
+                                <Label Text="{Binding Instructor}" />
+                            </HorizontalStackLayout>
+
+                            <!-- Location -->
+                            <HorizontalStackLayout Spacing="10">
+                                <Label Text="Locatie:" FontAttributes="Bold" />
+                                <Label Text="{Binding Location}" />
+                            </HorizontalStackLayout>
+
+                            <Button Text="Reservering Annuleren"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.CancelReservationCommand}"
+                                    CommandParameter="{Binding .}"
+                                    Margin="0,10,0,0" />
+                        </VerticalStackLayout>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <!-- Full-screen overlay that blocks all input while a cancellation is in progress. -->
+        <BoxView IsVisible="{Binding IsBusy}"
+                 InputTransparent="False"
+                 Color="Black"
+                 Opacity="0.3" />
+        <ActivityIndicator IsRunning="{Binding IsBusy}"
+                           IsVisible="{Binding IsBusy}"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center" />
+    </Grid>
 </ContentPage>
