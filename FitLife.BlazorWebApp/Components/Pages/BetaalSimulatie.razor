@@ -1,0 +1,261 @@
+@page "/betaal-simulatie"
+@layout PaymentLayout
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inject IPaymentService PaymentService
+@inject NavigationManager Nav
+
+<PageTitle>Betalen — @pageTitleSuffix</PageTitle>
+
+@if (isError)
+{
+    <div class="d-flex justify-content-center align-items-center" style="min-height:100vh;">
+        <div class="card shadow-sm text-center p-5" style="max-width:420px;width:100%;">
+            <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size:3.5rem;"></i>
+            <h4 class="mt-3">Sessie verlopen</h4>
+            <p class="text-muted">Deze betaalsessie is ongeldig of verlopen.</p>
+            <a href="/lid-worden" class="btn btn-primary mt-2">Opnieuw beginnen</a>
+        </div>
+    </div>
+}
+else if (isLoading)
+{
+    <div class="d-flex flex-column justify-content-center align-items-center" style="min-height:100vh;gap:20px;">
+        <div class="spinner-border" role="status"
+             style="width:3.5rem;height:3.5rem;border-width:3px;color:@PrimaryColor;">
+            <span class="visually-hidden">Laden...</span>
+        </div>
+        <div class="text-center">
+            <div style="font-size:1.1rem;font-weight:600;">Verbinding maken met @BankDisplayName...</div>
+            <div class="text-muted small mt-1">Beveiligde verbinding wordt opgezet</div>
+        </div>
+        <div class="d-flex align-items-center gap-2 text-success small">
+            <i class="bi bi-shield-lock-fill"></i>
+            <span>256-bit TLS versleuteling</span>
+        </div>
+    </div>
+}
+else if (isProcessing)
+{
+    <div class="d-flex flex-column justify-content-center align-items-center" style="min-height:100vh;gap:16px;">
+        <div class="spinner-border text-success" role="status" style="width:3rem;height:3rem;">
+            <span class="visually-hidden">Verwerken...</span>
+        </div>
+        <div class="text-center">
+            <div style="font-size:1.1rem;font-weight:600;">Betaling wordt verwerkt...</div>
+            <div class="text-muted small mt-1">Uw betaling wordt doorgegeven aan FitLife</div>
+        </div>
+    </div>
+}
+else if (session != null)
+{
+    <!-- ── BANK HEADER ────────────────────────────────────────────── -->
+    <div style="background:@PrimaryColor;padding:0;">
+        <div style="max-width:520px;margin:0 auto;padding:18px 24px;color:@HeaderTextColor;display:flex;align-items:center;justify-content:space-between;">
+            <div>
+                <div style="font-size:1.75rem;font-weight:900;letter-spacing:@LetterSpacing;font-style:@FontStyle;">
+                    @BankDisplayName
+                </div>
+                <div style="opacity:.7;font-size:.78rem;margin-top:2px;">@Tagline</div>
+            </div>
+            <div style="text-align:right;opacity:.65;font-size:.7rem;line-height:1.4;">
+                <i class="bi bi-shield-lock-fill" style="font-size:1rem;display:block;margin-bottom:2px;opacity:1;"></i>
+                Beveiligde omgeving
+            </div>
+        </div>
+    </div>
+
+    <!-- ── FAKE URL BAR ──────────────────────────────────────────── -->
+    <div style="background:#e9ecef;border-bottom:1px solid #dee2e6;padding:7px 24px;">
+        <div style="max-width:520px;margin:0 auto;">
+            <div style="background:#fff;border:1px solid #ced4da;border-radius:20px;padding:5px 14px;font-size:.72rem;color:#495057;display:flex;align-items:center;gap:7px;">
+                <i class="bi bi-shield-fill-check text-success" style="font-size:.85rem;"></i>
+                <span>betalen.@(BankUrlSlug).nl &rsaquo; /pay/@(session.Id[..8].ToUpper())</span>
+                <i class="bi bi-lock-fill text-muted ms-auto" style="font-size:.7rem;"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── MAIN CONTENT ──────────────────────────────────────────── -->
+    <div style="display:flex;justify-content:center;padding:28px 16px 40px;">
+        <div style="width:100%;max-width:520px;">
+
+                <!-- ════ iDEAL / WERO BANK UI ════ -->
+                <!-- Payment details -->
+                <div class="card shadow-sm border-0 mb-3">
+                    <div class="card-header border-0 py-3" style="background:@PrimaryColor10;">
+                        <h6 class="mb-0 fw-semibold" style="font-size:.8rem;text-transform:uppercase;letter-spacing:.07em;color:@PrimaryColor;">
+                            <i class="bi bi-receipt me-2"></i>Betalingsgegevens
+                        </h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-borderless mb-0">
+                            <tbody>
+                                <tr style="border-bottom:1px solid #f0f0f0;">
+                                    <td class="text-muted ps-4 py-3" style="width:45%;">Begunstigde</td>
+                                    <td class="fw-semibold pe-4 py-3">FitLife Gym</td>
+                                </tr>
+                                <tr style="border-bottom:1px solid #f0f0f0;">
+                                    <td class="text-muted ps-4 py-3">IBAN</td>
+                                    <td class="pe-4 py-3" style="font-family:monospace;font-size:.85rem;">NL47 FITL 0001 0000 01</td>
+                                </tr>
+                                <tr style="border-bottom:1px solid #f0f0f0;">
+                                    <td class="text-muted ps-4 py-3">Bedrag</td>
+                                    <td class="fw-bold text-success pe-4 py-3" style="font-size:1.15rem;">&#8364;@session.Amount.ToString("0.00")</td>
+                                </tr>
+                                <tr style="border-bottom:1px solid #f0f0f0;">
+                                    <td class="text-muted ps-4 py-3">Omschrijving</td>
+                                    <td class="fw-semibold pe-4 py-3">@session.Plan @(session.IsYearly ? "jaarabonnement" : "maandabonnement")</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted ps-4 py-3">Kenmerk</td>
+                                    <td class="pe-4 py-3" style="font-family:monospace;font-size:.82rem;">FTL-@(session.Id[..8].ToUpper())</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Login form -->
+                <div class="card shadow-sm border-0 mb-3">
+                    <div class="card-header border-0 py-3" style="background:@PrimaryColor10;">
+                        <h6 class="mb-0 fw-semibold" style="font-size:.8rem;text-transform:uppercase;letter-spacing:.07em;color:@PrimaryColor;">
+                            <i class="bi bi-person-lock me-2"></i>Inloggen bij @BankDisplayName
+                        </h6>
+                    </div>
+                    <div class="card-body px-4 py-3">
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">Gebruikersnaam / Klantnummer</label>
+                            <input type="text" class="form-control" value="TESTGEBRUIKER" disabled
+                                   style="background:#f8f9fa;font-family:monospace;" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">Wachtwoord</label>
+                            <input type="password" class="form-control" value="testpassword" disabled
+                                   style="background:#f8f9fa;" />
+                        </div>
+                        <div class="mb-1">
+                            <label class="form-label text-muted small">
+                                TAN-code
+                                <span class="badge ms-1" style="background:@PrimaryColor;font-size:.65rem;">Testmodus</span>
+                            </label>
+                            <input type="text" class="form-control" value="123456" disabled
+                                   style="background:#f8f9fa;font-family:monospace;letter-spacing:4px;font-weight:700;font-size:1.1rem;" />
+                            <div class="form-text">In testmodus is de TAN-code altijd 123456.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action buttons -->
+                <div class="card shadow-sm border-0">
+                    <div class="card-body px-4 py-4">
+                        <div class="d-grid gap-2 mb-3">
+                            <button class="btn btn-lg fw-semibold"
+                                    style="background:@PrimaryColor;color:@HeaderTextColor;border:none;"
+                                    @onclick="HandleConfirm">
+                                <i class="bi bi-check-circle me-2"></i>Betaling bevestigen
+                            </button>
+                            <button class="btn btn-outline-secondary" @onclick="HandleCancel">
+                                Annuleren
+                            </button>
+                        </div>
+                        <div class="text-center text-muted" style="font-size:.7rem;">
+                            <i class="bi bi-shield-lock me-1"></i>
+                            Beveiligde verbinding &middot; 256-bit TLS &middot; iDEAL via Stripe
+                        </div>
+                    </div>
+                </div>
+
+        </div>
+    </div>
+
+    <!-- Page footer -->
+    <div style="background:#fff;border-top:1px solid #dee2e6;padding:12px 24px;text-align:center;font-size:.68rem;color:#9ca3af;">
+        &#169; @DateTime.Now.Year @BankDisplayName &mdash; Alle rechten voorbehouden &mdash;
+        Betaalomgeving: <strong>TESTMODUS</strong> &middot; Powered by Stripe
+    </div>
+}
+
+@code {
+    [Parameter, SupplyParameterFromQuery] public string? Sid { get; set; }
+
+    private PaymentSession? session;
+    private bool isLoading   = true;
+    private bool isProcessing = false;
+    private bool isError     = false;
+
+    // ── Bank theme ──────────────────────────────────────────────────────
+    private record BankTheme(
+        string DisplayName, string PrimaryColor, string HeaderTextColor,
+        string LetterSpacing, string FontStyle, string Tagline, string UrlSlug);
+
+    private static readonly Dictionary<string, BankTheme> BankThemes =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["ABN AMRO"]    = new("ABN AMRO",    "#009933", "#fff", "-0.5px", "normal", "Your future is our business",       "abnamro"),
+            ["ING"]         = new("ING",          "#ff6200", "#fff", "normal",  "italic", "Ik ben ING",                        "ing"),
+            ["Rabobank"]    = new("Rabobank",     "#004c97", "#fff", "normal",  "normal", "Growing a better world together",   "rabobank"),
+            ["SNS Bank"]    = new("SNS Bank",     "#e4003a", "#fff", "normal",  "normal", "Eerlijk bankieren",                 "snsbank"),
+            ["ASN Bank"]    = new("ASN Bank",     "#5c9726", "#fff", "normal",  "normal", "Bankieren voor een betere wereld",  "asnbank"),
+            ["RegioBank"]   = new("RegioBank",    "#007a4c", "#fff", "normal",  "normal", "Bankieren dichtbij",                "regiobank"),
+            ["Triodos Bank"]= new("Triodos Bank", "#5a9b2e", "#fff", "normal",  "normal", "Positieve verandering",             "triodos"),
+            ["Bunq"]        = new("bunq",         "#1d1d1b", "#fff", "-2px",    "normal", "Break free from the bank",          "bunq"),
+            ["Knab"]        = new("knab",         "#f26522", "#fff", "normal",  "italic", "Uw financiële planner",             "knab"),
+        };
+
+    private BankTheme? _theme;
+
+    private string BankDisplayName => _theme?.DisplayName ?? session?.Bank ?? "Bank";
+    private string PrimaryColor     => _theme?.PrimaryColor ?? "#333";
+    private string PrimaryColor10   => PrimaryColor + "18"; // ~10% opacity hex trick
+    private string HeaderTextColor  => _theme?.HeaderTextColor ?? "#fff";
+    private string LetterSpacing    => _theme?.LetterSpacing ?? "normal";
+    private string FontStyle        => _theme?.FontStyle ?? "normal";
+    private string Tagline          => _theme?.Tagline ?? "";
+    private string BankUrlSlug      => _theme?.UrlSlug ?? BankDisplayName.ToLower().Replace(" ", "");
+    private string pageTitleSuffix  => BankDisplayName;
+
+    // ── Lifecycle ────────────────────────────────────────────────────────
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Sid))
+        {
+            isError   = true;
+            isLoading = false;
+            return;
+        }
+
+        session = PaymentService.GetSession(Sid);
+        if (session == null || session.Status != PaymentStatus.Pending)
+        {
+            isError   = true;
+            isLoading = false;
+            return;
+        }
+
+        if (session.Bank != null)
+            BankThemes.TryGetValue(session.Bank, out _theme);
+
+        // Simulate connecting to bank (1.5 s)
+        await Task.Delay(1500);
+        isLoading = false;
+    }
+
+    // ── Actions ──────────────────────────────────────────────────────────
+    private async Task HandleConfirm()
+    {
+        isProcessing = true;
+        StateHasChanged();
+
+        await Task.Delay(2000); // Simulate bank authorization
+
+        PaymentService.ConfirmSession(Sid!);
+        Nav.NavigateTo($"/lid-worden?status=success&sid={Sid}");
+    }
+
+    private void HandleCancel()
+    {
+        PaymentService.CancelSession(Sid!);
+        Nav.NavigateTo("/lid-worden?status=cancelled");
+    }
+
+}

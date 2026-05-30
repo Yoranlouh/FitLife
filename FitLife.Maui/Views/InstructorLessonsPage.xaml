@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
+             xmlns:responses="clr-namespace:SharedLibrary.DTOs.Responses;assembly=SharedLibrary"
+             x:Class="FitLife.Maui.Views.InstructorLessonsPage"
+             x:DataType="vm:InstructorLessonsViewModel"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="White"
+             Title="{Binding Title}">
+
+    <Grid RowDefinitions="Auto, *">
+        <!-- Header -->
+        <Grid Grid.Row="0"
+              Style="{StaticResource HeaderGrid}"
+              ColumnDefinitions="*,Auto"
+              Padding="16,10">
+            <Label Grid.Column="0"
+                   Text="Mijn Lessen als Trainer"
+                   Style="{StaticResource HeaderTitle}"
+                   FontSize="18"
+                   VerticalOptions="Center" />
+            <Button Grid.Column="1"
+                    Text="+ Nieuwe Les"
+                    Command="{Binding AddNewLessonCommand}"
+                    BackgroundColor="White"
+                    TextColor="#5B6636"
+                    FontAttributes="Bold"
+                    FontSize="13"
+                    CornerRadius="8"
+                    Padding="10,5"
+                    VerticalOptions="Center" />
+        </Grid>
+
+        <!-- Content -->
+        <Grid Grid.Row="1">
+            <CollectionView ItemsSource="{Binding Lessons}"
+                            Margin="0,8">
+                <CollectionView.EmptyView>
+                    <Label Text="{Binding EmptyMessage}"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center"
+                           HorizontalTextAlignment="Center"
+                           TextColor="Gray"
+                           Margin="20" />
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="responses:LessonResponse">
+                        <Frame Margin="12,5" Padding="14" CornerRadius="10" HasShadow="True" BorderColor="#E0E0E0">
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
+                                <!-- Workout naam -->
+                                <Label Grid.Row="0" Grid.Column="0"
+                                       Text="{Binding WorkoutName}"
+                                       FontSize="17"
+                                       FontAttributes="Bold"
+                                       TextColor="#222" />
+
+                                <!-- Datum + tijd -->
+                                <Label Grid.Row="1" Grid.Column="0"
+                                       Text="{Binding StartTime, StringFormat='{0:dddd dd-MM-yyyy HH:mm}'}"
+                                       FontSize="13"
+                                       TextColor="Gray"
+                                       Margin="0,2,0,0" />
+
+                                <!-- Locatie -->
+                                <HorizontalStackLayout Grid.Row="2" Grid.Column="0" Spacing="6" Margin="0,4,0,0">
+                                    <Label Text="📍" FontSize="13" />
+                                    <Label Text="{Binding LocationName}" FontSize="13" TextColor="#555" />
+                                </HorizontalStackLayout>
+
+                                <!-- Deelnemers -->
+                                <HorizontalStackLayout Grid.Row="3" Grid.Column="0" Spacing="6" Margin="0,2,0,0">
+                                    <Label Text="👥" FontSize="13" />
+                                    <Label FontSize="13" TextColor="#555">
+                                        <Label.FormattedText>
+                                            <FormattedString>
+                                                <Span Text="{Binding CurrentParticipantCount}" />
+                                                <Span Text=" / " />
+                                                <Span Text="{Binding MaxParticipants}" />
+                                            </FormattedString>
+                                        </Label.FormattedText>
+                                    </Label>
+                                </HorizontalStackLayout>
+
+                                <!-- Knoppen -->
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="1" Grid.RowSpan="4"
+                                                     VerticalOptions="Center" Spacing="6">
+                                    <Button Text="Wijzigen"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.OpenManageLessonCommand}"
+                                            CommandParameter="{Binding .}"
+                                            FontSize="12"
+                                            BackgroundColor="#5B6636"
+                                            TextColor="White"
+                                            CornerRadius="6"
+                                            Padding="10,5"
+                                            HeightRequest="36" />
+                                    <Button Text="Verwijderen"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DeleteLessonCommand}"
+                                            CommandParameter="{Binding .}"
+                                            FontSize="12"
+                                            BackgroundColor="#D32F2F"
+                                            TextColor="White"
+                                            CornerRadius="6"
+                                            Padding="10,5"
+                                            HeightRequest="36" />
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <!-- Loading overlay -->
+            <BoxView IsVisible="{Binding IsBusy}"
+                     InputTransparent="False"
+                     Color="Black"
+                     Opacity="0.25" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               IsVisible="{Binding IsBusy}"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center"
+                               Color="#5B6636" />
+        </Grid>
+    </Grid>
+</ContentPage>
