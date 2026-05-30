@@ -7,8 +7,6 @@ namespace FitLife.BlazorWebApp.Services;
 /// </summary>
 public interface IDashboardService
 {
-    /// <summary>
-    /// Retrieves comprehensive dashboard statistics for admin overview
-    /// </summary>
     Task<DashboardStatsDto> GetDashboardStatsAsync();
+    Task<InstructorDashboardDto> GetInstructorDashboardAsync(int userId);
 }

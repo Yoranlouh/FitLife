@@ -63,11 +63,13 @@ public partial class LoginViewModel : BaseViewModel
 
             if (result.Success)
             {
-                // Login successful - navigate to main app Shell
-                // Replace MainPage with Shell since we're transitioning from pre-auth to authenticated state
+                // Login successful - navigate to main app Shell via DI so role-based tabs are built correctly
                 if (Application.Current != null)
                 {
-                    Application.Current.MainPage = new AppShell();
+                    var shell = IPlatformApplication.Current?.Services.GetRequiredService<AppShell>();
+                    Application.Current.MainPage = shell ?? new AppShell(
+                        IPlatformApplication.Current!.Services.GetRequiredService<IAuthenticationService>(),
+                        IPlatformApplication.Current.Services);
                 }
             }
             else

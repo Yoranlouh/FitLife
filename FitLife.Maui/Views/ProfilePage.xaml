@@ -34,24 +34,32 @@
                 </VerticalStackLayout>
             </Frame>
 
-            <!-- Credits Sectie -->
-            <Frame CornerRadius="10" Padding="20" HasShadow="True" BackgroundColor="{StaticResource Primary}">
-                <VerticalStackLayout Spacing="10" HorizontalOptions="Center">
-                    <Label Text="Resterende Credits" 
-                           FontSize="16" 
-                           TextColor="White"
-                           HorizontalOptions="Center" />
-                    <Label Text="{Binding Credits}" 
-                           FontSize="48" 
-                           FontAttributes="Bold" 
-                           TextColor="White"
-                           HorizontalOptions="Center" />
-                    <Label Text="1 credit = 1 les" 
-                           FontSize="12" 
-                           TextColor="White"
-                           Opacity="0.8"
-                           HorizontalOptions="Center" />
-                </VerticalStackLayout>
+            <!-- Credits & Abonnement (compact) -->
+            <Frame CornerRadius="10" Padding="14,12" HasShadow="True" BackgroundColor="{StaticResource Primary}">
+                <Grid ColumnDefinitions="*,Auto">
+                    <VerticalStackLayout Spacing="2" Grid.Column="0" VerticalOptions="Center">
+                        <Label Text="{Binding SubscriptionName}"
+                               FontSize="15"
+                               FontAttributes="Bold"
+                               TextColor="White" />
+                        <Label Text="1 credit = 1 les"
+                               FontSize="11"
+                               TextColor="White"
+                               Opacity="0.75" />
+                    </VerticalStackLayout>
+                    <VerticalStackLayout Spacing="1" Grid.Column="1" HorizontalOptions="End" VerticalOptions="Center">
+                        <Label Text="{Binding CreditsDisplay}"
+                               FontSize="26"
+                               FontAttributes="Bold"
+                               TextColor="White"
+                               HorizontalOptions="End" />
+                        <Label Text="credits"
+                               FontSize="11"
+                               TextColor="White"
+                               Opacity="0.75"
+                               HorizontalOptions="End" />
+                    </VerticalStackLayout>
+                </Grid>
             </Frame>
 
             <!-- Abonnement Sectie -->

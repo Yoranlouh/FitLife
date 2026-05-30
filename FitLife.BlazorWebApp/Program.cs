@@ -27,6 +27,12 @@ builder.Services.AddBlazoredToast();
 // Register session service
 builder.Services.AddSingleton<ISessionService, SessionService>();
 
+// Payment simulation service (in-memory, Singleton so sessions survive across requests)
+builder.Services.AddSingleton<IPaymentService, PaymentService>();
+
+// Member registration service (writes new users to the database after payment)
+builder.Services.AddScoped<IRegistrationService, RegistrationService>();
+
 // Register custom services for database operations
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ILessonService, LessonService>();

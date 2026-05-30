@@ -76,6 +76,16 @@ public static class MauiProgram
             client.BaseAddress = new Uri(baseUrl);
         });
 
+        // Lesson management service for Admin/Instructor CRUD operations
+        builder.Services.AddHttpClient<ILessonManagementService, LessonManagementService>(client =>
+        {
+            string baseUrl = DeviceInfo.Platform == DevicePlatform.Android
+                ? "http://10.0.2.2:8080/"
+                : "http://localhost:8080/";
+
+            client.BaseAddress = new Uri(baseUrl);
+        });
+
         // Register AuthenticationService as Singleton to maintain authentication state across the app
         // This ensures that login information persists when navigating between pages
         builder.Services.AddSingleton<IAuthenticationService>(serviceProvider =>
@@ -109,6 +119,8 @@ public static class MauiProgram
 		builder.Services.AddTransient<DayViewModel>();
 		builder.Services.AddTransient<LessonDetailViewModel>();
 		builder.Services.AddTransient<ParticipantsViewModel>();
+		builder.Services.AddSingleton<InstructorLessonsViewModel>();
+		builder.Services.AddTransient<ManageLessonViewModel>();
 
 		// Pages - Match ViewModel lifecycle
 		builder.Services.AddTransient<SplashPage>();
@@ -123,6 +135,11 @@ public static class MauiProgram
 		builder.Services.AddTransient<DayPage>();
 		builder.Services.AddTransient<LessonDetailPage>();
 		builder.Services.AddTransient<ParticipantsPage>();
+		builder.Services.AddSingleton<InstructorLessonsPage>();
+		builder.Services.AddTransient<ManageLessonPage>();
+
+		// AppShell needs DI to build role-based tabs after login
+		builder.Services.AddTransient<AppShell>();
 
 			return builder.Build();
 		}

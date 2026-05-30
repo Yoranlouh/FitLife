@@ -36,7 +36,6 @@ public class WorkoutService : IWorkoutService
                 w.id,
                 w.name,
                 w.description,
-                w.duration_minutes,
                 w.default_capacity,
                 (SELECT COUNT(*) FROM lessons l WHERE l.workout_id = w.id) AS total_lessons
             FROM workouts w
@@ -53,7 +52,6 @@ public class WorkoutService : IWorkoutService
                 Id = reader.GetInt32("id"),
                 Name = reader.GetString("name"),
                 Description = reader.IsDBNull(reader.GetOrdinal("description")) ? null : reader.GetString("description"),
-                DurationMinutes = reader.GetInt32("duration_minutes"),
                 DefaultCapacity = reader.GetInt32("default_capacity"),
                 TotalLessons = reader.GetInt32("total_lessons")
             });
@@ -75,7 +73,6 @@ public class WorkoutService : IWorkoutService
                 w.id,
                 w.name,
                 w.description,
-                w.duration_minutes,
                 w.default_capacity,
                 (SELECT COUNT(*) FROM lessons l WHERE l.workout_id = w.id) AS total_lessons
             FROM workouts w
@@ -94,7 +91,6 @@ public class WorkoutService : IWorkoutService
                 Id = reader.GetInt32("id"),
                 Name = reader.GetString("name"),
                 Description = reader.IsDBNull(reader.GetOrdinal("description")) ? null : reader.GetString("description"),
-                DurationMinutes = reader.GetInt32("duration_minutes"),
                 DefaultCapacity = reader.GetInt32("default_capacity"),
                 TotalLessons = reader.GetInt32("total_lessons")
             };
@@ -114,15 +110,14 @@ public class WorkoutService : IWorkoutService
             await connection.OpenAsync();
 
             const string sql = """
-                INSERT INTO workouts (name, description, duration_minutes, default_capacity)
-                VALUES (@name, @description, @durationMinutes, @defaultCapacity);
+                INSERT INTO workouts (name, description, default_capacity)
+                VALUES (@name, @description, @defaultCapacity);
                 SELECT LAST_INSERT_ID();
                 """;
 
             await using var command = new MySqlCommand(sql, connection);
             command.Parameters.AddWithValue("@name", workout.Name);
             command.Parameters.AddWithValue("@description", workout.Description ?? (object)DBNull.Value);
-            command.Parameters.AddWithValue("@durationMinutes", workout.DurationMinutes);
             command.Parameters.AddWithValue("@defaultCapacity", workout.DefaultCapacity);
 
             var result = await command.ExecuteScalarAsync();
@@ -150,7 +145,6 @@ public class WorkoutService : IWorkoutService
                 UPDATE workouts SET
                     name = @name,
                     description = @description,
-                    duration_minutes = @durationMinutes,
                     default_capacity = @defaultCapacity
                 WHERE id = @id
                 """;
@@ -159,7 +153,6 @@ public class WorkoutService : IWorkoutService
             command.Parameters.AddWithValue("@id", workout.Id);
             command.Parameters.AddWithValue("@name", workout.Name);
             command.Parameters.AddWithValue("@description", workout.Description ?? (object)DBNull.Value);
-            command.Parameters.AddWithValue("@durationMinutes", workout.DurationMinutes);
             command.Parameters.AddWithValue("@defaultCapacity", workout.DefaultCapacity);
 
             var rowsAffected = await command.ExecuteNonQueryAsync();

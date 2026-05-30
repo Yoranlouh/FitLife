@@ -35,7 +35,6 @@ public class LocationService : ILocationService
             SELECT
                 l.id,
                 l.name,
-                l.address,
                 l.capacity,
                 (SELECT COUNT(*) FROM lessons les WHERE les.location_id = l.id) AS total_lessons
             FROM locations l
@@ -51,7 +50,6 @@ public class LocationService : ILocationService
             {
                 Id = reader.GetInt32("id"),
                 Name = reader.GetString("name"),
-                Address = reader.IsDBNull(reader.GetOrdinal("address")) ? null : reader.GetString("address"),
                 Capacity = reader.GetInt32("capacity"),
                 TotalLessons = reader.GetInt32("total_lessons")
             });
@@ -72,7 +70,6 @@ public class LocationService : ILocationService
             SELECT
                 l.id,
                 l.name,
-                l.address,
                 l.capacity,
                 (SELECT COUNT(*) FROM lessons les WHERE les.location_id = l.id) AS total_lessons
             FROM locations l
@@ -90,7 +87,6 @@ public class LocationService : ILocationService
             {
                 Id = reader.GetInt32("id"),
                 Name = reader.GetString("name"),
-                Address = reader.IsDBNull(reader.GetOrdinal("address")) ? null : reader.GetString("address"),
                 Capacity = reader.GetInt32("capacity"),
                 TotalLessons = reader.GetInt32("total_lessons")
             };

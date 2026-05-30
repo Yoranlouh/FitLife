@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace FitLife.BlazorWebApp.Models;
 
 /// <summary>
@@ -50,19 +52,24 @@ public class LessonDto
 public class LessonEditDto
 {
     public int Id { get; set; }
+
+    [Required(ErrorMessage = "Startdatum en -tijd zijn verplicht")]
     public DateTime StartTime { get; set; } = DateTime.Today.AddHours(9);
+
+    [Range(15, 480, ErrorMessage = "Duur moet tussen 15 en 480 minuten zijn")]
     public int DurationMinutes { get; set; } = 60;
+
+    [Range(1, 1000, ErrorMessage = "Max deelnemers moet tussen 1 en 1000 zijn")]
     public int? CapacityOverride { get; set; }
+
+    [Range(1, int.MaxValue, ErrorMessage = "Selecteer een workout")]
     public int WorkoutId { get; set; }
+
+    [Range(1, int.MaxValue, ErrorMessage = "Selecteer een instructeur")]
     public int InstructorId { get; set; }
+
+    [Range(1, int.MaxValue, ErrorMessage = "Selecteer een locatie")]
     public int LocationId { get; set; }
-    
-    // Recurrence settings
-    public bool IsRecurring { get; set; }
-    public string? RecurrencePattern { get; set; } // "Daily", "Weekly", "Monthly"
-    public int? RecurrenceInterval { get; set; } = 1;
-    public DateTime? RecurrenceEndDate { get; set; }
-    public int? RecurrenceCount { get; set; }
 }
 
 /// <summary>
@@ -73,7 +80,7 @@ public class InstructorDto
     public int Id { get; set; }
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
-    public string FullName => $"{FirstName} {LastName}";
+    public string FullName => string.IsNullOrEmpty(LastName) ? FirstName : $"{FirstName} {LastName}";
     public string? Email { get; set; }
     public string? Specialization { get; set; }
     public string? PhotoUrl { get; set; }
@@ -87,10 +94,16 @@ public class InstructorDto
 public class WorkoutDto
 {
     public int Id { get; set; }
+
+    [Required(ErrorMessage = "Naam is verplicht")]
+    [StringLength(100, ErrorMessage = "Naam mag maximaal 100 tekens zijn")]
     public string Name { get; set; } = string.Empty;
+
     public string? Description { get; set; }
-    public int DurationMinutes { get; set; }
+
+    [Range(1, 1000, ErrorMessage = "Capaciteit moet tussen 1 en 1000 zijn")]
     public int DefaultCapacity { get; set; }
+
     public int TotalLessons { get; set; }
 }
 
@@ -158,6 +171,31 @@ public class RecentActivityDto
     public string Description { get; set; } = string.Empty;
     public DateTime Timestamp { get; set; }
     public string ActivityType { get; set; } = string.Empty; // "reservation", "cancellation", "new_lesson"
+}
+
+/// <summary>
+/// DTO for instructor dashboard statistics
+/// </summary>
+public class InstructorDashboardDto
+{
+    public int TotalLessonsGiven { get; set; }
+    public int TotalUpcomingLessons { get; set; }
+    public int TotalStudentsTaught { get; set; }
+    public List<LessonDto> TodaysLessons { get; set; } = new();
+    public List<LessonDto> RecentLessons { get; set; } = new();
+    public List<LessonDto> UpcomingLessons { get; set; } = new();
+    public List<InstructorWorkoutStatDto> TopWorkouts { get; set; } = new();
+    public List<LessonDto> ParticipatedLessons { get; set; } = new();
+}
+
+/// <summary>
+/// Workout statistics for instructor dashboard
+/// </summary>
+public class InstructorWorkoutStatDto
+{
+    public string WorkoutName { get; set; } = string.Empty;
+    public int LessonCount { get; set; }
+    public int TotalStudents { get; set; }
 }
 
 /// <summary>

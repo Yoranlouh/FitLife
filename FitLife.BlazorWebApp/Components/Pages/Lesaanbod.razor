@@ -1,4 +1,6 @@
 @page "/lesaanbod"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inject IWorkoutService WorkoutService
 
 <PageTitle>Lesaanbod - FitLife</PageTitle>
 
@@ -6,45 +8,63 @@
     <h2 class="text-center mb-4">Ons Lesaanbod</h2>
     <p class="text-center">Kies uit een breed scala aan lessen die passen bij jouw fitnessdoelen.</p>
 
-    <div class="row row-cols-1 row-cols-md-3 g-4 mt-3">
-        @foreach (var workout in mockWorkouts)
-        {
-            <div class="col">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="card-title mb-0">@workout.Name</h5>
-                    </div>
-                    <div class="card-body">
-                        <p class="card-text">@workout.Description</p>
-                        <ul class="list-unstyled">
-                            <li><i class="bi bi-clock"></i> Duur: @workout.Duration.TotalMinutes min</li>
-                            <li><i class="bi bi-calendar-event"></i> Dagelijks beschikbaar</li>
-                        </ul>
-                    </div>
-                    <div class="card-footer bg-transparent border-top-0">
-                        <button class="btn btn-outline-primary w-100">Bekijk Rooster</button>
+    @if (isLoading)
+    {
+        <div class="text-center mt-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Laden...</span>
+            </div>
+        </div>
+    }
+    else if (errorMessage != null)
+    {
+        <div class="alert alert-danger text-center mt-4">@errorMessage</div>
+    }
+    else if (workouts.Count == 0)
+    {
+        <p class="text-center text-muted mt-4">Geen lessen beschikbaar.</p>
+    }
+    else
+    {
+        <div class="row row-cols-1 row-cols-md-3 g-4 mt-3">
+            @foreach (var workout in workouts)
+            {
+                <div class="col">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">@workout.Name</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">@workout.Description</p>
+                            <ul class="list-unstyled">
+                                <li><i class="bi bi-calendar-event"></i> Dagelijks beschikbaar</li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
-            </div>
-        }
-    </div>
+            }
+        </div>
+    }
 </div>
 
 @code {
-    private List<WorkoutData> mockWorkouts = new()
-    {
-        new WorkoutData { Name = "Spinning", Description = "Een intensieve cardio-workout op de fiets, perfect voor conditie en vetverbranding.", Duration = TimeSpan.FromMinutes(50) },
-        new WorkoutData { Name = "Yoga", Description = "Verbeter je flexibiliteit, balans en ontspanning met onze diverse yogalessen.", Duration = TimeSpan.FromMinutes(60) },
-        new WorkoutData { Name = "HIIT", Description = "High Intensity Interval Training: korte, krachtige inspanningen voor maximaal resultaat.", Duration = TimeSpan.FromMinutes(45) },
-        new WorkoutData { Name = "BodyPump", Description = "Werk aan je spierkracht met halters op opzwepende muziek.", Duration = TimeSpan.FromMinutes(60) },
-        new WorkoutData { Name = "Pilates", Description = "Focus op je core, stabiliteit en lichaamshouding.", Duration = TimeSpan.FromMinutes(55) },
-        new WorkoutData { Name = "Zumba", Description = "Dans jezelf fit met Latijns-Amerikaanse ritmes en energieke moves.", Duration = TimeSpan.FromMinutes(50) }
-    };
+    private List<WorkoutDto> workouts = new();
+    private bool isLoading = true;
+    private string? errorMessage;
 
-    private class WorkoutData
+    protected override async Task OnInitializedAsync()
     {
-        public string Name { get; set; } = "";
-        public string Description { get; set; } = "";
-        public TimeSpan Duration { get; set; }
+        try
+        {
+            workouts = await WorkoutService.GetAllWorkoutsAsync();
+        }
+        catch (Exception)
+        {
+            errorMessage = "Er is een fout opgetreden bij het laden van het lesaanbod.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 }

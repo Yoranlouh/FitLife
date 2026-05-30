@@ -70,8 +70,6 @@ public class DashboardService : IDashboardService
                 u.display_name AS instructor_name,
                 l.location_id,
                 loc.name AS location_name,
-                l.is_recurring,
-                l.recurrence_pattern,
                 (SELECT COUNT(*) FROM reservations r WHERE r.lesson_id = l.id AND r.is_cancelled = 0) AS current_participants,
                 (SELECT COUNT(*) FROM waitlist_entries wle WHERE wle.lesson_id = l.id) AS waitlist_count
             FROM lessons l
@@ -99,8 +97,6 @@ public class DashboardService : IDashboardService
                 InstructorName = todaysReader.IsDBNull(todaysReader.GetOrdinal("instructor_name")) ? "Niet toegewezen" : todaysReader.GetString("instructor_name"),
                 LocationId = todaysReader.GetInt32("location_id"),
                 LocationName = todaysReader.GetString("location_name"),
-                IsRecurring = !todaysReader.IsDBNull(todaysReader.GetOrdinal("is_recurring")) && todaysReader.GetBoolean("is_recurring"),
-                RecurrencePattern = todaysReader.IsDBNull(todaysReader.GetOrdinal("recurrence_pattern")) ? null : todaysReader.GetString("recurrence_pattern"),
                 CurrentParticipants = todaysReader.GetInt32("current_participants"),
                 WaitlistCount = todaysReader.GetInt32("waitlist_count")
             });
@@ -200,4 +196,183 @@ public class DashboardService : IDashboardService
 
         return stats;
     }
+
+    public async Task<InstructorDashboardDto> GetInstructorDashboardAsync(int userId)
+    {
+        var result = new InstructorDashboardDto();
+
+        await using var connection = new MySqlConnection(GetConnectionString());
+        await connection.OpenAsync();
+
+        // Counts: total given, upcoming, unique students
+        const string countSql = """
+            SELECT
+                (SELECT COUNT(*) FROM lessons WHERE instructor_id = @userId AND start_time < NOW()) AS total_given,
+                (SELECT COUNT(*) FROM lessons WHERE instructor_id = @userId AND start_time >= NOW()) AS total_upcoming,
+                (SELECT COUNT(DISTINCT r.member_id) FROM reservations r
+                 INNER JOIN lessons l ON l.id = r.lesson_id
+                 WHERE l.instructor_id = @userId AND r.is_cancelled = 0) AS total_students
+            """;
+
+        await using var countCmd = new MySqlCommand(countSql, connection);
+        countCmd.Parameters.AddWithValue("@userId", userId);
+        await using var countReader = await countCmd.ExecuteReaderAsync();
+        if (await countReader.ReadAsync())
+        {
+            result.TotalLessonsGiven = countReader.GetInt32("total_given");
+            result.TotalUpcomingLessons = countReader.GetInt32("total_upcoming");
+            result.TotalStudentsTaught = countReader.GetInt32("total_students");
+        }
+        await countReader.CloseAsync();
+
+        // Todays lessons
+        const string todaySql = """
+            SELECT l.id, l.start_time,
+                DATE_ADD(l.start_time, INTERVAL l.duration_minutes MINUTE) AS end_time,
+                COALESCE(l.capacity_override, w.default_capacity, loc.capacity, 0) AS max_participants,
+                l.workout_id, w.name AS workout_name,
+                l.instructor_id, u.display_name AS instructor_name,
+                l.location_id, loc.name AS location_name,
+                (SELECT COUNT(*) FROM reservations r WHERE r.lesson_id = l.id AND r.is_cancelled = 0) AS current_participants,
+                (SELECT COUNT(*) FROM waitlist_entries wle WHERE wle.lesson_id = l.id) AS waitlist_count
+            FROM lessons l
+            INNER JOIN workouts w ON w.id = l.workout_id
+            LEFT JOIN users u ON u.id = l.instructor_id
+            INNER JOIN locations loc ON loc.id = l.location_id
+            WHERE l.instructor_id = @userId AND DATE(l.start_time) = CURDATE()
+            ORDER BY l.start_time
+            """;
+
+        await using var todayCmd = new MySqlCommand(todaySql, connection);
+        todayCmd.Parameters.AddWithValue("@userId", userId);
+        await using var todayReader = await todayCmd.ExecuteReaderAsync();
+        while (await todayReader.ReadAsync())
+            result.TodaysLessons.Add(MapLessonRow(todayReader));
+        await todayReader.CloseAsync();
+
+        // Recent past lessons (last 10)
+        const string recentSql = """
+            SELECT l.id, l.start_time,
+                DATE_ADD(l.start_time, INTERVAL l.duration_minutes MINUTE) AS end_time,
+                COALESCE(l.capacity_override, w.default_capacity, loc.capacity, 0) AS max_participants,
+                l.workout_id, w.name AS workout_name,
+                l.instructor_id, u.display_name AS instructor_name,
+                l.location_id, loc.name AS location_name,
+                (SELECT COUNT(*) FROM reservations r WHERE r.lesson_id = l.id AND r.is_cancelled = 0) AS current_participants,
+                (SELECT COUNT(*) FROM waitlist_entries wle WHERE wle.lesson_id = l.id) AS waitlist_count
+            FROM lessons l
+            INNER JOIN workouts w ON w.id = l.workout_id
+            LEFT JOIN users u ON u.id = l.instructor_id
+            INNER JOIN locations loc ON loc.id = l.location_id
+            WHERE l.instructor_id = @userId AND l.start_time < NOW()
+            ORDER BY l.start_time DESC
+            LIMIT 10
+            """;
+
+        await using var recentCmd = new MySqlCommand(recentSql, connection);
+        recentCmd.Parameters.AddWithValue("@userId", userId);
+        await using var recentReader = await recentCmd.ExecuteReaderAsync();
+        while (await recentReader.ReadAsync())
+            result.RecentLessons.Add(MapLessonRow(recentReader));
+        await recentReader.CloseAsync();
+
+        // Upcoming lessons (next 10)
+        const string upcomingSql = """
+            SELECT l.id, l.start_time,
+                DATE_ADD(l.start_time, INTERVAL l.duration_minutes MINUTE) AS end_time,
+                COALESCE(l.capacity_override, w.default_capacity, loc.capacity, 0) AS max_participants,
+                l.workout_id, w.name AS workout_name,
+                l.instructor_id, u.display_name AS instructor_name,
+                l.location_id, loc.name AS location_name,
+                (SELECT COUNT(*) FROM reservations r WHERE r.lesson_id = l.id AND r.is_cancelled = 0) AS current_participants,
+                (SELECT COUNT(*) FROM waitlist_entries wle WHERE wle.lesson_id = l.id) AS waitlist_count
+            FROM lessons l
+            INNER JOIN workouts w ON w.id = l.workout_id
+            LEFT JOIN users u ON u.id = l.instructor_id
+            INNER JOIN locations loc ON loc.id = l.location_id
+            WHERE l.instructor_id = @userId AND l.start_time > NOW()
+            ORDER BY l.start_time ASC
+            LIMIT 10
+            """;
+
+        await using var upcomingCmd = new MySqlCommand(upcomingSql, connection);
+        upcomingCmd.Parameters.AddWithValue("@userId", userId);
+        await using var upcomingReader = await upcomingCmd.ExecuteReaderAsync();
+        while (await upcomingReader.ReadAsync())
+            result.UpcomingLessons.Add(MapLessonRow(upcomingReader));
+        await upcomingReader.CloseAsync();
+
+        // Top workouts given by instructor
+        const string workoutStatSql = """
+            SELECT w.name AS workout_name,
+                COUNT(DISTINCT l.id) AS lesson_count,
+                COUNT(DISTINCT r.member_id) AS total_students
+            FROM lessons l
+            INNER JOIN workouts w ON w.id = l.workout_id
+            LEFT JOIN reservations r ON r.lesson_id = l.id AND r.is_cancelled = 0
+            WHERE l.instructor_id = @userId
+            GROUP BY w.id, w.name
+            ORDER BY lesson_count DESC
+            LIMIT 5
+            """;
+
+        await using var wsCmd = new MySqlCommand(workoutStatSql, connection);
+        wsCmd.Parameters.AddWithValue("@userId", userId);
+        await using var wsReader = await wsCmd.ExecuteReaderAsync();
+        while (await wsReader.ReadAsync())
+        {
+            result.TopWorkouts.Add(new InstructorWorkoutStatDto
+            {
+                WorkoutName = wsReader.GetString("workout_name"),
+                LessonCount = wsReader.GetInt32("lesson_count"),
+                TotalStudents = wsReader.GetInt32("total_students")
+            });
+        }
+        await wsReader.CloseAsync();
+
+        // Lessons where instructor participated as a member
+        const string participatedSql = """
+            SELECT l.id, l.start_time,
+                DATE_ADD(l.start_time, INTERVAL l.duration_minutes MINUTE) AS end_time,
+                COALESCE(l.capacity_override, w.default_capacity, loc.capacity, 0) AS max_participants,
+                l.workout_id, w.name AS workout_name,
+                l.instructor_id, u2.display_name AS instructor_name,
+                l.location_id, loc.name AS location_name,
+                (SELECT COUNT(*) FROM reservations r2 WHERE r2.lesson_id = l.id AND r2.is_cancelled = 0) AS current_participants,
+                0 AS waitlist_count
+            FROM reservations r
+            INNER JOIN lessons l ON l.id = r.lesson_id
+            INNER JOIN workouts w ON w.id = l.workout_id
+            LEFT JOIN users u2 ON u2.id = l.instructor_id
+            INNER JOIN locations loc ON loc.id = l.location_id
+            WHERE r.member_id = @userId AND r.is_cancelled = 0
+            ORDER BY l.start_time DESC
+            LIMIT 10
+            """;
+
+        await using var partCmd = new MySqlCommand(participatedSql, connection);
+        partCmd.Parameters.AddWithValue("@userId", userId);
+        await using var partReader = await partCmd.ExecuteReaderAsync();
+        while (await partReader.ReadAsync())
+            result.ParticipatedLessons.Add(MapLessonRow(partReader));
+        await partReader.CloseAsync();
+
+        return result;
+    }
+
+    private static LessonDto MapLessonRow(MySqlDataReader r) => new()
+    {
+        Id = r.GetInt32("id"),
+        StartTime = r.GetDateTime("start_time"),
+        EndTime = r.GetDateTime("end_time"),
+        MaxParticipants = r.GetInt32("max_participants"),
+        WorkoutId = r.GetInt32("workout_id"),
+        WorkoutName = r.GetString("workout_name"),
+        InstructorId = r.IsDBNull(r.GetOrdinal("instructor_id")) ? 0 : r.GetInt32("instructor_id"),
+        InstructorName = r.IsDBNull(r.GetOrdinal("instructor_name")) ? "Niet toegewezen" : r.GetString("instructor_name"),
+        LocationId = r.GetInt32("location_id"),
+        LocationName = r.GetString("location_name"),
+        CurrentParticipants = r.GetInt32("current_participants"),
+        WaitlistCount = r.GetInt32("waitlist_count")
+    };
 }

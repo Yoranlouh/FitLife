@@ -51,7 +51,7 @@ public class AuthService : IAuthService
             httpContext.Response.Cookies.Append(".FitLife.Auth", sessionId, new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,
+                Secure = httpContext.Request.IsHttps,
                 SameSite = SameSiteMode.Lax,
                 IsEssential = true,
                 MaxAge = TimeSpan.FromHours(8)

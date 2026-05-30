@@ -1,11 +1,7 @@
 @page "/admin/login"
-@using FitLife.BlazorWebApp.Services
-@using FitLife.BlazorWebApp.Models
-@using Microsoft.AspNetCore.Components.Authorization
 @inject IAuthService AuthService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
-@inject IToastService ToastService
 
 <PageTitle>Login - FitLife Admin</PageTitle>
 
@@ -31,34 +27,26 @@
 
                         <div class="mb-3">
                             <label for="email" class="form-label">Email</label>
-                            <InputText @bind-Value="_loginModel.Email" 
-                                       class="form-control" 
-                                       id="email" 
+                            <InputText @bind-Value="_loginModel.Email"
+                                       class="form-control"
+                                       id="email"
                                        placeholder="naam@fitlife.nl" />
                             <ValidationMessage For="@(() => _loginModel.Email)" />
                         </div>
 
                         <div class="mb-3">
                             <label for="password" class="form-label">Wachtwoord</label>
-                            <InputText @bind-Value="_loginModel.Password" 
-                                       type="password" 
-                                       class="form-control" 
-                                       id="password" 
+                            <InputText @bind-Value="_loginModel.Password"
+                                       type="password"
+                                       class="form-control"
+                                       id="password"
                                        placeholder="Wachtwoord" />
                             <ValidationMessage For="@(() => _loginModel.Password)" />
                         </div>
 
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg" disabled="@_isLoading">
-                                @if (_isLoading)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                    <span>Inloggen...</span>
-                                }
-                                else
-                                {
-                                    <span>Inloggen</span>
-                                }
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                Inloggen
                             </button>
                         </div>
                     </EditForm>
@@ -75,81 +63,39 @@
 </div>
 
 @code {
-    /// <summary>
-    /// Model for the login form with email and password fields
-    /// </summary>
     [SupplyParameterFromForm]
     private LoginModel _loginModel { get; set; } = new();
 
     private string _errorMessage = string.Empty;
-    private bool _isLoading = false;
 
-    /// <summary>
-    /// Checks if user is already authenticated on page load, redirects to dashboard if so
-    /// </summary>
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated == true)
         {
-            NavigationManager.NavigateTo("/admin/dashboard");
+            var role = authState.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+            NavigationManager.NavigateTo(role == "instructor" ? "/instructor/dashboard" : "/admin/dashboard");
         }
     }
 
-    /// <summary>
-    /// Handles the login form submission, authenticates user and redirects to dashboard on success
-    /// </summary>
     private async Task HandleLogin()
     {
-        _isLoading = true;
         _errorMessage = string.Empty;
 
-        try
-        {
-            var (success, message, user) = await AuthService.LoginAsync(_loginModel.Email, _loginModel.Password);
+        var (success, message, user) = await AuthService.LoginAsync(_loginModel.Email, _loginModel.Password);
 
-            if (success && user != null)
-            {
-                // Notify authentication state provider that user logged in
-                ((CustomAuthenticationStateProvider)AuthStateProvider).NotifyAuthenticationStateChanged();
-
-                ToastService.ShowSuccess("Login succesvol! Welkom terug.");
-
-                // Redirect based on role - forceLoad to avoid NavigationException
-                if (user.Role == "instructor")
-                {
-                    NavigationManager.NavigateTo("/instructor/dashboard", forceLoad: true);
-                }
-                else
-                {
-                    NavigationManager.NavigateTo("/admin/dashboard", forceLoad: true);
-                }
-            }
-            else
-            {
-                _errorMessage = message;
-                ToastService.ShowError(message);
-            }
-        }
-        catch (Microsoft.AspNetCore.Components.NavigationException)
+        if (success && user != null)
         {
-            // NavigationException is expected when using NavigateTo, ignore it
+            NavigationManager.NavigateTo(
+                user.Role == "instructor" ? "/instructor/dashboard" : "/admin/dashboard",
+                forceLoad: true);
         }
-        catch (Exception ex)
+        else
         {
-            _errorMessage = "Er is een fout opgetreden bij het inloggen. Probeer het later opnieuw.";
-            ToastService.ShowError(_errorMessage);
-            Console.WriteLine($"Login error: {ex.Message}");
-        }
-        finally
-        {
-            _isLoading = false;
+            _errorMessage = message;
         }
     }
 
-    /// <summary>
-    /// Internal model class for login form binding with validation attributes
-    /// </summary>
     private class LoginModel
     {
         [Required(ErrorMessage = "Email is verplicht")]

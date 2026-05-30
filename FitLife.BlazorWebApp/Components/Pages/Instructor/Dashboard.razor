@@ -1,7 +1,7 @@
 @page "/instructor/dashboard"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @attribute [Authorize(Roles = "instructor")]
-@inject ILessonService LessonService
-@inject IInstructorService InstructorService
+@inject IDashboardService DashboardService
 @inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Instructeur Dashboard - FitLife</PageTitle>
@@ -10,7 +10,7 @@
     <div class="row mb-4">
         <div class="col">
             <h1 class="display-5 fw-bold">Mijn Dashboard</h1>
-            <p class="text-muted">Welkom terug, @_instructorName</p>
+            <p class="text-muted">Welkom terug, @_displayName</p>
         </div>
     </div>
 
@@ -21,57 +21,68 @@
             <p class="mt-3 text-muted">Dashboard laden...</p>
         </div>
     }
-    else if (_instructor != null)
+    else if (_data != null)
     {
         <!-- Statistics Cards -->
         <div class="row g-3 mb-4">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card border-primary shadow-sm h-100">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start">
                             <div>
-                                <h6 class="card-subtitle mb-2 text-muted">Totaal Lessen</h6>
-                                <h2 class="card-title fw-bold mb-0">@_instructor.TotalLessons</h2>
+                                <h6 class="card-subtitle mb-2 text-muted">Lessen Gegeven</h6>
+                                <h2 class="card-title fw-bold mb-0">@_data.TotalLessonsGiven</h2>
                             </div>
                             <i class="bi bi-calendar-check-fill fs-1 text-primary opacity-50"></i>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card border-success shadow-sm h-100">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start">
                             <div>
                                 <h6 class="card-subtitle mb-2 text-muted">Komende Lessen</h6>
-                                <h2 class="card-title fw-bold mb-0">@_instructor.UpcomingLessons</h2>
+                                <h2 class="card-title fw-bold mb-0">@_data.TotalUpcomingLessons</h2>
                             </div>
                             <i class="bi bi-clock-fill fs-1 text-success opacity-50"></i>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card border-info shadow-sm h-100">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start">
                             <div>
                                 <h6 class="card-subtitle mb-2 text-muted">Lessen Vandaag</h6>
-                                <h2 class="card-title fw-bold mb-0">@_todaysLessons.Count</h2>
+                                <h2 class="card-title fw-bold mb-0">@_data.TodaysLessons.Count</h2>
                             </div>
                             <i class="bi bi-calendar-day-fill fs-1 text-info opacity-50"></i>
                         </div>
                     </div>
                 </div>
             </div>
+            <div class="col-md-3">
+                <div class="card border-warning shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="card-subtitle mb-2 text-muted">Unieke Deelnemers</h6>
+                                <h2 class="card-title fw-bold mb-0">@_data.TotalStudentsTaught</h2>
+                            </div>
+                            <i class="bi bi-people-fill fs-1 text-warning opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- Today's Lessons -->
-        @if (_todaysLessons.Any())
-        {
-            <div class="row mb-4">
+        <div class="row g-3 mb-4">
+            <!-- Today's Lessons -->
+            @if (_data.TodaysLessons.Any())
+            {
                 <div class="col-12">
                     <div class="card shadow-sm">
                         <div class="card-header bg-white">
@@ -81,31 +92,20 @@
                             <div class="table-responsive">
                                 <table class="table table-hover">
                                     <thead>
-                                        <tr>
-                                            <th>Tijd</th>
-                                            <th>Workout</th>
-                                            <th>Locatie</th>
-                                            <th>Bezetting</th>
-                                            <th>Status</th>
-                                        </tr>
+                                        <tr><th>Tijd</th><th>Workout</th><th>Locatie</th><th>Bezetting</th><th>Status</th></tr>
                                     </thead>
                                     <tbody>
-                                        @foreach (var lesson in _todaysLessons)
+                                        @foreach (var lesson in _data.TodaysLessons)
                                         {
                                             <tr>
-                                                <td>
-                                                    <strong>@lesson.StartTime.ToString("HH:mm")</strong> - @lesson.EndTime.ToString("HH:mm")
-                                                </td>
+                                                <td><strong>@lesson.StartTime.ToString("HH:mm")</strong> - @lesson.EndTime.ToString("HH:mm")</td>
                                                 <td><strong>@lesson.WorkoutName</strong></td>
                                                 <td>@lesson.LocationName</td>
                                                 <td>
-                                                    <div class="progress" style="height: 20px;">
-                                                        <div class="progress-bar @GetProgressBarClass(lesson.OccupancyPercentage)" 
-                                                             role="progressbar" 
-                                                             style="width: @lesson.OccupancyPercentage%"
-                                                             aria-valuenow="@lesson.OccupancyPercentage" 
-                                                             aria-valuemin="0" 
-                                                             aria-valuemax="100">
+                                                    <div class="progress" style="height:20px;">
+                                                        <div class="progress-bar @GetProgressBarClass(lesson.OccupancyPercentage)"
+                                                             role="progressbar"
+                                                             style="width:@lesson.OccupancyPercentage%">
                                                             @lesson.CurrentParticipants/@lesson.MaxParticipants
                                                         </div>
                                                     </div>
@@ -113,21 +113,15 @@
                                                 <td>
                                                     @if (lesson.StartTime <= DateTime.Now && lesson.EndTime >= DateTime.Now)
                                                     {
-                                                        <span class="badge bg-success">
-                                                            <i class="bi bi-play-circle me-1"></i>Bezig
-                                                        </span>
+                                                        <span class="badge bg-success"><i class="bi bi-play-circle me-1"></i>Bezig</span>
                                                     }
                                                     else if (lesson.StartTime > DateTime.Now)
                                                     {
-                                                        <span class="badge bg-primary">
-                                                            <i class="bi bi-clock me-1"></i>Gepland
-                                                        </span>
+                                                        <span class="badge bg-primary"><i class="bi bi-clock me-1"></i>Gepland</span>
                                                     }
                                                     else
                                                     {
-                                                        <span class="badge bg-secondary">
-                                                            <i class="bi bi-check-circle me-1"></i>Voltooid
-                                                        </span>
+                                                        <span class="badge bg-secondary"><i class="bi bi-check-circle me-1"></i>Voltooid</span>
                                                     }
                                                 </td>
                                             </tr>
@@ -138,31 +132,26 @@
                         </div>
                     </div>
                 </div>
-            </div>
-        }
+            }
+        </div>
 
-        <!-- Upcoming Lessons -->
-        <div class="row">
-            <div class="col-12">
-                <div class="card shadow-sm">
+        <div class="row g-3 mb-4">
+            <!-- Upcoming Lessons -->
+            <div class="col-lg-8">
+                <div class="card shadow-sm h-100">
                     <div class="card-header bg-white">
                         <h5 class="mb-0"><i class="bi bi-calendar-range me-2"></i>Komende Lessen</h5>
                     </div>
                     <div class="card-body">
-                        @if (_upcomingLessons.Any())
+                        @if (_data.UpcomingLessons.Any())
                         {
                             <div class="table-responsive">
                                 <table class="table table-hover">
                                     <thead>
-                                        <tr>
-                                            <th>Datum & Tijd</th>
-                                            <th>Workout</th>
-                                            <th>Locatie</th>
-                                            <th>Bezetting</th>
-                                        </tr>
+                                        <tr><th>Datum & Tijd</th><th>Workout</th><th>Locatie</th><th>Bezetting</th></tr>
                                     </thead>
                                     <tbody>
-                                        @foreach (var lesson in _upcomingLessons.Take(10))
+                                        @foreach (var lesson in _data.UpcomingLessons)
                                         {
                                             <tr>
                                                 <td>
@@ -189,27 +178,136 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Top Workouts -->
+            <div class="col-lg-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0"><i class="bi bi-fire me-2"></i>Meest Gegeven Workouts</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (_data.TopWorkouts.Any())
+                        {
+                            <ul class="list-group list-group-flush">
+                                @foreach (var stat in _data.TopWorkouts)
+                                {
+                                    <li class="list-group-item px-0">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <strong>@stat.WorkoutName</strong>
+                                                <small class="d-block text-muted">@stat.TotalStudents deelnemers totaal</small>
+                                            </div>
+                                            <span class="badge bg-primary rounded-pill">@stat.LessonCount les@(stat.LessonCount == 1 ? "" : "sen")</span>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <p class="text-muted text-center my-4">Nog geen lessen gegeven.</p>
+                        }
+                    </div>
+                </div>
+            </div>
         </div>
+
+        <!-- Lesson History -->
+        <div class="row g-3 mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recente Les Historie</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (_data.RecentLessons.Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr><th>Datum & Tijd</th><th>Workout</th><th>Locatie</th><th>Deelnemers</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var lesson in _data.RecentLessons)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <strong>@lesson.StartTime.ToString("dd MMM yyyy")</strong>
+                                                    <br /><small class="text-muted">@lesson.StartTime.ToString("HH:mm") - @lesson.EndTime.ToString("HH:mm")</small>
+                                                </td>
+                                                <td>@lesson.WorkoutName</td>
+                                                <td>@lesson.LocationName</td>
+                                                <td>
+                                                    <span class="badge @GetOccupancyBadgeClass(lesson.OccupancyPercentage)">
+                                                        @lesson.CurrentParticipants/@lesson.MaxParticipants
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted text-center my-4">Geen recente lessen gevonden.</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Participated Lessons -->
+        @if (_data.ParticipatedLessons.Any())
+        {
+            <div class="row g-3">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0"><i class="bi bi-person-check me-2"></i>Lessen als Deelnemer</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr><th>Datum & Tijd</th><th>Workout</th><th>Instructeur</th><th>Locatie</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var lesson in _data.ParticipatedLessons)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <strong>@lesson.StartTime.ToString("dd MMM yyyy")</strong>
+                                                    <br /><small class="text-muted">@lesson.StartTime.ToString("HH:mm")</small>
+                                                </td>
+                                                <td>@lesson.WorkoutName</td>
+                                                <td>@lesson.InstructorName</td>
+                                                <td>@lesson.LocationName</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
     }
     else
     {
         <div class="alert alert-warning">
             <i class="bi bi-exclamation-triangle me-2"></i>
-            Kon je instructeur profiel niet laden. Neem contact op met een administrator.
+            Kon dashboard gegevens niet laden. Probeer de pagina te verversen.
         </div>
     }
 </div>
 
 @code {
-    private InstructorDto? _instructor;
-    private List<LessonDto> _todaysLessons = new();
-    private List<LessonDto> _upcomingLessons = new();
+    private InstructorDashboardDto? _data;
     private bool _isLoading = true;
-    private string _instructorName = "Instructeur";
+    private string _displayName = "Instructeur";
 
-    /// <summary>
-    /// Loads instructor profile and lessons when component initializes
-    /// </summary>
     protected override async Task OnInitializedAsync()
     {
         try
@@ -219,27 +317,11 @@
 
             if (user.Identity?.IsAuthenticated == true)
             {
-                _instructorName = user.Identity.Name ?? "Instructeur";
-                
+                _displayName = user.Identity.Name ?? "Instructeur";
                 var userIdClaim = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
                 if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
                 {
-                    _instructor = await InstructorService.GetInstructorByUserIdAsync(userId);
-                    
-                    if (_instructor != null)
-                    {
-                        var allLessons = await LessonService.GetLessonsByInstructorAsync(_instructor.Id, DateTime.Today);
-                        
-                        _todaysLessons = allLessons
-                            .Where(l => l.StartTime.Date == DateTime.Today)
-                            .OrderBy(l => l.StartTime)
-                            .ToList();
-                        
-                        _upcomingLessons = allLessons
-                            .Where(l => l.StartTime.Date > DateTime.Today)
-                            .OrderBy(l => l.StartTime)
-                            .ToList();
-                    }
+                    _data = await DashboardService.GetInstructorDashboardAsync(userId);
                 }
             }
         }
@@ -253,31 +335,19 @@
         }
     }
 
-    /// <summary>
-    /// Returns Bootstrap badge class based on occupancy percentage
-    /// </summary>
-    private string GetOccupancyBadgeClass(double occupancy)
+    private string GetOccupancyBadgeClass(double occupancy) => occupancy switch
     {
-        return occupancy switch
-        {
-            >= 90 => "bg-danger",
-            >= 70 => "bg-warning text-dark",
-            >= 50 => "bg-info",
-            _ => "bg-success"
-        };
-    }
+        >= 90 => "bg-danger",
+        >= 70 => "bg-warning text-dark",
+        >= 50 => "bg-info",
+        _ => "bg-success"
+    };
 
-    /// <summary>
-    /// Returns Bootstrap progress bar color class based on occupancy
-    /// </summary>
-    private string GetProgressBarClass(double occupancy)
+    private string GetProgressBarClass(double occupancy) => occupancy switch
     {
-        return occupancy switch
-        {
-            >= 90 => "bg-danger",
-            >= 70 => "bg-warning",
-            >= 50 => "bg-info",
-            _ => "bg-success"
-        };
-    }
+        >= 90 => "bg-danger",
+        >= 70 => "bg-warning",
+        >= 50 => "bg-info",
+        _ => "bg-success"
+    };
 }

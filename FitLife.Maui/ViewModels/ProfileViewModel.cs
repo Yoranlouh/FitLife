@@ -22,13 +22,20 @@ public partial class ProfileViewModel : BaseViewModel
     private string _profilePictureUrl = "https://ui-avatars.com/api/?name=User&size=128";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CreditsDisplay))]
     private string _subscriptionName = "Geen abonnement";
 
     [ObservableProperty]
     private DateTime? _subscriptionEndDate = null;
 
     [ObservableProperty]
-    private int _credits = 0;
+    [NotifyPropertyChangedFor(nameof(CreditsDisplay))]
+    private int? _credits = null;
+
+    public string CreditsDisplay =>
+        SubscriptionName == "Advanced" || Credits is null or >= 999
+            ? "Onbeperkt"
+            : Credits.Value.ToString();
 
     [ObservableProperty]
     private bool _hasPendingSubscriptionChange = false;
@@ -96,7 +103,7 @@ public partial class ProfileViewModel : BaseViewModel
             System.Diagnostics.Debug.WriteLine($"[ProfileViewModel] ProfilePictureUrl: {ProfilePictureUrl}");
 
             // Get subscription and credits information
-            Credits = _authService.CurrentUserCredits ?? 0;
+            Credits = _authService.CurrentUserCredits;
             SubscriptionName = _authService.CurrentUserSubscriptionType ?? "Geen abonnement";
 
             System.Diagnostics.Debug.WriteLine($"[ProfileViewModel] Credits: {Credits}, Subscription: {SubscriptionName}");
@@ -118,7 +125,8 @@ public partial class ProfileViewModel : BaseViewModel
     }
 
     /// <summary>
-    /// Loads any pending subscription change information from the API
+    /// Fetches live data from the API: refreshes credits, subscription type, renewal date,
+    /// and any pending subscription change.
     /// </summary>
     private async Task LoadPendingSubscriptionChangeAsync()
     {
@@ -133,21 +141,25 @@ public partial class ProfileViewModel : BaseViewModel
         {
             var status = await _subscriptionService.GetSubscriptionStatusAsync(_authService.CurrentUserId.Value);
 
-            if (status != null && !string.IsNullOrEmpty(status.PendingSubscriptionChange))
+            if (status == null) return;
+
+            // Refresh live values from the API so they reflect the current DB state.
+            Credits = status.Credits;
+            if (!string.IsNullOrEmpty(status.CurrentSubscriptionType))
+                SubscriptionName = status.CurrentSubscriptionType;
+
+            if (!string.IsNullOrEmpty(status.RenewalDate)
+                && DateTime.TryParse(status.RenewalDate, out var renewalDate))
+            {
+                SubscriptionEndDate = renewalDate;
+            }
+
+            if (!string.IsNullOrEmpty(status.PendingSubscriptionChange))
             {
                 HasPendingSubscriptionChange = true;
                 var billingCycle = status.PendingBillingCycle == "yearly" ? "jaarlijks" : "maandelijks";
-
-                if (!string.IsNullOrEmpty(status.RenewalDate) && DateTime.TryParse(status.RenewalDate, out var renewalDate))
-                {
-                    PendingSubscriptionInfo = $"Wijzigt naar {status.PendingSubscriptionChange} ({billingCycle}) op {renewalDate:dd-MM-yyyy}";
-                }
-                else
-                {
-                    PendingSubscriptionInfo = $"Wijzigt naar {status.PendingSubscriptionChange} ({billingCycle})";
-                }
-
-                System.Diagnostics.Debug.WriteLine($"[ProfileViewModel] Pending subscription change detected: {PendingSubscriptionInfo}");
+                PendingSubscriptionInfo = $"Wijzigt naar {status.PendingSubscriptionChange} ({billingCycle}) op {SubscriptionEndDate:dd-MM-yyyy}";
+                System.Diagnostics.Debug.WriteLine($"[ProfileViewModel] Pending change: {PendingSubscriptionInfo}");
             }
             else
             {
@@ -157,7 +169,7 @@ public partial class ProfileViewModel : BaseViewModel
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[ProfileViewModel] Error loading pending subscription change: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[ProfileViewModel] Error loading subscription status: {ex.Message}");
             HasPendingSubscriptionChange = false;
             PendingSubscriptionInfo = string.Empty;
         }

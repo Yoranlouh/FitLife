@@ -1,13 +1,11 @@
 @page "/admin/lessons"
-@using FitLife.BlazorWebApp.Services
-@using FitLife.BlazorWebApp.Models
-@using Microsoft.AspNetCore.Authorization
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @attribute [Authorize(Roles = "employee,instructor")]
 @inject ILessonService LessonService
 @inject IWorkoutService WorkoutService
 @inject IInstructorService InstructorService
 @inject ILocationService LocationService
-@inject Blazored.Toast.Services.IToastService ToastService
+@inject IToastService ToastService
 
 <PageTitle>Lessen Beheer - FitLife Admin</PageTitle>
 
@@ -67,7 +65,7 @@
                                         <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => OpenEditModal(lesson)">
                                             <i class="bi bi-pencil"></i>
                                         </button>
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteLesson(lesson.Id)">
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(lesson.Id)">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </td>
@@ -87,7 +85,6 @@
     }
 </div>
 
-@* Modal for Create/Edit Lesson *@
 @if (_showModal)
 {
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
@@ -103,7 +100,7 @@
 
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label class="form-label">Workout Type</label>
+                                <label class="form-label fw-semibold">Workout Type *</label>
                                 <InputSelect @bind-Value="_editingLesson.WorkoutId" class="form-select">
                                     <option value="0">-- Selecteer Workout --</option>
                                     @foreach (var workout in _workouts)
@@ -111,9 +108,10 @@
                                         <option value="@workout.Id">@workout.Name</option>
                                     }
                                 </InputSelect>
+                                <ValidationMessage For="@(() => _editingLesson.WorkoutId)" />
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Instructeur</label>
+                                <label class="form-label fw-semibold">Instructeur *</label>
                                 <InputSelect @bind-Value="_editingLesson.InstructorId" class="form-select">
                                     <option value="0">-- Selecteer Instructeur --</option>
                                     @foreach (var instructor in _instructors)
@@ -121,12 +119,13 @@
                                         <option value="@instructor.Id">@instructor.FullName</option>
                                     }
                                 </InputSelect>
+                                <ValidationMessage For="@(() => _editingLesson.InstructorId)" />
                             </div>
                         </div>
 
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label class="form-label">Locatie</label>
+                                <label class="form-label fw-semibold">Locatie *</label>
                                 <InputSelect @bind-Value="_editingLesson.LocationId" class="form-select">
                                     <option value="0">-- Selecteer Locatie --</option>
                                     @foreach (var location in _locations)
@@ -134,31 +133,60 @@
                                         <option value="@location.Id">@location.Name</option>
                                     }
                                 </InputSelect>
+                                <ValidationMessage For="@(() => _editingLesson.LocationId)" />
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Duur (minuten)</label>
+                                <label class="form-label fw-semibold">Duur (minuten)</label>
                                 <InputNumber @bind-Value="_editingLesson.DurationMinutes" class="form-control" />
+                                <ValidationMessage For="@(() => _editingLesson.DurationMinutes)" />
                             </div>
                         </div>
 
                         <div class="row mb-3">
                             <div class="col-md-8">
-                                <label class="form-label">Start Datum & Tijd</label>
+                                <label class="form-label fw-semibold">Start Datum & Tijd *</label>
                                 <InputDate @bind-Value="_editingLesson.StartTime" Type="InputDateType.DateTimeLocal" class="form-control" />
+                                <ValidationMessage For="@(() => _editingLesson.StartTime)" />
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Max Deelnemers (optioneel)</label>
-                                <InputNumber @bind-Value="_editingLesson.CapacityOverride" class="form-control" />
+                                <label class="form-label fw-semibold">Max Deelnemers <small class="text-muted">(optioneel)</small></label>
+                                <InputNumber @bind-Value="_editingLesson.CapacityOverride" class="form-control" placeholder="Standaard locatie/workout" />
+                                <ValidationMessage For="@(() => _editingLesson.CapacityOverride)" />
                             </div>
                         </div>
 
-                        <div class="modal-footer">
+                        <div class="modal-footer px-0 pb-0">
                             <button type="button" class="btn btn-secondary" @onclick="CloseModal">Annuleren</button>
                             <button type="submit" class="btn btn-primary" disabled="@_isSaving">
-                                @(_isSaving ? "Opslaan..." : "Opslaan")
+                                @if (_isSaving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                Opslaan
                             </button>
                         </div>
                     </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showDeleteConfirm)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Les verwijderen</h5>
+                    <button type="button" class="btn-close" @onclick="() => _showDeleteConfirm = false"></button>
+                </div>
+                <div class="modal-body">
+                    Weet je zeker dat je deze les wilt verwijderen?
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary btn-sm" @onclick="() => _showDeleteConfirm = false">Annuleren</button>
+                    <button class="btn btn-danger btn-sm" @onclick="DeleteLesson" disabled="@_isSaving">Verwijderen</button>
                 </div>
             </div>
         </div>
@@ -170,36 +198,39 @@
     private List<WorkoutDto> _workouts = new();
     private List<InstructorDto> _instructors = new();
     private List<LocationDto> _locations = new();
-    
+
     private bool _isLoading = true;
     private bool _isSaving = false;
     private bool _showModal = false;
-    
+    private bool _showDeleteConfirm = false;
+    private int _deleteTargetId = 0;
+
     private LessonEditDto _editingLesson = new();
 
-    /// <summary>
-    /// Loads all lessons and supporting data (workouts, instructors, locations) when component initializes
-    /// </summary>
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
     }
 
-    /// <summary>
-    /// Loads lessons and all supporting reference data from the database
-    /// </summary>
     private async Task LoadData()
     {
         _isLoading = true;
         try
         {
-            var fromDate = DateTime.Today.AddMonths(-1);
-            var toDate = DateTime.Today.AddMonths(2);
-            
-            _lessons = await LessonService.GetAllLessonsAsync(fromDate, toDate);
-            _workouts = await WorkoutService.GetAllWorkoutsAsync();
-            _instructors = await InstructorService.GetAllInstructorsAsync();
-            _locations = await LocationService.GetAllLocationsAsync();
+            var from = DateTime.Today.AddMonths(-1);
+            var to = DateTime.Today.AddMonths(3);
+
+            var lessonsTask = LessonService.GetAllLessonsAsync(from, to);
+            var workoutsTask = WorkoutService.GetAllWorkoutsAsync();
+            var instructorsTask = InstructorService.GetAllInstructorsAsync();
+            var locationsTask = LocationService.GetAllLocationsAsync();
+
+            await Task.WhenAll(lessonsTask, workoutsTask, instructorsTask, locationsTask);
+
+            _lessons = lessonsTask.Result;
+            _workouts = workoutsTask.Result;
+            _instructors = instructorsTask.Result;
+            _locations = locationsTask.Result;
         }
         catch (Exception ex)
         {
@@ -212,18 +243,16 @@
         }
     }
 
-    /// <summary>
-    /// Opens the modal dialog for creating a new lesson
-    /// </summary>
     private void OpenCreateModal()
     {
-        _editingLesson = new LessonEditDto { StartTime = DateTime.Today.AddDays(1).AddHours(9) };
+        _editingLesson = new LessonEditDto
+        {
+            StartTime = DateTime.Today.AddDays(1).AddHours(9),
+            DurationMinutes = 60
+        };
         _showModal = true;
     }
 
-    /// <summary>
-    /// Opens the modal dialog for editing an existing lesson
-    /// </summary>
     private void OpenEditModal(LessonDto lesson)
     {
         _editingLesson = new LessonEditDto
@@ -231,7 +260,7 @@
             Id = lesson.Id,
             StartTime = lesson.StartTime,
             DurationMinutes = (int)(lesson.EndTime - lesson.StartTime).TotalMinutes,
-            CapacityOverride = lesson.MaxParticipants,
+            CapacityOverride = lesson.MaxParticipants > 0 ? lesson.MaxParticipants : null,
             WorkoutId = lesson.WorkoutId,
             InstructorId = lesson.InstructorId,
             LocationId = lesson.LocationId
@@ -239,18 +268,12 @@
         _showModal = true;
     }
 
-    /// <summary>
-    /// Closes the modal dialog and resets editing state
-    /// </summary>
     private void CloseModal()
     {
         _showModal = false;
         _editingLesson = new();
     }
 
-    /// <summary>
-    /// Saves the lesson (creates new or updates existing) to the database
-    /// </summary>
     private async Task SaveLesson()
     {
         _isSaving = true;
@@ -282,14 +305,19 @@
         }
     }
 
-    /// <summary>
-    /// Deletes a lesson after confirmation
-    /// </summary>
-    private async Task DeleteLesson(int lessonId)
+    private void ConfirmDelete(int lessonId)
     {
-        // In production, add a confirmation dialog here
-        var (success, message) = await LessonService.DeleteLessonAsync(lessonId);
-        
+        _deleteTargetId = lessonId;
+        _showDeleteConfirm = true;
+    }
+
+    private async Task DeleteLesson()
+    {
+        _isSaving = true;
+        var (success, message) = await LessonService.DeleteLessonAsync(_deleteTargetId);
+        _showDeleteConfirm = false;
+        _isSaving = false;
+
         if (success)
         {
             ToastService.ShowSuccess(message);
@@ -301,17 +329,11 @@
         }
     }
 
-    /// <summary>
-    /// Returns Bootstrap badge color class based on occupancy percentage
-    /// </summary>
-    private string GetOccupancyBadgeClass(double occupancy)
+    private string GetOccupancyBadgeClass(double occupancy) => occupancy switch
     {
-        return occupancy switch
-        {
-            >= 90 => "bg-danger",
-            >= 70 => "bg-warning text-dark",
-            >= 50 => "bg-info",
-            _ => "bg-success"
-        };
-    }
+        >= 90 => "bg-danger",
+        >= 70 => "bg-warning text-dark",
+        >= 50 => "bg-info",
+        _ => "bg-success"
+    };
 }

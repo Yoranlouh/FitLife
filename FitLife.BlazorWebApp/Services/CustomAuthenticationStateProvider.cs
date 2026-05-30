@@ -12,49 +12,49 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
     private readonly ISessionService _sessionService;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
+    // Cached per Blazor circuit (Scoped DI) — avoids re-reading HttpContext during WebSocket phase
+    private AuthenticationState? _cachedState;
+
     public CustomAuthenticationStateProvider(ISessionService sessionService, IHttpContextAccessor httpContextAccessor)
     {
         _sessionService = sessionService;
         _httpContextAccessor = httpContextAccessor;
     }
 
-    private string GetSessionId()
-    {
-        var httpContext = _httpContextAccessor.HttpContext;
-        if (httpContext == null)
-            return string.Empty;
-
-        // Try to get existing auth token from cookie
-        if (httpContext.Request.Cookies.TryGetValue(".FitLife.Auth", out var existingToken))
-        {
-            return existingToken;
-        }
-
-        // Fallback to session ID
-        if (string.IsNullOrEmpty(httpContext.Session.Id))
-        {
-            httpContext.Session.SetString("init", "true");
-        }
-
-        return httpContext.Session.Id;
-    }
-
-    /// <summary>
-    /// Gets the current authentication state from in-memory session
-    /// </summary>
     public override Task<AuthenticationState> GetAuthenticationStateAsync()
     {
+        if (_cachedState != null)
+            return Task.FromResult(_cachedState);
+
         try
         {
-            var sessionId = GetSessionId();
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext == null)
+            {
+                _cachedState = Anonymous();
+                return Task.FromResult(_cachedState);
+            }
+
+            string sessionId;
+            if (httpContext.Request.Cookies.TryGetValue(".FitLife.Auth", out var token))
+            {
+                sessionId = token;
+            }
+            else
+            {
+                if (string.IsNullOrEmpty(httpContext.Session.Id))
+                    httpContext.Session.SetString("init", "true");
+                sessionId = httpContext.Session.Id;
+            }
+
             if (string.IsNullOrEmpty(sessionId))
             {
-                return Task.FromResult(new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity())));
+                _cachedState = Anonymous();
+                return Task.FromResult(_cachedState);
             }
 
             var userSession = _sessionService.GetUserSession(sessionId);
-
-            if (userSession != null && userSession.IsAuthenticated)
+            if (userSession?.IsAuthenticated == true)
             {
                 var claims = new[]
                 {
@@ -63,26 +63,28 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
                     new Claim(ClaimTypes.Email, userSession.Email),
                     new Claim(ClaimTypes.Role, userSession.Role)
                 };
-
-                var identity = new ClaimsIdentity(claims, "CustomAuth");
-                var user = new ClaimsPrincipal(identity);
-
-                return Task.FromResult(new AuthenticationState(user));
+                _cachedState = new AuthenticationState(
+                    new ClaimsPrincipal(new ClaimsIdentity(claims, "CustomAuth")));
+            }
+            else
+            {
+                _cachedState = Anonymous();
             }
         }
         catch
         {
-            // If there's an error reading from storage, return anonymous user
+            _cachedState = Anonymous();
         }
 
-        return Task.FromResult(new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity())));
+        return Task.FromResult(_cachedState);
     }
 
-    /// <summary>
-    /// Notifies that the authentication state has changed
-    /// </summary>
     public void NotifyAuthenticationStateChanged()
     {
+        _cachedState = null;
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
     }
+
+    private static AuthenticationState Anonymous() =>
+        new(new ClaimsPrincipal(new ClaimsIdentity()));
 }

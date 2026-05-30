@@ -20,16 +20,40 @@ public class ReservationActionResult
 }
 
 /// <summary>
+/// DTO for a lesson the user has reserved, returned by GET /users/{userId}/lessons.
+/// </summary>
+public class UserLessonDto
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("workoutName")]
+    public string WorkoutName { get; set; } = string.Empty;
+
+    [JsonPropertyName("startTime")]
+    public DateTime StartTime { get; set; }
+
+    [JsonPropertyName("instructorName")]
+    public string InstructorName { get; set; } = string.Empty;
+
+    [JsonPropertyName("locationName")]
+    public string LocationName { get; set; } = string.Empty;
+}
+
+/// <summary>
 /// Contract for the MAUI client-side reservation service.
 /// Encapsulates the HTTP calls to the FitLife.API reservation endpoints.
 /// </summary>
 public interface IReservationService
 {
     /// <summary>
+    /// Returns all active (non-cancelled) lesson reservations for the given user.
+    /// </summary>
+    Task<IEnumerable<UserLessonDto>> GetUserLessonsAsync(int userId);
+
+    /// <summary>
     /// Cancels the active reservation of the given user for the given lesson on the server.
     /// </summary>
-    /// <param name="lessonId">Identifier of the lesson whose reservation should be cancelled.</param>
-    /// <param name="userId">Identifier of the user that owns the reservation.</param>
     Task<ReservationActionResult> CancelReservationAsync(int lessonId, int userId);
 }
 
@@ -44,6 +68,31 @@ public class ReservationService : IReservationService
     public ReservationService(HttpClient httpClient)
     {
         _httpClient = httpClient;
+    }
+
+    /// <summary>
+    /// Calls GET /users/{userId}/lessons and returns the user's active reservations.
+    /// Returns an empty list on any error so the caller never needs to handle exceptions.
+    /// </summary>
+    public async Task<IEnumerable<UserLessonDto>> GetUserLessonsAsync(int userId)
+    {
+        try
+        {
+            using var response = await _httpClient.GetAsync($"users/{userId}/lessons");
+            if (response.IsSuccessStatusCode)
+            {
+                var lessons = await response.Content.ReadFromJsonAsync<IEnumerable<UserLessonDto>>();
+                return lessons ?? Enumerable.Empty<UserLessonDto>();
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[ReservationService] GetUserLessonsAsync: {(int)response.StatusCode}");
+            return Enumerable.Empty<UserLessonDto>();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ReservationService] GetUserLessonsAsync error: {ex.Message}");
+            return Enumerable.Empty<UserLessonDto>();
+        }
     }
 
     /// <summary>

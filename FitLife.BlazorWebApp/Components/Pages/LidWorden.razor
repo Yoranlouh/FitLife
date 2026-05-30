@@ -1,162 +1,532 @@
 @page "/lid-worden"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using System.ComponentModel.DataAnnotations
-@inject NavigationManager NavManager
+@using System.Security.Cryptography
+@using System.Text
+@inject NavigationManager Nav
+@inject IPaymentService PaymentService
+@inject IRegistrationService RegistrationService
 
 <PageTitle>Lid Worden - FitLife</PageTitle>
 
-<div class="container mt-5">
+<div class="container mt-5 mb-5">
     <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow">
-                <div class="card-header bg-success text-white">
-                    <h3 class="mb-0">Word Lid van FitLife</h3>
+        <div class="col-md-8 col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white py-3">
+                    <h3 class="mb-0">
+                        <i class="bi bi-person-plus-fill me-2"></i>Word Lid van FitLife
+                    </h3>
                 </div>
-                <div class="card-body">
-                    @if (!isProcessing && !isSuccess)
-                    {
-                        <EditForm Model="@registrationModel" OnValidSubmit="HandleRegistration">
-                            <DataAnnotationsValidator />
-                            <ValidationSummary class="text-danger" />
 
+                <div class="card-body p-4">
+
+                    @if (pageState == PageState.Form)
+                    {
+                        <EditForm Model="@model" OnValidSubmit="HandleSubmit">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="alert alert-danger py-2" />
+
+                            <!-- Persoonlijke gegevens -->
+                            <h6 class="lw-section-label">Persoonlijke gegevens</h6>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Voornaam</label>
-                                    <InputText @bind-Value="registrationModel.FirstName" class="form-control" />
-                                    <ValidationMessage For="@(() => registrationModel.FirstName)" />
+                                    <InputText @bind-Value="model.FirstName" class="form-control" placeholder="Jan" />
+                                    <ValidationMessage For="@(() => model.FirstName)" />
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Achternaam</label>
-                                    <InputText @bind-Value="registrationModel.LastName" class="form-control" />
-                                    <ValidationMessage For="@(() => registrationModel.LastName)" />
+                                    <InputText @bind-Value="model.LastName" class="form-control" placeholder="de Vries" />
+                                    <ValidationMessage For="@(() => model.LastName)" />
                                 </div>
                             </div>
-
                             <div class="mb-3">
                                 <label class="form-label">E-mailadres</label>
-                                <InputText @bind-Value="registrationModel.Email" class="form-control" />
-                                <ValidationMessage For="@(() => registrationModel.Email)" />
+                                <InputText @bind-Value="model.Email" class="form-control" placeholder="jan@example.nl" />
+                                <ValidationMessage For="@(() => model.Email)" />
                             </div>
 
+                            <hr class="my-3" />
+
+                            <!-- Inloggegevens -->
+                            <h6 class="lw-section-label">Inloggegevens voor de FitLife app</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Maak wachtwoord aan</label>
+                                    <div class="input-group">
+                                        <input type="@(showPassword ? "text" : "password")"
+                                               class="form-control"
+                                               placeholder="Min. 8 tekens"
+                                               @bind="model.Password"
+                                               @bind:event="oninput" />
+                                        <button type="button" class="btn btn-outline-secondary"
+                                                @onclick="@(() => showPassword = !showPassword)"
+                                                tabindex="-1">
+                                            <i class="bi @(showPassword ? "bi-eye-slash" : "bi-eye")"></i>
+                                        </button>
+                                    </div>
+                                    <ValidationMessage For="@(() => model.Password)" />
+                                    @if (!string.IsNullOrEmpty(model.Password))
+                                    {
+                                        <div class="mt-1">
+                                            @{
+                                                var (label, cls) = PasswordStrength(model.Password);
+                                            }
+                                            <small class="@cls">
+                                                <i class="bi bi-shield me-1"></i>Sterkte: @label
+                                            </small>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Herhaal wachtwoord</label>
+                                    <div class="input-group">
+                                        <input type="@(showConfirm ? "text" : "password")"
+                                               class="form-control @(ConfirmMismatch ? "is-invalid" : "")"
+                                               placeholder="Herhaal wachtwoord"
+                                               @bind="model.ConfirmPassword"
+                                               @bind:event="oninput" />
+                                        <button type="button" class="btn btn-outline-secondary"
+                                                @onclick="@(() => showConfirm = !showConfirm)"
+                                                tabindex="-1">
+                                            <i class="bi @(showConfirm ? "bi-eye-slash" : "bi-eye")"></i>
+                                        </button>
+                                    </div>
+                                    <ValidationMessage For="@(() => model.ConfirmPassword)" />
+                                    @if (ConfirmMismatch)
+                                    {
+                                        <div class="invalid-feedback d-block small">
+                                            Wachtwoorden komen niet overeen.
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                            <div class="alert alert-light border small py-2 mb-3">
+                                <i class="bi bi-info-circle me-1 text-primary"></i>
+                                Gebruik dit e-mailadres en wachtwoord om in te loggen in de <strong>FitLife app</strong>.
+                            </div>
+
+                            <hr class="my-3" />
+
+                            <!-- Abonnement -->
+                            <h6 class="lw-section-label">Abonnement</h6>
                             <div class="mb-3">
                                 <label class="form-label">Factureringsperiode</label>
                                 <div class="btn-group w-100" role="group">
-                                    <input type="radio" class="btn-check" name="billingPeriod" id="monthly" autocomplete="off" 
-                                           checked="@(!registrationModel.IsYearly)" @onclick="() => SetYearly(false)">
+                                    <input type="radio" class="btn-check" name="billingPeriod" id="monthly"
+                                           autocomplete="off" checked="@(!model.IsYearly)"
+                                           @onclick="@(() => SetYearly(false))" />
                                     <label class="btn btn-outline-success" for="monthly">Maandelijks</label>
-
-                                    <input type="radio" class="btn-check" name="billingPeriod" id="yearly" autocomplete="off" 
-                                           checked="@registrationModel.IsYearly)" @onclick="() => SetYearly(true)">
-                                    <label class="btn btn-outline-success" for="yearly">Jaarlijks (Bespaar ~15%)</label>
+                                    <input type="radio" class="btn-check" name="billingPeriod" id="yearly"
+                                           autocomplete="off" checked="@model.IsYearly"
+                                           @onclick="@(() => SetYearly(true))" />
+                                    <label class="btn btn-outline-success" for="yearly">
+                                        Jaarlijks <span class="badge bg-warning text-dark ms-1">Bespaar ~15%</span>
+                                    </label>
                                 </div>
                             </div>
-
-                            <div class="mb-3">
+                            <div class="mb-4">
                                 <label class="form-label">Gekozen Abonnement</label>
-                                <InputSelect @bind-Value="registrationModel.SelectedPlan" class="form-select">
-                                    <option value="Rookie">Rookie (9 credits - €@(registrationModel.IsYearly ? $"{Math.Round(45 * 12 * 0.85m, 0)}/jr" : "45/mnd"))</option>
-                                    <option value="Intermediate">Intermediate (13 credits - €@(registrationModel.IsYearly ? $"{Math.Round(65 * 12 * 0.85m, 0)}/jr" : "65/mnd"))</option>
-                                    <option value="Advanced">Advanced (Unlimited - €@(registrationModel.IsYearly ? $"{Math.Round(85 * 12 * 0.85m, 0)}/jr" : "85/mnd"))</option>
+                                <InputSelect @bind-Value="model.SelectedPlan" class="form-select">
+                                    <option value="Rookie">Rookie — 9 credits/mnd · &#8364;@(PlanPrice("Rookie"))@(model.IsYearly ? "/jr" : "/mnd")</option>
+                                    <option value="Intermediate">Intermediate — 13 credits/mnd · &#8364;@(PlanPrice("Intermediate"))@(model.IsYearly ? "/jr" : "/mnd")</option>
+                                    <option value="Advanced">Advanced — Unlimited · &#8364;@(PlanPrice("Advanced"))@(model.IsYearly ? "/jr" : "/mnd")</option>
                                 </InputSelect>
                             </div>
 
-                            <hr class="my-4">
-                            <h5>Betalingsinformatie (Stripe Simulatie)</h5>
-                            <div class="mb-3 p-3 border rounded bg-light">
-                                <div class="mb-3">
-                                    <label class="form-label">Kaartnummer</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="bi bi-credit-card"></i></span>
-                                        <input type="text" class="form-control" placeholder="4242 4242 4242 4242" disabled />
+                            <hr class="my-3" />
+
+                            <!-- Betaalmethode -->
+                            <h6 class="lw-section-label">Betaalmethode</h6>
+
+                            <div class="@(paymentSelected ? "lw-payment-card lw-payment-card-selected mb-3" : "lw-payment-card mb-3")"
+                                 @onclick="TogglePayment">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                                        <span class="ideal-text" style="font-size:1.25rem;">iDEAL</span>
+                                        <span class="text-muted" style="font-size:.85rem;">/</span>
+                                        <span class="wero-text" style="font-size:1.25rem;">Wero</span>
                                     </div>
-                                    <small class="text-muted">Gebruik de Stripe testkaart in deze simulatie.</small>
-                                </div>
-                                <div class="row">
-                                    <div class="col-6 mb-3">
-                                        <label class="form-label">Vervaldatum</label>
-                                        <input type="text" class="form-control" placeholder="MM/YY" disabled />
+                                    <div class="flex-grow-1">
+                                        <div class="fw-semibold">iDEAL / Wero</div>
+                                        <div class="text-muted small">Betaal via uw eigen bank</div>
                                     </div>
-                                    <div class="col-6 mb-3">
-                                        <label class="form-label">CVC</label>
-                                        <input type="text" class="form-control" placeholder="123" disabled />
-                                    </div>
+                                    @if (paymentSelected)
+                                    {
+                                        <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-circle text-muted fs-5"></i>
+                                    }
                                 </div>
                             </div>
 
-                            <div class="d-grid mt-4">
-                                <button type="submit" class="btn btn-success btn-lg">Afrekenen en Lid Worden</button>
+                            @if (paymentSelected)
+                            {
+                                <div class="lw-bank-box mb-3">
+                                    <label class="form-label fw-semibold small mb-2">Selecteer uw bank</label>
+                                    <InputSelect @bind-Value="model.SelectedBank" class="form-select">
+                                        <option value="">— Kies uw bank —</option>
+                                        <option value="ABN AMRO">ABN AMRO</option>
+                                        <option value="ING">ING</option>
+                                        <option value="Rabobank">Rabobank</option>
+                                        <option value="SNS Bank">SNS Bank</option>
+                                        <option value="ASN Bank">ASN Bank</option>
+                                        <option value="RegioBank">RegioBank</option>
+                                        <option value="Triodos Bank">Triodos Bank</option>
+                                        <option value="Bunq">Bunq</option>
+                                        <option value="Knab">Knab</option>
+                                    </InputSelect>
+                                    @if (showBankError)
+                                    {
+                                        <div class="text-danger mt-1 small">
+                                            <i class="bi bi-exclamation-circle me-1"></i>Selecteer een bank om door te gaan.
+                                        </div>
+                                    }
+                                    <div class="mt-2 d-flex align-items-center gap-1 text-muted" style="font-size:.72rem;">
+                                        <i class="bi bi-shield-lock-fill text-success"></i>
+                                        <span>Beveiligd met 256-bit SSL via Stripe</span>
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-light border d-flex justify-content-between align-items-center py-2 mb-3">
+                                    <div>
+                                        <strong>@model.SelectedPlan</strong>
+                                        <span class="text-muted ms-1 small">(@(model.IsYearly ? "Jaarlijks" : "Maandelijks"))</span>
+                                    </div>
+                                    <span class="fs-5 fw-bold text-success">&#8364;@CurrentPrice()</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="text-center text-muted small mb-3">
+                                    <i class="bi bi-hand-index me-1"></i>Klik op de kaart om iDEAL / Wero te selecteren
+                                </p>
+                            }
+
+                            <div class="d-grid mt-2">
+                                <button type="submit" class="btn btn-success btn-lg"
+                                        disabled="@(!paymentSelected)">
+                                    <i class="bi bi-bank me-2"></i>Betalen met iDEAL / Wero
+                                </button>
                             </div>
+                            <p class="text-center text-muted mt-2 mb-0" style="font-size:.73rem;">
+                                <i class="bi bi-shield-lock me-1"></i>Betaling verwerkt via <strong>Stripe</strong> Testmodus
+                            </p>
                         </EditForm>
                     }
-                    else if (isProcessing)
+
+                    else if (pageState == PageState.Registering)
                     {
                         <div class="text-center py-5">
-                            <div class="spinner-border text-success" role="status" style="width: 3rem; height: 3rem;">
-                                <span class="visually-hidden">Loading...</span>
+                            <div class="spinner-border text-success mb-4" role="status" style="width:3rem;height:3rem;">
+                                <span class="visually-hidden">Laden...</span>
                             </div>
-                            <h4 class="mt-3">Betaling wordt verwerkt via Stripe...</h4>
-                            <p class="text-muted">Sluit dit venster niet.</p>
+                            <h5>Account wordt aangemaakt...</h5>
+                            <p class="text-muted small">Uw gegevens worden opgeslagen in de database.</p>
                         </div>
                     }
-                    else if (isSuccess)
+
+                    else if (pageState == PageState.Cancelled)
                     {
                         <div class="text-center py-5">
-                            <i class="bi bi-check-circle-fill text-success display-1"></i>
-                            <h2 class="mt-3">Welkom bij de club, @registrationModel.FirstName!</h2>
-                            <p class="lead">Je betaling is succesvol verwerkt. Je ontvangt binnen enkele minuten een bevestigingsmail.</p>
-                            <button class="btn btn-primary mt-3" @onclick="GoHome">Terug naar Home</button>
+                            <i class="bi bi-x-circle-fill text-secondary" style="font-size:4rem;"></i>
+                            <h4 class="mt-3">Betaling geannuleerd</h4>
+                            <p class="text-muted">U heeft de betaling geannuleerd. U kunt het opnieuw proberen.</p>
+                            <button class="btn btn-outline-success mt-2 px-4" @onclick="ResetForm">
+                                <i class="bi bi-arrow-clockwise me-2"></i>Opnieuw proberen
+                            </button>
                         </div>
                     }
+
+                    else if (pageState == PageState.RegistrationFailed && completedSession != null)
+                    {
+                        <div class="text-center py-5">
+                            <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size:4rem;"></i>
+                            <h4 class="mt-3">Betaling gelukt, registratie mislukt</h4>
+                            <p class="text-muted">Uw betaling van <strong>&#8364;@completedSession.Amount.ToString("0.00")</strong> is verwerkt, maar het aanmaken van uw account is mislukt.</p>
+                            @if (!string.IsNullOrEmpty(registrationError))
+                            {
+                                <div class="alert alert-warning mt-3">@registrationError</div>
+                            }
+                            <p class="text-muted small mt-2">
+                                Neem contact op met <strong>info&#64;fitlife.nl</strong> met kenmerk
+                                <code>FTL-@(completedSession.Id[..8].ToUpper())</code>.
+                            </p>
+                        </div>
+                    }
+
+                    else if (pageState == PageState.Success && completedSession != null)
+                    {
+                        <div class="text-center py-4">
+                            <div class="text-success mb-3" style="font-size:4.5rem;line-height:1;">
+                                <i class="bi bi-check-circle-fill"></i>
+                            </div>
+                            <h2 class="mb-1">Welkom bij de club, @completedSession.FirstName!</h2>
+                            <p class="lead text-muted mb-4">
+                                Betaling succesvol &mdash; uw account is aangemaakt.
+                            </p>
+
+                            <!-- App login info -->
+                            <div class="alert alert-success border-success mb-4 text-start">
+                                <h6 class="alert-heading mb-2">
+                                    <i class="bi bi-phone-fill me-2"></i>Log in op de FitLife app
+                                </h6>
+                                <p class="mb-1 small">Gebruik deze gegevens om in te loggen:</p>
+                                <div class="d-flex align-items-center gap-2 mt-2">
+                                    <i class="bi bi-envelope text-success"></i>
+                                    <code class="text-dark">@completedSession.Email</code>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 mt-1">
+                                    <i class="bi bi-lock text-success"></i>
+                                    <span class="text-muted small">Uw gekozen wachtwoord</span>
+                                </div>
+                            </div>
+
+                            <!-- Payment summary -->
+                            <div class="card bg-light border-0 text-start mb-4">
+                                <div class="card-body">
+                                    <h6 class="lw-section-label mb-3">Betalingsoverzicht</h6>
+                                    <dl class="row mb-0">
+                                        <dt class="col-6 fw-normal text-muted">Naam</dt>
+                                        <dd class="col-6 fw-semibold">@completedSession.FirstName @completedSession.LastName</dd>
+
+                                        <dt class="col-6 fw-normal text-muted">Abonnement</dt>
+                                        <dd class="col-6 fw-semibold">@completedSession.Plan</dd>
+
+                                        <dt class="col-6 fw-normal text-muted">Periode</dt>
+                                        <dd class="col-6 fw-semibold">@(completedSession.IsYearly ? "Jaarlijks" : "Maandelijks")</dd>
+
+                                        <dt class="col-6 fw-normal text-muted">Betaalmethode</dt>
+                                        <dd class="col-6 fw-semibold">iDEAL / Wero &mdash; @completedSession.Bank</dd>
+
+                                        <dt class="col-6 fw-normal text-muted">Bedrag</dt>
+                                        <dd class="col-6 fw-semibold text-success fs-5">&#8364;@completedSession.Amount.ToString("0.00")</dd>
+
+                                        <dt class="col-6 fw-normal text-muted">Kenmerk</dt>
+                                        <dd class="col-6" style="font-family:monospace;font-size:.82rem;">FTL-@(completedSession.Id[..8].ToUpper())</dd>
+                                    </dl>
+                                </div>
+                            </div>
+
+                            <p class="text-muted small">
+                                <i class="bi bi-envelope me-1"></i>
+                                Bevestiging wordt gestuurd naar <strong>@completedSession.Email</strong>.
+                            </p>
+                            <a href="/" class="btn btn-primary mt-2 px-4">
+                                <i class="bi bi-house-fill me-2"></i>Terug naar Home
+                            </a>
+                        </div>
+                    }
+
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+<style>
+    .lw-section-label {
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        color: #6c757d;
+        font-weight: 600;
+        font-size: .75rem;
+    }
+
+    .lw-payment-card {
+        cursor: pointer;
+        border: 2px solid #dee2e6;
+        border-radius: 12px;
+        padding: 16px 18px;
+        transition: border-color .15s, box-shadow .15s;
+        user-select: none;
+    }
+
+        .lw-payment-card:hover {
+            border-color: #adb5bd;
+            box-shadow: 0 2px 8px rgba(0,0,0,.07);
+        }
+
+    .lw-payment-card-selected {
+        border-color: #4CAF50 !important;
+        box-shadow: 0 0 0 3px rgba(76,175,80,.15) !important;
+    }
+
+    .lw-bank-box {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 16px;
+    }
+
+    .ideal-text {
+        color: #cc0066;
+        font-weight: 900;
+        font-style: italic;
+    }
+
+    .wero-text {
+        font-weight: 900;
+        background: linear-gradient(135deg, #6B2FD6, #3B82F6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+</style>
+
 @code {
-    private RegistrationModel registrationModel = new();
-    private bool isProcessing = false;
-    private bool isSuccess = false;
+    [Parameter, SupplyParameterFromQuery] public string? Plan   { get; set; }
+    [Parameter, SupplyParameterFromQuery] public bool    Yearly { get; set; }
+    [Parameter, SupplyParameterFromQuery] public string? Status { get; set; }
+    [Parameter, SupplyParameterFromQuery] public string? Sid    { get; set; }
 
-    [Parameter]
-    [SupplyParameterFromQuery]
-    public string? Plan { get; set; }
+    private enum PageState { Form, Registering, Cancelled, RegistrationFailed, Success }
+    private PageState pageState = PageState.Form;
 
-    [Parameter]
-    [SupplyParameterFromQuery]
-    public bool Yearly { get; set; }
+    private PaymentSession? completedSession;
+    private bool   paymentSelected = false;
+    private bool   showBankError   = false;
+    private bool   showPassword    = false;
+    private bool   showConfirm     = false;
+    private string? registrationError;
 
-    protected override void OnInitialized()
+    private bool ConfirmMismatch =>
+        !string.IsNullOrEmpty(model.Password) &&
+        !string.IsNullOrEmpty(model.ConfirmPassword) &&
+        model.Password != model.ConfirmPassword;
+
+    private FormModel model = new();
+
+    protected override async Task OnInitializedAsync()
     {
         if (!string.IsNullOrEmpty(Plan))
+            model.SelectedPlan = Plan;
+        model.IsYearly = Yearly;
+
+        if (Status == "success" && !string.IsNullOrEmpty(Sid))
         {
-            registrationModel.SelectedPlan = Plan;
+            var session = PaymentService.GetSession(Sid);
+            if (session?.Status == PaymentStatus.Confirmed)
+            {
+                if (session.IsRegistered)
+                {
+                    // Page refresh — already registered, just show success
+                    completedSession = session;
+                    pageState = PageState.Success;
+                }
+                else
+                {
+                    pageState = PageState.Registering;
+                    StateHasChanged();
+
+                    var result = await RegistrationService.CreateMemberAsync(session);
+                    if (result.Success)
+                    {
+                        session.IsRegistered = true;
+                        completedSession     = session;
+                        pageState            = PageState.Success;
+                    }
+                    else
+                    {
+                        registrationError = result.ErrorMessage;
+                        completedSession  = session;
+                        pageState         = PageState.RegistrationFailed;
+                    }
+                }
+            }
         }
-        registrationModel.IsYearly = Yearly;
+        else if (Status == "cancelled")
+        {
+            pageState = PageState.Cancelled;
+        }
     }
 
-    private void SetYearly(bool yearly)
+    private void SetYearly(bool yearly) => model.IsYearly = yearly;
+
+    private void TogglePayment()
     {
-        registrationModel.IsYearly = yearly;
-        StateHasChanged();
+        paymentSelected = !paymentSelected;
+        showBankError   = false;
     }
 
-    private async Task HandleRegistration()
+    private void ResetForm()
     {
-        isProcessing = true;
-        
-        // Simuleer Stripe API vertraging
-        await Task.Delay(2500);
-        
-        isProcessing = false;
-        isSuccess = true;
+        model            = new FormModel();
+        pageState        = PageState.Form;
+        paymentSelected  = false;
+        completedSession = null;
+        registrationError = null;
+        Nav.NavigateTo("/lid-worden");
     }
 
-    private void GoHome()
+    private string PlanPrice(string plan) => (plan, model.IsYearly) switch
     {
-        NavManager.NavigateTo("/");
+        ("Rookie",       true)  => $"{Math.Round(45m * 12 * 0.85m, 0)}",
+        ("Intermediate", true)  => $"{Math.Round(65m * 12 * 0.85m, 0)}",
+        ("Advanced",     true)  => $"{Math.Round(85m * 12 * 0.85m, 0)}",
+        ("Rookie",       false) => "45",
+        ("Intermediate", false) => "65",
+        ("Advanced",     false) => "85",
+        _                       => "0"
+    };
+
+    private string CurrentPrice() => PlanPrice(model.SelectedPlan);
+
+    private async Task HandleSubmit()
+    {
+        showBankError = false;
+
+        if (string.IsNullOrEmpty(model.SelectedBank))
+        {
+            showBankError = true;
+            return;
+        }
+
+        if (model.Password != model.ConfirmPassword)
+            return; // client-side mismatch guard
+
+        var session = await PaymentService.CreateSessionAsync(
+            firstName:    model.FirstName,
+            lastName:     model.LastName,
+            email:        model.Email,
+            plan:         model.SelectedPlan,
+            isYearly:     model.IsYearly,
+            amount:       decimal.Parse(CurrentPrice()),
+            subMethod:    "ideal",
+            bank:         model.SelectedBank,
+            phone:        null,
+            passwordHash: HashPassword(model.Password)
+        );
+
+        Nav.NavigateTo($"/betaal-simulatie?sid={session.Id}");
     }
 
-    public class RegistrationModel
+    private static string HashPassword(string password)
+    {
+        using var sha = SHA256.Create();
+        var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(password));
+        var sb = new StringBuilder();
+        foreach (var b in bytes) sb.Append(b.ToString("x2"));
+        return sb.ToString();
+    }
+
+    private static (string Label, string CssClass) PasswordStrength(string pw)
+    {
+        if (pw.Length < 8)  return ("Zwak",  "text-danger");
+        if (pw.Length < 12) return ("Matig", "text-warning");
+        var hasUpper  = pw.Any(char.IsUpper);
+        var hasDigit  = pw.Any(char.IsDigit);
+        var hasSymbol = pw.Any(c => !char.IsLetterOrDigit(c));
+        return (hasUpper && hasDigit && hasSymbol)
+            ? ("Sterk", "text-success")
+            : ("Goed",  "text-primary");
+    }
+
+    // ── Form model ──────────────────────────────────────────────────────
+    public class FormModel
     {
         [Required(ErrorMessage = "Voornaam is verplicht")]
         public string FirstName { get; set; } = "";
@@ -168,9 +538,16 @@
         [EmailAddress(ErrorMessage = "Ongeldig e-mailadres")]
         public string Email { get; set; } = "";
 
+        [Required(ErrorMessage = "Wachtwoord is verplicht")]
+        [MinLength(8, ErrorMessage = "Wachtwoord moet minimaal 8 tekens zijn")]
+        public string Password { get; set; } = "";
+
+        [Required(ErrorMessage = "Herhaal uw wachtwoord")]
+        public string ConfirmPassword { get; set; } = "";
+
         [Required]
         public string SelectedPlan { get; set; } = "Rookie";
-
-        public bool IsYearly { get; set; }
+        public bool   IsYearly     { get; set; }
+        public string SelectedBank { get; set; } = "";
     }
 }

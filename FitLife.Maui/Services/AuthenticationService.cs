@@ -65,6 +65,10 @@ public interface IAuthenticationService
     int? CurrentUserCredits { get; }
     string? CurrentUserSubscriptionType { get; }
     string? CurrentUserSubscriptionRenewalDate { get; }
+    string? CurrentUserRole { get; }
+    bool IsAdmin { get; }
+    bool IsInstructor { get; }
+    bool IsMember { get; }
 }
 
 /// <summary>
@@ -114,6 +118,11 @@ public class AuthenticationService : IAuthenticationService
     /// Get the current user's subscription renewal date
     /// </summary>
     public string? CurrentUserSubscriptionRenewalDate => _currentUser?.SubscriptionRenewalDate;
+
+    public string? CurrentUserRole => _currentUser?.Role;
+    public bool IsAdmin => string.Equals(_currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
+    public bool IsInstructor => string.Equals(_currentUser?.Role, "instructor", StringComparison.OrdinalIgnoreCase);
+    public bool IsMember => !IsAdmin && !IsInstructor;
 
     /// <summary>
     /// Attempt to login with email and password

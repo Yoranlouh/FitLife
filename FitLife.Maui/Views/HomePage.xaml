@@ -16,79 +16,359 @@
             <Label Grid.Column="0"
                    Text="☰"
                    TextColor="{StaticResource White}"
-                   FontSize="34"
+                   FontSize="24"
                    VerticalOptions="Center" />
 
             <VerticalStackLayout Grid.Column="1"
                                  Spacing="0"
                                  HorizontalOptions="Center"
                                  VerticalOptions="Center">
-                <Label Text="FitLife."
+                <Label Text="Hoofdmenu"
                        Style="{StaticResource HeaderTitle}"
-                       FontSize="24" />
+                       FontSize="20" />
             </VerticalStackLayout>
 
-            <Label Grid.Column="2"
-                   Text="✉"
-                   TextColor="{StaticResource White}"
-                   FontSize="34"
-                   VerticalOptions="Center" />
+            <Grid Grid.Column="2" VerticalOptions="Center">
+                <Label Text="✉"
+                       TextColor="{StaticResource White}"
+                       FontSize="30"
+                       VerticalOptions="Center" />
+                <Ellipse Fill="Red"
+                         WidthRequest="10"
+                         HeightRequest="10"
+                         HorizontalOptions="End"
+                         VerticalOptions="Start"
+                         TranslationX="2"
+                         TranslationY="-2" />
+            </Grid>
         </Grid>
 
         <!-- Tiles -->
-        <ScrollView Grid.Row="1" BackgroundColor="{StaticResource LightGray}">
+        <ScrollView Grid.Row="1" BackgroundColor="White">
             <VerticalStackLayout Spacing="0">
                 <!-- Logo section -->
-                <Grid HeightRequest="200" BackgroundColor="White">
-                    <Label Text="FitLife" 
-                           TextColor="{StaticResource Primary}" 
-                           FontSize="48" 
-                           FontAttributes="Bold" 
-                           HorizontalOptions="Center" 
-                           VerticalOptions="Center" />
+                <Grid HeightRequest="160" BackgroundColor="White">
+                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="4">
+                        <Label Text="FitLife."
+                               TextColor="#5B6636"
+                               FontSize="42"
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center" />
+                        <Label Text="{Binding WelcomeMessage}"
+                               TextColor="#5B6636"
+                               FontSize="14"
+                               HorizontalOptions="Center" />
+                    </VerticalStackLayout>
                 </Grid>
 
-                <!-- Tiles Grid -->
-                <Grid ColumnDefinitions="*,*" RowDefinitions="250">
+                <!-- ==================== MEMBER TILES ==================== -->
+                <Grid ColumnDefinitions="*,*"
+                      RowDefinitions="Auto,Auto,Auto"
+                      IsVisible="{Binding IsMember}">
+
                     <!-- Rooster & Events -->
-                    <Border Grid.Column="0" 
-                            Stroke="{StaticResource MediumGray}" 
-                            StrokeThickness="1"
-                            BackgroundColor="White">
+                    <Border Grid.Row="0" Grid.Column="0"
+                            Stroke="{StaticResource MediumGray}"
+                            StrokeThickness="0.5"
+                            BackgroundColor="White"
+                            HeightRequest="220">
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Tapped="OnViewLessonsClicked" />
                         </Border.GestureRecognizers>
-                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="20">
-                            <Label Text="📅" FontSize="60" HorizontalOptions="Center" TextColor="{StaticResource Black}" />
-                            <Label Text="Rooster &amp; Events" 
-                                   FontSize="20" 
-                                   TextColor="{StaticResource Black}" 
-                                   HorizontalOptions="Center" 
+                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="16">
+                            <Label Text="📅" FontSize="44" HorizontalOptions="Center" />
+                            <Label Text="Rooster &amp; Events"
+                                   FontSize="14"
+                                   TextColor="{StaticResource Black}"
+                                   HorizontalOptions="Center"
                                    HorizontalTextAlignment="Center" />
                         </VerticalStackLayout>
                     </Border>
 
                     <!-- Afspraken & reserveringen -->
-                    <Border Grid.Column="1" 
-                            Stroke="{StaticResource MediumGray}" 
-                            StrokeThickness="1"
-                            BackgroundColor="White">
+                    <Border Grid.Row="0" Grid.Column="1"
+                            Stroke="{StaticResource MediumGray}"
+                            StrokeThickness="0.5"
+                            BackgroundColor="White"
+                            HeightRequest="220">
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Tapped="OnReservationsClicked" />
                         </Border.GestureRecognizers>
-                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="20">
-                            <Label Text="✅" FontSize="60" HorizontalOptions="Center" TextColor="{StaticResource Black}" />
-                            <Label Text="Afspraken &amp; reserveringen" 
-                                   FontSize="20" 
-                                   TextColor="{StaticResource Black}" 
-                                   HorizontalOptions="Center" 
+                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="16">
+                            <Label Text="🔖" FontSize="44" HorizontalOptions="Center" />
+                            <Label Text="Afspraken &amp; reserveringen"
+                                   FontSize="14"
+                                   TextColor="{StaticResource Black}"
+                                   HorizontalOptions="Center"
                                    HorizontalTextAlignment="Center" />
                         </VerticalStackLayout>
                     </Border>
+
+                    <!-- Fitcommunity -->
+                    <Border Grid.Row="1" Grid.Column="0"
+                            Stroke="{StaticResource MediumGray}"
+                            StrokeThickness="0.5"
+                            BackgroundColor="White"
+                            HeightRequest="220">
+                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="16">
+                            <Label Text="📺" FontSize="44" HorizontalOptions="Center" />
+                            <Label Text="Fitcommunity"
+                                   FontSize="14"
+                                   TextColor="{StaticResource Black}"
+                                   HorizontalOptions="Center"
+                                   HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- Documenten -->
+                    <Border Grid.Row="1" Grid.Column="1"
+                            Stroke="{StaticResource MediumGray}"
+                            StrokeThickness="0.5"
+                            BackgroundColor="White"
+                            HeightRequest="220">
+                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="16">
+                            <Label Text="📄" FontSize="44" HorizontalOptions="Center" />
+                            <Label Text="Documenten"
+                                   FontSize="14"
+                                   TextColor="{StaticResource Black}"
+                                   HorizontalOptions="Center"
+                                   HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- Shop -->
+                    <Border Grid.Row="2" Grid.Column="0"
+                            Stroke="{StaticResource MediumGray}"
+                            StrokeThickness="0.5"
+                            BackgroundColor="White"
+                            HeightRequest="220">
+                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="16">
+                            <Label Text="🛒" FontSize="44" HorizontalOptions="Center" />
+                            <Label Text="Shop"
+                                   FontSize="14"
+                                   TextColor="{StaticResource Black}"
+                                   HorizontalOptions="Center"
+                                   HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Grid.Row="2" Grid.Column="1"
+                            Stroke="{StaticResource MediumGray}"
+                            StrokeThickness="0.5"
+                            BackgroundColor="{StaticResource LightGray}"
+                            HeightRequest="220" />
                 </Grid>
-                
-                <!-- Placeholder for the rest of the empty space -->
-                <BoxView HeightRequest="500" Color="{StaticResource LightGray}" />
+
+                <!-- ==================== TRAINER TILES ==================== -->
+                <Grid ColumnDefinitions="*,*"
+                      RowDefinitions="Auto,Auto,Auto"
+                      IsVisible="{Binding IsInstructor}">
+
+                    <!-- Lessen Geven -->
+                    <Border Grid.Row="0" Grid.Column="0"
+                            Stroke="{StaticResource MediumGray}"
+                            StrokeThickness="0.5"
+                            BackgroundColor="#F0F4E8"
+                            HeightRequest="220">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnInstructorLessonsClicked" />
+                        </Border.GestureRecognizers>
+                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="16">
+                            <Label Text="📋" FontSize="44" HorizontalOptions="Center" />
+                            <Label Text="Mijn Lessen Geven"
+                                   FontSize="14"
+                                   FontAttributes="Bold"
+                                   TextColor="#5B6636"
+                                   HorizontalOptions="Center"
+                                   HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- Lessen Deelnemen -->
+                    <Border Grid.Row="0" Grid.Column="1"
+                            Stroke="{StaticResource MediumGray}"
+                            StrokeThickness="0.5"
+                            BackgroundColor="#F0F4E8"
+                            HeightRequest="220">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnReservationsClicked" />
+                        </Border.GestureRecognizers>
+                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="16">
+                            <Label Text="🔖" FontSize="44" HorizontalOptions="Center" />
+                            <Label Text="Lessen Deelnemen"
+                                   FontSize="14"
+                                   FontAttributes="Bold"
+                                   TextColor="#5B6636"
+                                   HorizontalOptions="Center"
+                                   HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- Les Aanmaken -->
+                    <Border Grid.Row="1" Grid.Column="0"
+                            Stroke="{StaticResource MediumGray}"
+                            StrokeThickness="0.5"
+                            BackgroundColor="#F0F4E8"
+                            HeightRequest="220">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnCreateLessonClicked" />
+                        </Border.GestureRecognizers>
+                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="16">
+                            <Label Text="➕" FontSize="44" HorizontalOptions="Center" />
+                            <Label Text="Les Aanmaken"
+                                   FontSize="14"
+                                   FontAttributes="Bold"
+                                   TextColor="#5B6636"
+                                   HorizontalOptions="Center"
+                                   HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- Rooster bekijken -->
+                    <Border Grid.Row="1" Grid.Column="1"
+                            Stroke="{StaticResource MediumGray}"
+                            StrokeThickness="0.5"
+                            BackgroundColor="White"
+                            HeightRequest="220">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnViewLessonsClicked" />
+                        </Border.GestureRecognizers>
+                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="16">
+                            <Label Text="📅" FontSize="44" HorizontalOptions="Center" />
+                            <Label Text="Rooster"
+                                   FontSize="14"
+                                   TextColor="{StaticResource Black}"
+                                   HorizontalOptions="Center"
+                                   HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- Documenten -->
+                    <Border Grid.Row="2" Grid.Column="0"
+                            Stroke="{StaticResource MediumGray}"
+                            StrokeThickness="0.5"
+                            BackgroundColor="White"
+                            HeightRequest="220">
+                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="16">
+                            <Label Text="📄" FontSize="44" HorizontalOptions="Center" />
+                            <Label Text="Documenten"
+                                   FontSize="14"
+                                   TextColor="{StaticResource Black}"
+                                   HorizontalOptions="Center"
+                                   HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Grid.Row="2" Grid.Column="1"
+                            Stroke="{StaticResource MediumGray}"
+                            StrokeThickness="0.5"
+                            BackgroundColor="{StaticResource LightGray}"
+                            HeightRequest="220" />
+                </Grid>
+
+                <!-- ==================== ADMIN TILES ==================== -->
+                <Grid ColumnDefinitions="*,*"
+                      RowDefinitions="Auto,Auto,Auto"
+                      IsVisible="{Binding IsAdmin}">
+
+                    <!-- Les Aanmaken -->
+                    <Border Grid.Row="0" Grid.Column="0"
+                            Stroke="{StaticResource MediumGray}"
+                            StrokeThickness="0.5"
+                            BackgroundColor="#FFF3E0"
+                            HeightRequest="220">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnCreateLessonClicked" />
+                        </Border.GestureRecognizers>
+                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="16">
+                            <Label Text="➕" FontSize="44" HorizontalOptions="Center" />
+                            <Label Text="Les Aanmaken"
+                                   FontSize="14"
+                                   FontAttributes="Bold"
+                                   TextColor="#E65100"
+                                   HorizontalOptions="Center"
+                                   HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- Lessen Beheer -->
+                    <Border Grid.Row="0" Grid.Column="1"
+                            Stroke="{StaticResource MediumGray}"
+                            StrokeThickness="0.5"
+                            BackgroundColor="#FFF3E0"
+                            HeightRequest="220">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnViewLessonsClicked" />
+                        </Border.GestureRecognizers>
+                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="16">
+                            <Label Text="📅" FontSize="44" HorizontalOptions="Center" />
+                            <Label Text="Lessen Beheer"
+                                   FontSize="14"
+                                   FontAttributes="Bold"
+                                   TextColor="#E65100"
+                                   HorizontalOptions="Center"
+                                   HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- Instructeurs -->
+                    <Border Grid.Row="1" Grid.Column="0"
+                            Stroke="{StaticResource MediumGray}"
+                            StrokeThickness="0.5"
+                            BackgroundColor="#FFF3E0"
+                            HeightRequest="220">
+                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="16">
+                            <Label Text="🏋️" FontSize="44" HorizontalOptions="Center" />
+                            <Label Text="Instructeurs"
+                                   FontSize="14"
+                                   FontAttributes="Bold"
+                                   TextColor="#E65100"
+                                   HorizontalOptions="Center"
+                                   HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- Leden -->
+                    <Border Grid.Row="1" Grid.Column="1"
+                            Stroke="{StaticResource MediumGray}"
+                            StrokeThickness="0.5"
+                            BackgroundColor="#FFF3E0"
+                            HeightRequest="220">
+                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="16">
+                            <Label Text="👥" FontSize="44" HorizontalOptions="Center" />
+                            <Label Text="Leden"
+                                   FontSize="14"
+                                   FontAttributes="Bold"
+                                   TextColor="#E65100"
+                                   HorizontalOptions="Center"
+                                   HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- Documenten -->
+                    <Border Grid.Row="2" Grid.Column="0"
+                            Stroke="{StaticResource MediumGray}"
+                            StrokeThickness="0.5"
+                            BackgroundColor="White"
+                            HeightRequest="220">
+                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="16">
+                            <Label Text="📄" FontSize="44" HorizontalOptions="Center" />
+                            <Label Text="Documenten"
+                                   FontSize="14"
+                                   TextColor="{StaticResource Black}"
+                                   HorizontalOptions="Center"
+                                   HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Grid.Row="2" Grid.Column="1"
+                            Stroke="{StaticResource MediumGray}"
+                            StrokeThickness="0.5"
+                            BackgroundColor="{StaticResource LightGray}"
+                            HeightRequest="220" />
+                </Grid>
+
+                <BoxView HeightRequest="60" Color="{StaticResource LightGray}" />
             </VerticalStackLayout>
         </ScrollView>
     </Grid>

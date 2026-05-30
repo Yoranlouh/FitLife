@@ -70,18 +70,43 @@ public partial class MyLessonsViewModel : BaseViewModel
             });
         });
 
-        LoadMyLessons();
     }
 
     /// <summary>
-    /// Loads the initial list of lessons. Currently uses mock data with negative ids
-    /// so the cancel-flow can distinguish them from real, server-known reservations.
+    /// Loads (or refreshes) the list from the API. Safe to call on every OnAppearing.
     /// </summary>
-    private void LoadMyLessons()
+    public async Task LoadMyLessonsAsync()
     {
-        // Mock data for demonstration purposes (negative ids => not present in DB).
-        EnrolledLessons.Add(new UserLesson { Id = -1, Name = "Spinning", Time = DateTime.Today.AddHours(18), Instructor = "Marco", Location = "Zaal 1" });
-        EnrolledLessons.Add(new UserLesson { Id = -2, Name = "Yoga", Time = DateTime.Today.AddDays(2).AddHours(10), Instructor = "Sarah", Location = "Zaal 3" });
+        if (IsBusy) return;
+
+        var userId = _authenticationService.CurrentUserId;
+        if (userId is null or <= 0) return;
+
+        try
+        {
+            IsBusy = true;
+            var lessons = await _reservationService.GetUserLessonsAsync(userId.Value);
+
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                EnrolledLessons.Clear();
+                foreach (var lesson in lessons)
+                {
+                    EnrolledLessons.Add(new UserLesson
+                    {
+                        Id         = lesson.Id,
+                        Name       = lesson.WorkoutName,
+                        Time       = lesson.StartTime,
+                        Instructor = lesson.InstructorName,
+                        Location   = lesson.LocationName
+                    });
+                }
+            });
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     /// <summary>
@@ -108,18 +133,6 @@ public partial class MyLessonsViewModel : BaseViewModel
         {
             IsBusy = true;
 
-            // Demo/mock entries (negative ids) do not exist in the database.
-            // We remove them client-side only to keep the demo working.
-            if (lesson.Id < 0)
-            {
-                EnrolledLessons.Remove(lesson);
-                WeakReferenceMessenger.Default.Send(new LessonUnregisteredMessage(lesson.Id));
-                await Shell.Current.DisplayAlert("Geannuleerd", "Je reservering is geannuleerd.", "OK");
-                return;
-            }
-
-            // We need the currently authenticated user's id to ask the API
-            // to cancel the right reservation.
             var userId = _authenticationService.CurrentUserId;
             if (userId is null or <= 0)
             {

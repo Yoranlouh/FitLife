@@ -34,6 +34,315 @@ if (!app.Environment.IsDevelopment())
 // Enable CORS
 app.UseCors("AllowFitLifeClients");
 
+// GET /workouts - Simple list for dropdowns
+app.MapGet("/workouts", async (IConfiguration configuration) =>
+{
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrWhiteSpace(connectionString))
+        return Results.Problem("Connection string 'DefaultConnection' is niet gevonden.");
+
+    var items = new List<object>();
+    await using var connection = new MySqlConnection(connectionString);
+    await connection.OpenAsync();
+
+    const string sql = "SELECT id, name FROM workouts ORDER BY name";
+    await using var command = new MySqlCommand(sql, connection);
+    await using var reader = await command.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+        items.Add(new { id = reader.GetInt32("id"), name = reader.GetString("name") });
+
+    return Results.Ok(items);
+});
+
+// GET /locations - Simple list for dropdowns
+app.MapGet("/locations", async (IConfiguration configuration) =>
+{
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrWhiteSpace(connectionString))
+        return Results.Problem("Connection string 'DefaultConnection' is niet gevonden.");
+
+    var items = new List<object>();
+    await using var connection = new MySqlConnection(connectionString);
+    await connection.OpenAsync();
+
+    const string sql = "SELECT id, name FROM locations ORDER BY name";
+    await using var command = new MySqlCommand(sql, connection);
+    await using var reader = await command.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+        items.Add(new { id = reader.GetInt32("id"), name = reader.GetString("name") });
+
+    return Results.Ok(items);
+});
+
+// GET /instructors - Simple list for dropdowns
+app.MapGet("/instructors", async (IConfiguration configuration) =>
+{
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrWhiteSpace(connectionString))
+        return Results.Problem("Connection string 'DefaultConnection' is niet gevonden.");
+
+    var items = new List<object>();
+    await using var connection = new MySqlConnection(connectionString);
+    await connection.OpenAsync();
+
+    const string sql = "SELECT id, display_name AS name FROM users WHERE role = 'instructor' ORDER BY display_name";
+    await using var command = new MySqlCommand(sql, connection);
+    await using var reader = await command.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+        items.Add(new { id = reader.GetInt32("id"), name = reader.IsDBNull(reader.GetOrdinal("name")) ? "Onbekend" : reader.GetString("name") });
+
+    return Results.Ok(items);
+});
+
+// GET /lessons/instructor/{instructorId} - Lessons given by a specific instructor
+app.MapGet("/lessons/instructor/{instructorId:int}", async (int instructorId, IConfiguration configuration) =>
+{
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrWhiteSpace(connectionString))
+        return Results.Problem("Connection string 'DefaultConnection' is niet gevonden.");
+
+    var lessons = new List<LessonResponse>();
+    await using var connection = new MySqlConnection(connectionString);
+    await connection.OpenAsync();
+
+    const string sql = """
+        SELECT
+            l.id,
+            l.start_time,
+            DATE_ADD(l.start_time, INTERVAL l.duration_minutes MINUTE) AS end_time,
+            COALESCE(l.capacity_override, w.default_capacity, loc.capacity, 0) AS max_participants,
+            l.workout_id,
+            w.name AS workout_name,
+            l.instructor_id,
+            u.display_name AS instructor_name,
+            l.location_id,
+            loc.name AS location_name,
+            (SELECT COUNT(*) FROM reservations r WHERE r.lesson_id = l.id AND r.is_cancelled = 0) AS current_participants,
+            (SELECT COUNT(*) FROM waitlist_entries wle WHERE wle.lesson_id = l.id) AS waitlist_count
+        FROM lessons l
+        INNER JOIN workouts w ON w.id = l.workout_id
+        LEFT JOIN users u ON u.id = l.instructor_id
+        INNER JOIN locations loc ON loc.id = l.location_id
+        WHERE l.instructor_id = @instructorId
+        ORDER BY l.start_time;
+        """;
+
+    await using var command = new MySqlCommand(sql, connection);
+    command.Parameters.AddWithValue("@instructorId", instructorId);
+    await using var reader = await command.ExecuteReaderAsync();
+
+    while (await reader.ReadAsync())
+    {
+        lessons.Add(new LessonResponse
+        {
+            Id = reader.GetInt32("id"),
+            StartTime = reader.GetDateTime("start_time"),
+            EndTime = reader.GetDateTime("end_time"),
+            MaxParticipants = reader.GetInt32("max_participants"),
+            WorkoutId = reader.GetInt32("workout_id"),
+            WorkoutName = reader.GetString("workout_name"),
+            InstructorId = instructorId,
+            InstructorName = reader.IsDBNull(reader.GetOrdinal("instructor_name")) ? "Onbekende instructeur" : reader.GetString("instructor_name"),
+            LocationId = reader.GetInt32("location_id"),
+            LocationName = reader.GetString("location_name"),
+            CurrentParticipantCount = reader.GetInt32("current_participants"),
+            WaitlistCount = reader.GetInt32("waitlist_count")
+        });
+    }
+
+    return Results.Ok(lessons);
+});
+
+// POST /lessons - Create a new lesson
+app.MapPost("/lessons", async (IConfiguration configuration, LessonSaveDto request) =>
+{
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrWhiteSpace(connectionString))
+        return Results.Problem("Connection string 'DefaultConnection' is niet gevonden.");
+
+    try
+    {
+        await using var connection = new MySqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        // Calculate duration in minutes
+        var duration = (int)(request.EndTime - request.StartTime).TotalMinutes;
+        if (duration <= 0) duration = 60;
+
+        const string sql = """
+            INSERT INTO lessons (start_time, duration_minutes, capacity_override, workout_id, instructor_id, location_id)
+            VALUES (@startTime, @duration, @capacity, @workoutId, @instructorId, @locationId);
+            SELECT LAST_INSERT_ID();
+            """;
+
+        await using var command = new MySqlCommand(sql, connection);
+        command.Parameters.AddWithValue("@startTime", request.StartTime);
+        command.Parameters.AddWithValue("@duration", duration);
+        command.Parameters.AddWithValue("@capacity", request.MaxParticipants > 0 ? request.MaxParticipants : DBNull.Value);
+        command.Parameters.AddWithValue("@workoutId", request.WorkoutId);
+        command.Parameters.AddWithValue("@instructorId", request.InstructorId);
+        command.Parameters.AddWithValue("@locationId", request.LocationId);
+
+        var newId = await command.ExecuteScalarAsync();
+        return Results.Ok(new { success = true, id = newId, message = "Les succesvol aangemaakt." });
+    }
+    catch (Exception ex)
+    {
+        System.Diagnostics.Debug.WriteLine($"Error creating lesson: {ex.Message}");
+        return Results.Problem("Er is een fout opgetreden bij het aanmaken van de les.");
+    }
+});
+
+// PUT /lessons/{lessonId} - Update an existing lesson
+app.MapPut("/lessons/{lessonId:int}", async (int lessonId, IConfiguration configuration, LessonSaveDto request) =>
+{
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrWhiteSpace(connectionString))
+        return Results.Problem("Connection string 'DefaultConnection' is niet gevonden.");
+
+    try
+    {
+        await using var connection = new MySqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        var duration = (int)(request.EndTime - request.StartTime).TotalMinutes;
+        if (duration <= 0) duration = 60;
+
+        const string sql = """
+            UPDATE lessons SET
+                start_time = @startTime,
+                duration_minutes = @duration,
+                capacity_override = @capacity,
+                workout_id = @workoutId,
+                instructor_id = @instructorId,
+                location_id = @locationId
+            WHERE id = @lessonId;
+            """;
+
+        await using var command = new MySqlCommand(sql, connection);
+        command.Parameters.AddWithValue("@startTime", request.StartTime);
+        command.Parameters.AddWithValue("@duration", duration);
+        command.Parameters.AddWithValue("@capacity", request.MaxParticipants > 0 ? request.MaxParticipants : DBNull.Value);
+        command.Parameters.AddWithValue("@workoutId", request.WorkoutId);
+        command.Parameters.AddWithValue("@instructorId", request.InstructorId);
+        command.Parameters.AddWithValue("@locationId", request.LocationId);
+        command.Parameters.AddWithValue("@lessonId", lessonId);
+
+        var rows = await command.ExecuteNonQueryAsync();
+        return rows > 0
+            ? Results.Ok(new { success = true, message = "Les succesvol bijgewerkt." })
+            : Results.Ok(new { success = false, message = "Les niet gevonden." });
+    }
+    catch (Exception ex)
+    {
+        System.Diagnostics.Debug.WriteLine($"Error updating lesson: {ex.Message}");
+        return Results.Problem("Er is een fout opgetreden bij het bijwerken van de les.");
+    }
+});
+
+// DELETE /lessons/{lessonId} - Delete a lesson
+app.MapDelete("/lessons/{lessonId:int}", async (int lessonId, IConfiguration configuration) =>
+{
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrWhiteSpace(connectionString))
+        return Results.Problem("Connection string 'DefaultConnection' is niet gevonden.");
+
+    try
+    {
+        await using var connection = new MySqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        // Check if there are active reservations
+        const string checkSql = "SELECT COUNT(*) FROM reservations WHERE lesson_id = @lessonId AND is_cancelled = 0";
+        await using var checkCmd = new MySqlCommand(checkSql, connection);
+        checkCmd.Parameters.AddWithValue("@lessonId", lessonId);
+        var count = Convert.ToInt32(await checkCmd.ExecuteScalarAsync());
+        if (count > 0)
+            return Results.Ok(new { success = false, message = $"Kan les niet verwijderen: er zijn nog {count} actieve reserveringen." });
+
+        const string sql = "DELETE FROM lessons WHERE id = @lessonId";
+        await using var command = new MySqlCommand(sql, connection);
+        command.Parameters.AddWithValue("@lessonId", lessonId);
+
+        var rows = await command.ExecuteNonQueryAsync();
+        return rows > 0
+            ? Results.Ok(new { success = true, message = "Les succesvol verwijderd." })
+            : Results.Ok(new { success = false, message = "Les niet gevonden." });
+    }
+    catch (Exception ex)
+    {
+        System.Diagnostics.Debug.WriteLine($"Error deleting lesson: {ex.Message}");
+        return Results.Problem("Er is een fout opgetreden bij het verwijderen van de les.");
+    }
+});
+
+// POST /lessons/{lessonId}/add-member - Add a member to a lesson (no credit deduction)
+app.MapPost("/lessons/{lessonId:int}/add-member", async (int lessonId, IConfiguration configuration, AddMemberDto request) =>
+{
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrWhiteSpace(connectionString))
+        return Results.Problem("Connection string 'DefaultConnection' is niet gevonden.");
+
+    try
+    {
+        await using var connection = new MySqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        // Check capacity
+        const string capacitySql = """
+            SELECT COALESCE(l.capacity_override, w.default_capacity, loc.capacity, 0) AS max_capacity,
+                   (SELECT COUNT(*) FROM reservations r WHERE r.lesson_id = l.id AND r.is_cancelled = 0) AS current_count
+            FROM lessons l
+            INNER JOIN workouts w ON w.id = l.workout_id
+            INNER JOIN locations loc ON loc.id = l.location_id
+            WHERE l.id = @lessonId
+            """;
+
+        await using var capacityCmd = new MySqlCommand(capacitySql, connection);
+        capacityCmd.Parameters.AddWithValue("@lessonId", lessonId);
+        await using var reader = await capacityCmd.ExecuteReaderAsync();
+
+        if (!await reader.ReadAsync())
+        {
+            await reader.CloseAsync();
+            return Results.Ok(new { success = false, message = "Les niet gevonden." });
+        }
+
+        int maxCapacity = reader.GetInt32("max_capacity");
+        int currentCount = reader.GetInt32("current_count");
+        await reader.CloseAsync();
+
+        if (currentCount >= maxCapacity)
+            return Results.Ok(new { success = false, message = "Les is vol." });
+
+        // Check for existing reservation
+        const string existingSql = "SELECT id FROM reservations WHERE lesson_id = @lessonId AND member_id = @userId AND is_cancelled = 0";
+        await using var existingCmd = new MySqlCommand(existingSql, connection);
+        existingCmd.Parameters.AddWithValue("@lessonId", lessonId);
+        existingCmd.Parameters.AddWithValue("@userId", request.UserId);
+        var existing = await existingCmd.ExecuteScalarAsync();
+        if (existing != null)
+            return Results.Ok(new { success = false, message = "Dit lid is al aangemeld voor deze les." });
+
+        // Insert reservation without credit deduction
+        const string insertSql = """
+            INSERT INTO reservations (lesson_id, member_id, reservation_date, is_cancelled)
+            VALUES (@lessonId, @userId, NOW(), 0)
+            """;
+        await using var insertCmd = new MySqlCommand(insertSql, connection);
+        insertCmd.Parameters.AddWithValue("@lessonId", lessonId);
+        insertCmd.Parameters.AddWithValue("@userId", request.UserId);
+        await insertCmd.ExecuteNonQueryAsync();
+
+        return Results.Ok(new { success = true, message = "Lid succesvol toegevoegd aan de les." });
+    }
+    catch (Exception ex)
+    {
+        System.Diagnostics.Debug.WriteLine($"Error adding member: {ex.Message}");
+        return Results.Problem("Er is een fout opgetreden bij het toevoegen van het lid.");
+    }
+});
+
 app.MapGet("/lessons", async (IConfiguration configuration) =>
 {
     var connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -489,6 +798,55 @@ static string ComputeSha256Hash(string rawData)
     }
 }
 
+// GET /users/{userId}/lessons - Get all active reservations for a user
+app.MapGet("/users/{userId:int}/lessons", async (int userId, IConfiguration configuration) =>
+{
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrWhiteSpace(connectionString))
+        return Results.Problem("Connection string 'DefaultConnection' is niet gevonden.");
+
+    var lessons = new List<UserLessonDto>();
+
+    await using var connection = new MySqlConnection(connectionString);
+    await connection.OpenAsync();
+
+    const string sql = """
+        SELECT
+            l.id,
+            l.start_time,
+            w.name  AS workout_name,
+            u.display_name AS instructor_name,
+            loc.name AS location_name
+        FROM reservations r
+        INNER JOIN lessons l   ON l.id  = r.lesson_id
+        INNER JOIN workouts w  ON w.id  = l.workout_id
+        LEFT  JOIN users u     ON u.id  = l.instructor_id
+        INNER JOIN locations loc ON loc.id = l.location_id
+        WHERE r.member_id = @userId AND r.is_cancelled = 0
+        ORDER BY l.start_time;
+        """;
+
+    await using var command = new MySqlCommand(sql, connection);
+    command.Parameters.AddWithValue("@userId", userId);
+    await using var reader = await command.ExecuteReaderAsync();
+
+    while (await reader.ReadAsync())
+    {
+        lessons.Add(new UserLessonDto
+        {
+            Id           = reader.GetInt32("id"),
+            WorkoutName  = reader.GetString("workout_name"),
+            StartTime    = reader.GetDateTime("start_time"),
+            InstructorName = reader.IsDBNull(reader.GetOrdinal("instructor_name"))
+                ? "Onbekende instructeur"
+                : reader.GetString("instructor_name"),
+            LocationName = reader.GetString("location_name")
+        });
+    }
+
+    return Results.Ok(lessons);
+});
+
 // Subscription Management Endpoints
 
 // GET /subscriptions/plans - Get available subscription plans with pricing
@@ -554,7 +912,7 @@ app.MapPost("/subscriptions/change", async (IConfiguration configuration, Subscr
 
         // First, get current subscription info
         const string selectSql = """
-            SELECT subscription_type, subscription_renewal_date, pending_subscription_change
+            SELECT subscription_type, subscription_renewal_date
             FROM users
             WHERE id = @userId
             LIMIT 1;
@@ -583,17 +941,26 @@ app.MapPost("/subscriptions/change", async (IConfiguration configuration, Subscr
 
         await reader.CloseAsync();
 
-        // Store the pending change that will be applied on renewal date
+        var newCredits = request.NewSubscriptionType switch
+        {
+            "Rookie"       => 9,
+            "Intermediate" => 13,
+            "Advanced"     => 999,
+            _              => 0
+        };
+
         const string updateSql = """
             UPDATE users
-            SET pending_subscription_change = @newSubscriptionType,
-                pending_billing_cycle = @billingCycle
+            SET subscription_type = @newSubscriptionType,
+                subscription_renewal_date = @renewalDate,
+                credits = @credits
             WHERE id = @userId;
             """;
 
         await using var updateCommand = new MySqlCommand(updateSql, connection);
         updateCommand.Parameters.AddWithValue("@newSubscriptionType", request.NewSubscriptionType);
-        updateCommand.Parameters.AddWithValue("@billingCycle", request.IsYearly ? "yearly" : "monthly");
+        updateCommand.Parameters.AddWithValue("@renewalDate", renewalDate.Date);
+        updateCommand.Parameters.AddWithValue("@credits", newCredits);
         updateCommand.Parameters.AddWithValue("@userId", request.UserId);
 
         var rowsAffected = await updateCommand.ExecuteNonQueryAsync();
@@ -603,7 +970,7 @@ app.MapPost("/subscriptions/change", async (IConfiguration configuration, Subscr
             return Results.Ok(new SubscriptionChangeResponseDto
             {
                 Success = true,
-                Message = $"Je abonnement wordt gewijzigd naar {request.NewSubscriptionType} op {renewalDate:dd-MM-yyyy}.",
+                Message = $"Je abonnement is gewijzigd naar {request.NewSubscriptionType}.",
                 EffectiveDate = renewalDate.ToString("yyyy-MM-dd"),
                 NewSubscriptionType = request.NewSubscriptionType,
                 BillingCycle = request.IsYearly ? "yearly" : "monthly"
@@ -641,7 +1008,7 @@ app.MapGet("/subscriptions/status/{userId}", async (IConfiguration configuration
         await connection.OpenAsync();
 
         const string sql = """
-            SELECT subscription_type, subscription_renewal_date, pending_subscription_change, pending_billing_cycle, credits
+            SELECT subscription_type, subscription_renewal_date, credits
             FROM users
             WHERE id = @userId
             LIMIT 1;
@@ -662,12 +1029,8 @@ app.MapGet("/subscriptions/status/{userId}", async (IConfiguration configuration
                 RenewalDate = reader.IsDBNull(reader.GetOrdinal("subscription_renewal_date"))
                     ? null
                     : reader.GetDateTime("subscription_renewal_date").ToString("yyyy-MM-dd"),
-                PendingSubscriptionChange = reader.IsDBNull(reader.GetOrdinal("pending_subscription_change"))
-                    ? null
-                    : reader.GetString("pending_subscription_change"),
-                PendingBillingCycle = reader.IsDBNull(reader.GetOrdinal("pending_billing_cycle"))
-                    ? null
-                    : reader.GetString("pending_billing_cycle"),
+                PendingSubscriptionChange = null,
+                PendingBillingCycle = null,
                 Credits = reader.IsDBNull(reader.GetOrdinal("credits")) ? 0 : reader.GetInt32("credits")
             };
 
@@ -750,11 +1113,10 @@ app.MapPost("/subscriptions/cancel", async (IConfiguration configuration, Subscr
 
         await reader.CloseAsync();
 
-        // Mark subscription for cancellation
         const string updateSql = """
             UPDATE users
-            SET pending_subscription_change = NULL,
-                pending_billing_cycle = 'cancelled'
+            SET subscription_type = NULL,
+                credits = 0
             WHERE id = @userId;
             """;
 
@@ -768,7 +1130,7 @@ app.MapPost("/subscriptions/cancel", async (IConfiguration configuration, Subscr
             return Results.Ok(new SubscriptionChangeResponseDto
             {
                 Success = true,
-                Message = $"Je abonnement wordt stopgezet op {renewalDate:dd-MM-yyyy}. Tot die datum kun je nog van je huidige abonnement gebruikmaken.",
+                Message = $"Je abonnement is stopgezet op {renewalDate:dd-MM-yyyy}.",
                 EffectiveDate = renewalDate.ToString("yyyy-MM-dd"),
                 NewSubscriptionType = null,
                 BillingCycle = "cancelled"
@@ -855,17 +1217,19 @@ app.MapPost("/subscriptions/change-billing", async (IConfiguration configuration
 
         await reader.CloseAsync();
 
-        // Update billing cycle (keep same subscription, just change billing frequency)
+        // Extend renewal date by 1 month or 1 year depending on chosen cycle
+        var newRenewalDate = request.IsYearly
+            ? DateTime.UtcNow.AddYears(1)
+            : DateTime.UtcNow.AddMonths(1);
+
         const string updateSql = """
             UPDATE users
-            SET pending_subscription_change = @currentSubscription,
-                pending_billing_cycle = @billingCycle
+            SET subscription_renewal_date = @renewalDate
             WHERE id = @userId;
             """;
 
         await using var updateCommand = new MySqlCommand(updateSql, connection);
-        updateCommand.Parameters.AddWithValue("@currentSubscription", currentSubscription);
-        updateCommand.Parameters.AddWithValue("@billingCycle", request.IsYearly ? "yearly" : "monthly");
+        updateCommand.Parameters.AddWithValue("@renewalDate", newRenewalDate.Date);
         updateCommand.Parameters.AddWithValue("@userId", request.UserId);
 
         var rowsAffected = await updateCommand.ExecuteNonQueryAsync();
@@ -876,8 +1240,8 @@ app.MapPost("/subscriptions/change-billing", async (IConfiguration configuration
             return Results.Ok(new SubscriptionChangeResponseDto
             {
                 Success = true,
-                Message = $"Je factureringsperiode wordt gewijzigd naar {billingCycleText} op {renewalDate:dd-MM-yyyy}.",
-                EffectiveDate = renewalDate.ToString("yyyy-MM-dd"),
+                Message = $"Je factureringsperiode is gewijzigd naar {billingCycleText}.",
+                EffectiveDate = newRenewalDate.ToString("yyyy-MM-dd"),
                 NewSubscriptionType = currentSubscription,
                 BillingCycle = request.IsYearly ? "yearly" : "monthly"
             });
@@ -1032,4 +1396,49 @@ public class ChangeBillingCycleRequestDto
 
     [JsonPropertyName("isYearly")]
     public bool IsYearly { get; set; }
+}
+
+public class UserLessonDto
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("workoutName")]
+    public string WorkoutName { get; set; } = string.Empty;
+
+    [JsonPropertyName("startTime")]
+    public DateTime StartTime { get; set; }
+
+    [JsonPropertyName("instructorName")]
+    public string InstructorName { get; set; } = string.Empty;
+
+    [JsonPropertyName("locationName")]
+    public string LocationName { get; set; } = string.Empty;
+}
+
+public class LessonSaveDto
+{
+    [JsonPropertyName("startTime")]
+    public DateTime StartTime { get; set; }
+
+    [JsonPropertyName("endTime")]
+    public DateTime EndTime { get; set; }
+
+    [JsonPropertyName("maxParticipants")]
+    public int MaxParticipants { get; set; }
+
+    [JsonPropertyName("workoutId")]
+    public int WorkoutId { get; set; }
+
+    [JsonPropertyName("instructorId")]
+    public int InstructorId { get; set; }
+
+    [JsonPropertyName("locationId")]
+    public int LocationId { get; set; }
+}
+
+public class AddMemberDto
+{
+    [JsonPropertyName("userId")]
+    public int UserId { get; set; }
 }
