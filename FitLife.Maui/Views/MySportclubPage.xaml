@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="FitLife.Maui.Views.MySportclubPage"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="White"
+             Title="Mijn Sportclub">
+
+    <Grid RowDefinitions="Auto, *">
+        <Grid Grid.Row="0"
+              Style="{StaticResource HeaderGrid}"
+              ColumnDefinitions="Auto, *"
+              Padding="10,8">
+            <ImageButton Source="back_icon.png"
+                         WidthRequest="20" HeightRequest="20"
+                         VerticalOptions="Center"
+                         Clicked="OnBackToHomeClicked" />
+            <Label Grid.Column="1"
+                   Text="Mijn Sportclub"
+                   Style="{StaticResource HeaderTitle}"
+                   FontSize="18" />
+        </Grid>
+
+        <VerticalStackLayout Grid.Row="1"
+                             VerticalOptions="Center"
+                             HorizontalOptions="Center"
+                             Spacing="20"
+                             Padding="40">
+            <Image Source="icon_sportclub.svg"
+                   WidthRequest="72" HeightRequest="72"
+                   HorizontalOptions="Center" />
+            <Label Text="Mijn Sportclub"
+                   FontSize="22"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   TextColor="{StaticResource Tertiary}" />
+            <Label Text="Deze functie wordt binnenkort toegevoegd."
+                   FontSize="15"
+                   TextColor="Gray"
+                   HorizontalOptions="Center"
+                   HorizontalTextAlignment="Center" />
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>

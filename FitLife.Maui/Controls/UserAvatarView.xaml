@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="FitLife.Maui.Controls.UserAvatarView">
+    <Grid>
+        <!-- Default: Primary green circle with white person icon -->
+        <Border x:Name="DefaultBorder"
+                BackgroundColor="{StaticResource Primary}"
+                StrokeThickness="0"
+                WidthRequest="50"
+                HeightRequest="50"
+                HorizontalOptions="Center"
+                VerticalOptions="Center">
+            <Border.StrokeShape>
+                <Ellipse />
+            </Border.StrokeShape>
+            <Image Source="person_icon.svg"
+                   WidthRequest="28"
+                   HeightRequest="28"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center" />
+        </Border>
+
+        <!-- Photo overlay: only visible when a URL is provided -->
+        <Border x:Name="PhotoBorder"
+                StrokeThickness="0"
+                WidthRequest="50"
+                HeightRequest="50"
+                HorizontalOptions="Center"
+                VerticalOptions="Center"
+                IsVisible="False">
+            <Border.StrokeShape>
+                <Ellipse />
+            </Border.StrokeShape>
+            <Image x:Name="PhotoImage"
+                   WidthRequest="50"
+                   HeightRequest="50"
+                   Aspect="AspectFill" />
+        </Border>
+    </Grid>
+</ContentView>

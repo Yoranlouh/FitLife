@@ -1,0 +1,32 @@
+@{
+    var showPhoto = !string.IsNullOrWhiteSpace(PhotoUrl) && !IsPlaceholder(PhotoUrl);
+}
+
+@if (showPhoto)
+{
+    <img src="@PhotoUrl"
+         alt="@DisplayName"
+         class="rounded-circle @CssClass"
+         style="width: @(Size)px; height: @(Size)px; object-fit: cover;" />
+}
+else
+{
+    <div class="fitlife-avatar-default @CssClass"
+         style="width: @(Size)px; height: @(Size)px; font-size: @(Math.Round(Size * 0.55))px;">
+        <i class="bi bi-person-fill"></i>
+    </div>
+}
+
+@code {
+    [Parameter] public string? PhotoUrl  { get; set; }
+    [Parameter] public string  DisplayName { get; set; } = string.Empty;
+    [Parameter] public int     Size     { get; set; } = 40;
+    [Parameter] public string  CssClass { get; set; } = string.Empty;
+
+    private static bool IsPlaceholder(string url) =>
+        url.Contains("ui-avatars.com",   StringComparison.OrdinalIgnoreCase) ||
+        url.Contains("dicebear.com",     StringComparison.OrdinalIgnoreCase) ||
+        url.Contains("gravatar.com",     StringComparison.OrdinalIgnoreCase) ||
+        url.Contains("placeholder.com",  StringComparison.OrdinalIgnoreCase) ||
+        url.Contains("robohash.org",     StringComparison.OrdinalIgnoreCase);
+}
