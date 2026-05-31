@@ -78,7 +78,10 @@ public class LessonEditDto
 public class InstructorDto
 {
     public int Id { get; set; }
+
+    [Required(ErrorMessage = "Voornaam is verplicht")]
     public string FirstName { get; set; } = string.Empty;
+
     public string LastName { get; set; } = string.Empty;
     public string FullName => string.IsNullOrEmpty(LastName) ? FirstName : $"{FirstName} {LastName}";
     public string? Email { get; set; }

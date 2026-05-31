@@ -42,18 +42,16 @@ public class UserLessonDto
 
 /// <summary>
 /// Contract for the MAUI client-side reservation service.
-/// Encapsulates the HTTP calls to the FitLife.API reservation endpoints.
 /// </summary>
 public interface IReservationService
 {
-    /// <summary>
-    /// Returns all active (non-cancelled) lesson reservations for the given user.
-    /// </summary>
+    /// <summary>Returns all active (non-cancelled) reservations for the given user.</summary>
     Task<IEnumerable<UserLessonDto>> GetUserLessonsAsync(int userId);
 
-    /// <summary>
-    /// Cancels the active reservation of the given user for the given lesson on the server.
-    /// </summary>
+    /// <summary>Creates a reservation and deducts 1 credit via POST /lessons/{lessonId}/reserve.</summary>
+    Task<ReservationActionResult> ReserveAsync(int lessonId, int userId);
+
+    /// <summary>Cancels a reservation via DELETE /lessons/{lessonId}/cancel.</summary>
     Task<ReservationActionResult> CancelReservationAsync(int lessonId, int userId);
 }
 
@@ -71,8 +69,46 @@ public class ReservationService : IReservationService
     }
 
     /// <summary>
+    /// Calls POST /lessons/{lessonId}/reserve with { userId }.
+    /// Deducts 1 credit and creates a reservation in the database.
+    /// </summary>
+    public async Task<ReservationActionResult> ReserveAsync(int lessonId, int userId)
+    {
+        try
+        {
+            var body = new { userId };
+            using var response = await _httpClient.PostAsJsonAsync(
+                $"lessons/{lessonId}/reserve", body);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ReservationActionResult>();
+                return result ?? new ReservationActionResult
+                {
+                    Success = false,
+                    Message = "Onbekend antwoord van de server."
+                };
+            }
+
+            return new ReservationActionResult
+            {
+                Success = false,
+                Message = $"Server gaf statuscode {(int)response.StatusCode} terug."
+            };
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ReservationService] ReserveAsync error: {ex.Message}");
+            return new ReservationActionResult
+            {
+                Success = false,
+                Message = "Netwerkfout: kon de reservering niet opslaan."
+            };
+        }
+    }
+
+    /// <summary>
     /// Calls GET /users/{userId}/lessons and returns the user's active reservations.
-    /// Returns an empty list on any error so the caller never needs to handle exceptions.
     /// </summary>
     public async Task<IEnumerable<UserLessonDto>> GetUserLessonsAsync(int userId)
     {

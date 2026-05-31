@@ -85,12 +85,16 @@ public class InstructorService : IInstructorService
                 SELECT LAST_INSERT_ID();
                 """;
 
+            var displayName = string.IsNullOrWhiteSpace(instructor.LastName)
+                ? instructor.FirstName.Trim()
+                : $"{instructor.FirstName.Trim()} {instructor.LastName.Trim()}";
+
             await using var command = new MySqlCommand(sql, connection);
-            command.Parameters.AddWithValue("@displayName", instructor.FirstName);
+            command.Parameters.AddWithValue("@displayName", displayName);
             command.Parameters.AddWithValue("@email", instructor.Email ?? (object)DBNull.Value);
 
             var result = await command.ExecuteScalarAsync();
-            return (true, $"Instructeur aangemaakt met ID {result}.");
+            return (true, $"Instructeur '{displayName}' aangemaakt.");
         }
         catch (Exception ex)
         {
@@ -111,9 +115,13 @@ public class InstructorService : IInstructorService
                 WHERE id = @id AND role = 'instructor'
                 """;
 
+            var displayName = string.IsNullOrWhiteSpace(instructor.LastName)
+                ? instructor.FirstName.Trim()
+                : $"{instructor.FirstName.Trim()} {instructor.LastName.Trim()}";
+
             await using var command = new MySqlCommand(sql, connection);
             command.Parameters.AddWithValue("@id", instructor.Id);
-            command.Parameters.AddWithValue("@displayName", instructor.FirstName);
+            command.Parameters.AddWithValue("@displayName", displayName);
             command.Parameters.AddWithValue("@email", instructor.Email ?? (object)DBNull.Value);
 
             var rowsAffected = await command.ExecuteNonQueryAsync();
@@ -159,14 +167,23 @@ public class InstructorService : IInstructorService
         }
     }
 
-    private static InstructorDto MapFromReader(MySqlDataReader reader) => new()
+    private static InstructorDto MapFromReader(MySqlDataReader reader)
     {
-        Id = reader.GetInt32("id"),
-        FirstName = reader.IsDBNull(reader.GetOrdinal("display_name")) ? "Onbekend" : reader.GetString("display_name"),
-        LastName = string.Empty,
-        Email = reader.IsDBNull(reader.GetOrdinal("email")) ? null : reader.GetString("email"),
-        PhotoUrl = reader.IsDBNull(reader.GetOrdinal("photo_url")) ? null : reader.GetString("photo_url"),
-        TotalLessons = reader.GetInt32("total_lessons"),
-        UpcomingLessons = reader.GetInt32("upcoming_lessons")
-    };
+        var displayName = reader.IsDBNull(reader.GetOrdinal("display_name"))
+            ? "Onbekend"
+            : reader.GetString("display_name");
+
+        var nameParts = displayName.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+
+        return new InstructorDto
+        {
+            Id = reader.GetInt32("id"),
+            FirstName = nameParts.Length > 0 ? nameParts[0] : displayName,
+            LastName = nameParts.Length > 1 ? nameParts[1] : string.Empty,
+            Email = reader.IsDBNull(reader.GetOrdinal("email")) ? null : reader.GetString("email"),
+            PhotoUrl = reader.IsDBNull(reader.GetOrdinal("photo_url")) ? null : reader.GetString("photo_url"),
+            TotalLessons = reader.GetInt32("total_lessons"),
+            UpcomingLessons = reader.GetInt32("upcoming_lessons")
+        };
+    }
 }

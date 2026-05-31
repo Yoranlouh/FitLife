@@ -16,4 +16,13 @@ public partial class InstructorLessonsPage : ContentPage
         if (BindingContext is InstructorLessonsViewModel vm)
             await vm.LoadAsync();
     }
+
+    private async void OnBackToHomeClicked(object sender, EventArgs e)
+        => await Shell.Current.GoToAsync("//HomePage");
+
+    protected override bool OnBackButtonPressed()
+    {
+        _ = Shell.Current.GoToAsync("//HomePage");
+        return true;
+    }
 }

@@ -4,8 +4,23 @@
              xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
              x:Class="FitLife.Maui.Views.SubscriptionPage"
              x:DataType="vm:SubscriptionViewModel"
-             Title="{Binding Title}">
-    <ScrollView>
+             Title="{Binding Title}"
+             Shell.NavBarIsVisible="False">
+    <Grid RowDefinitions="Auto, *">
+        <Grid Grid.Row="0"
+              Style="{StaticResource HeaderGrid}"
+              ColumnDefinitions="Auto, *"
+              Padding="10,8">
+            <ImageButton Source="back_icon.png"
+                         WidthRequest="20" HeightRequest="20"
+                         VerticalOptions="Center"
+                         Clicked="OnBackToHomeClicked" />
+            <Label Grid.Column="1"
+                   Text="Abonnement"
+                   Style="{StaticResource HeaderTitle}"
+                   FontSize="18" />
+        </Grid>
+        <ScrollView Grid.Row="1">
         <VerticalStackLayout Spacing="20" Padding="20">
 
             <!-- Current Subscription Card -->
@@ -300,5 +315,6 @@
                 </VerticalStackLayout>
             </Frame>
         </VerticalStackLayout>
-    </ScrollView>
+        </ScrollView>
+    </Grid>
 </ContentPage>

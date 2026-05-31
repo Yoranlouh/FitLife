@@ -1,6 +1,9 @@
 @page "/admin/instructors"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @attribute [Authorize(Roles = "employee,instructor")]
 @inject IInstructorService InstructorService
+@inject IPhotoUploadService PhotoUploadService
+@inject IJSRuntime JS
 @inject Blazored.Toast.Services.IToastService ToastService
 
 <PageTitle>Instructeurs Beheer - FitLife Admin</PageTitle>
@@ -22,7 +25,8 @@
     {
         <div class="text-center my-5">
             <div class="spinner-border text-primary" role="status"></div>
-            <p class="mt-3 text-muted">Instructeurs laden...</p>
+            <p class="mt-3 text-muted">laden...
+            </p>
         </div>
     }
     else if (_instructors.Any())
@@ -35,23 +39,10 @@
                         <div class="card-body">
                             <div class="d-flex align-items-start mb-3">
                                 <div class="flex-shrink-0">
-                                    @if (!string.IsNullOrEmpty(instructor.PhotoUrl))
-                                    {
-                                        <img src="@instructor.PhotoUrl" alt="@instructor.FullName" class="rounded-circle" style="width: 60px; height: 60px; object-fit: cover;" />
-                                    }
-                                    else
-                                    {
-                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                            <i class="bi bi-person-fill fs-3"></i>
-                                        </div>
-                                    }
+                                    <UserAvatar PhotoUrl="@instructor.PhotoUrl" DisplayName="@instructor.FullName" Size="60" />
                                 </div>
                                 <div class="flex-grow-1 ms-3">
                                     <h5 class="card-title mb-1">@instructor.FullName</h5>
-                                    @if (!string.IsNullOrEmpty(instructor.Specialization))
-                                    {
-                                        <p class="text-muted small mb-0">@instructor.Specialization</p>
-                                    }
                                     @if (!string.IsNullOrEmpty(instructor.Email))
                                     {
                                         <p class="text-muted small mb-0"><i class="bi bi-envelope me-1"></i>@instructor.Email</p>
@@ -96,19 +87,83 @@
     }
 </div>
 
-@* Modal for Create/Edit Instructor *@
+@* ── Instructeur Create/Edit Modal ──────────────────────────────────────── *@
 @if (_showModal)
 {
-    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal fade show d-block" tabindex="-1" style="background-color:rgba(0,0,0,.5);">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">@(_editingInstructor.Id == 0 ? "Nieuwe Instructeur Aanmaken" : "Instructeur Bewerken")</h5>
+                    <h5 class="modal-title">@(_editingInstructor.Id == 0 ? "Nieuwe Instructeur" : "Instructeur Bewerken")</h5>
                     <button type="button" class="btn-close" @onclick="CloseModal"></button>
                 </div>
                 <div class="modal-body">
                     <EditForm Model="@_editingInstructor" OnValidSubmit="SaveInstructor">
                         <DataAnnotationsValidator />
+
+                        @* ── Foto sectie ─────────────────────────── *@
+                        <div class="mb-4 text-center">
+                            @* Preview *@
+                            @if (!string.IsNullOrEmpty(_previewUrl))
+                            {
+                                <img src="@_previewUrl"
+                                     alt="preview"
+                                     class="rounded-circle d-block mx-auto mb-2"
+                                     style="width:96px;height:96px;object-fit:cover;
+                                            border:3px solid var(--fitlife-primary);" />
+                            }
+                            else
+                            {
+                                <div class="d-flex justify-content-center mb-2">
+                                    <UserAvatar PhotoUrl="@_editingInstructor.PhotoUrl"
+                                                DisplayName="@_editingInstructor.FullName"
+                                                Size="96" />
+                                </div>
+                            }
+
+                            @* Buttons *@
+                            <div class="d-flex gap-2 justify-content-center mt-1">
+                                @* Bestand kiezen *@
+                                <label class="btn btn-outline-primary btn-sm" style="cursor:pointer;"
+                                       title="Kies een foto van schijf">
+                                    @if (_isUploading)
+                                    {
+                                        <span class="spinner-border spinner-border-sm"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-folder2-open me-1"></i>
+                                        <span>Bestand</span>
+                                    }
+                                    <InputFile OnChange="OnFileSelected"
+                                               accept=".jpg,.jpeg,.png,.webp"
+                                               style="display:none;"
+                                               disabled="@_isUploading" />
+                                </label>
+
+                                @* Camera *@
+                                <button type="button"
+                                        class="btn btn-outline-secondary btn-sm"
+                                        title="Foto nemen met camera"
+                                        @onclick="OpenCamera"
+                                        disabled="@_isUploading">
+                                    <i class="bi bi-camera me-1"></i>Camera
+                                </button>
+                            </div>
+
+                            <div class="text-muted small mt-1">JPG · PNG · WebP · max 5 MB</div>
+
+                            @if (!string.IsNullOrEmpty(_photoError))
+                            {
+                                <div class="alert alert-danger py-1 px-2 mt-2 small mb-0">@_photoError</div>
+                            }
+                            @if (_photoSaved)
+                            {
+                                <div class="text-success small mt-1">
+                                    <i class="bi bi-check-circle-fill me-1"></i>Foto opgeslagen
+                                </div>
+                            }
+                        </div>
 
                         <div class="mb-3">
                             <label class="form-label">Voornaam *</label>
@@ -117,25 +172,23 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Achternaam *</label>
+                            <label class="form-label">Achternaam</label>
                             <InputText @bind-Value="_editingInstructor.LastName" class="form-control" placeholder="Doe" />
-                            <ValidationMessage For="@(() => _editingInstructor.LastName)" />
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">Email</label>
-                            <InputText @bind-Value="_editingInstructor.Email" type="email" class="form-control" placeholder="john.doe@fitlife.nl" />
+                            <InputText @bind-Value="_editingInstructor.Email" type="email" class="form-control" placeholder="john@fitlife.nl" />
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">Specialisatie</label>
-                            <InputText @bind-Value="_editingInstructor.Specialization" class="form-control" placeholder="Yoga, Spinning, CrossFit..." />
-                        </div>
-
-                        <div class="modal-footer">
+                        <div class="modal-footer px-0 pb-0">
                             <button type="button" class="btn btn-secondary" @onclick="CloseModal">Annuleren</button>
-                            <button type="submit" class="btn btn-primary" disabled="@_isSaving">
-                                @(_isSaving ? "Opslaan..." : "Opslaan")
+                            <button type="submit" class="btn btn-primary" disabled="@(_isSaving || _isUploading)">
+                                @if (_isSaving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                Opslaan
                             </button>
                         </div>
                     </EditForm>
@@ -145,131 +198,328 @@
     </div>
 }
 
+@* ── Camera Modal ────────────────────────────────────────────────────────── *@
+@if (_showCamera)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color:rgba(0,0,0,.7); z-index:1060;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-camera me-2"></i>Foto nemen</h5>
+                    <button type="button" class="btn-close" @onclick="CloseCamera"></button>
+                </div>
+                <div class="modal-body text-center p-2">
+                    @if (_cameraError)
+                    {
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Camera niet beschikbaar of geen toestemming.<br />
+                            <small>Gebruik de "Bestand" knop om een foto te kiezen.</small>
+                        </div>
+                    }
+                    else
+                    {
+                        <video id="fitlife-camera-video"
+                               autoplay muted playsinline
+                               style="width:100%;max-width:480px;border-radius:8px;background:#000;"></video>
+                        <canvas id="fitlife-camera-canvas" style="display:none;"></canvas>
+                    }
+                </div>
+                @if (!_cameraError)
+                {
+                    <div class="modal-footer justify-content-center">
+                        <button type="button" class="btn btn-primary px-4" @onclick="CapturePhoto">
+                            <i class="bi bi-camera-fill me-2"></i>Foto nemen
+                        </button>
+                        <button type="button" class="btn btn-secondary" @onclick="CloseCamera">Annuleren</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseCamera">Sluiten</button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
 @code {
-    private List<InstructorDto> _instructors = new();
-    private bool _isLoading = true;
-    private bool _isSaving = false;
-    private bool _showModal = false;
-    private InstructorDto _editingInstructor = new();
+    // ── State ─────────────────────────────────────────────────────────────
+    private List<InstructorDto> _instructors    = new();
+    private InstructorDto       _editingInstructor = new();
+    private bool _isLoading  = true;
+    private bool _isSaving   = false;
+    private bool _showModal  = false;
 
-    /// <summary>
-    /// Loads all instructors when component initializes
-    /// </summary>
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadData();
-    }
+    // Photo state — store bytes, never the IBrowserFile reference
+    private byte[]? _pendingBytes;
+    private string   _pendingMime  = "image/jpeg";
+    private string   _pendingName  = "photo.jpg";
+    private string?  _previewUrl;
+    private string   _photoError   = string.Empty;
+    private bool     _isUploading  = false;
+    private bool     _photoSaved   = false;
 
-    /// <summary>
-    /// Loads instructors from the database
-    /// </summary>
+    // Camera state
+    private bool _showCamera  = false;
+    private bool _cameraError = false;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────
+    protected override async Task OnInitializedAsync() => await LoadData();
+
     private async Task LoadData()
     {
         _isLoading = true;
-        try
-        {
-            _instructors = await InstructorService.GetAllInstructorsAsync();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error loading instructors: {ex.Message}");
-            ToastService.ShowError("Fout bij laden van instructeurs.");
-        }
-        finally
-        {
-            _isLoading = false;
-        }
+        try   { _instructors = await InstructorService.GetAllInstructorsAsync(); }
+        catch { ToastService.ShowError("Fout bij laden van instructeurs."); }
+        finally { _isLoading = false; }
     }
 
-    /// <summary>
-    /// Opens modal for creating a new instructor
-    /// </summary>
+    // ── Modal open/close ───────────────────────────────────────────────────
     private void OpenCreateModal()
     {
-        _editingInstructor = new InstructorDto();
+        _editingInstructor = new();
+        ResetPhotoState();
         _showModal = true;
     }
 
-    /// <summary>
-    /// Opens modal for editing an existing instructor
-    /// </summary>
-    private void OpenEditModal(InstructorDto instructor)
+    private void OpenEditModal(InstructorDto i)
     {
         _editingInstructor = new InstructorDto
         {
-            Id = instructor.Id,
-            FirstName = instructor.FirstName,
-            LastName = instructor.LastName,
-            Email = instructor.Email,
-            Specialization = instructor.Specialization,
-            PhotoUrl = instructor.PhotoUrl
+            Id             = i.Id,
+            FirstName      = i.FirstName,
+            LastName       = i.LastName,
+            Email          = i.Email,
+            Specialization = i.Specialization,
+            PhotoUrl       = i.PhotoUrl
         };
+        ResetPhotoState();
         _showModal = true;
     }
 
-    /// <summary>
-    /// Closes the modal and resets state
-    /// </summary>
     private void CloseModal()
     {
         _showModal = false;
         _editingInstructor = new();
+        ResetPhotoState();
     }
 
-    /// <summary>
-    /// Saves instructor (create or update) to database
-    /// </summary>
+    private void ResetPhotoState()
+    {
+        _pendingBytes = null;
+        _previewUrl   = null;
+        _photoError   = string.Empty;
+        _isUploading  = false;
+        _photoSaved   = false;
+    }
+
+    // ── File picker ────────────────────────────────────────────────────────
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        _photoError = string.Empty;
+        _photoSaved = false;
+        StateHasChanged();
+
+        var file = e.File;
+        var ext  = Path.GetExtension(file.Name).ToLowerInvariant();
+
+        if (ext is not (".jpg" or ".jpeg" or ".png" or ".webp"))
+        {
+            _photoError = "Alleen JPG, PNG of WebP.";
+            StateHasChanged();
+            return;
+        }
+        if (file.Size > 5 * 1024 * 1024)
+        {
+            _photoError = "Bestand mag maximaal 5 MB zijn.";
+            StateHasChanged();
+            return;
+        }
+
+        _isUploading = true;
+        StateHasChanged();
+
+        try
+        {
+            // Read ALL bytes now — IBrowserFile is only valid during this event
+            await using var stream = file.OpenReadStream(5 * 1024 * 1024);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+
+            _pendingBytes = ms.ToArray();
+            _pendingMime  = ext is ".png" ? "image/png" : ext is ".webp" ? "image/webp" : "image/jpeg";
+            _pendingName  = file.Name;
+
+            _previewUrl = $"data:{_pendingMime};base64,{Convert.ToBase64String(_pendingBytes)}";
+            StateHasChanged(); // show preview immediately
+
+            await UploadPendingPhotoAsync();
+        }
+        catch (Exception ex)
+        {
+            _photoError = "Kon bestand niet lezen: " + ex.Message;
+        }
+        finally
+        {
+            _isUploading = false;
+            StateHasChanged();
+        }
+    }
+
+    // ── Camera ─────────────────────────────────────────────────────────────
+    private async Task OpenCamera()
+    {
+        _showCamera  = true;
+        _cameraError = false;
+        StateHasChanged();
+
+        // Give the DOM a tick to render the video element
+        await Task.Delay(100);
+
+        var ok = await JS.InvokeAsync<bool>("fitlifeCamera.start", "fitlife-camera-video");
+        if (!ok)
+        {
+            _cameraError = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CloseCamera()
+    {
+        await JS.InvokeVoidAsync("fitlifeCamera.stop");
+        _showCamera  = false;
+        _cameraError = false;
+        StateHasChanged();
+    }
+
+    private async Task CapturePhoto()
+    {
+        var dataUrl = await JS.InvokeAsync<string?>(
+            "fitlifeCamera.capture", "fitlife-camera-video", "fitlife-camera-canvas");
+
+        if (string.IsNullOrEmpty(dataUrl))
+        {
+            _photoError = "Foto nemen mislukt.";
+            await CloseCamera();
+            StateHasChanged();
+            return;
+        }
+
+        await CloseCamera();
+
+        // Convert data URL → bytes
+        var comma = dataUrl.IndexOf(',');
+        if (comma < 0) { _photoError = "Ongeldige cameraopname."; StateHasChanged(); return; }
+
+        _isUploading = true;
+        _photoError  = string.Empty;
+        _photoSaved  = false;
+
+        _pendingBytes = Convert.FromBase64String(dataUrl[(comma + 1)..]);
+        _pendingMime  = "image/jpeg";
+        _pendingName  = $"camera_{DateTime.Now:yyyyMMdd_HHmmss}.jpg";
+        _previewUrl   = dataUrl;
+
+        StateHasChanged();
+
+        try   { await UploadPendingPhotoAsync(); }
+        catch (Exception ex) { _photoError = "Upload mislukt: " + ex.Message; }
+        finally { _isUploading = false; StateHasChanged(); }
+    }
+
+    // ── Shared upload logic ────────────────────────────────────────────────
+    // Only uploads immediately when the instructor already has an ID.
+    // For new instructors, bytes stay in _pendingBytes until SaveInstructor runs.
+    private async Task UploadPendingPhotoAsync()
+    {
+        if (_pendingBytes is null) return;
+        if (_editingInstructor.Id <= 0) return; // wait until saved
+
+        var wrapper = new BytesBrowserFile(_pendingName, _pendingMime, _pendingBytes);
+        var (ok, url, err) = await PhotoUploadService.UploadAsync(_editingInstructor.Id, wrapper);
+
+        if (ok && url != null)
+        {
+            _editingInstructor.PhotoUrl = url;
+            _pendingBytes = null; // consumed
+            _photoSaved   = true;
+        }
+        else
+        {
+            _photoError = string.IsNullOrEmpty(err) ? "Upload mislukt." : err;
+        }
+    }
+
+    // ── Save instructor ────────────────────────────────────────────────────
     private async Task SaveInstructor()
     {
         _isSaving = true;
         try
         {
-            var (success, message) = _editingInstructor.Id == 0
+            var isNew = _editingInstructor.Id == 0;
+            var (ok, msg) = isNew
                 ? await InstructorService.CreateInstructorAsync(_editingInstructor)
                 : await InstructorService.UpdateInstructorAsync(_editingInstructor);
 
-            if (success)
+            if (!ok) { ToastService.ShowError(msg); return; }
+
+            // New instructor: upload pending photo now that we have an ID
+            if (isNew && _pendingBytes is not null)
             {
-                ToastService.ShowSuccess(message);
-                CloseModal();
-                await LoadData();
+                await LoadData(); // refresh to get the new ID
+                var saved = _instructors.FirstOrDefault(i =>
+                    i.FirstName == _editingInstructor.FirstName &&
+                    i.LastName  == _editingInstructor.LastName);
+
+                if (saved?.Id > 0)
+                {
+                    _editingInstructor.Id = saved.Id;
+                    await UploadPendingPhotoAsync();
+                }
             }
-            else
-            {
-                ToastService.ShowError(message);
-            }
+
+            ToastService.ShowSuccess(msg);
+            CloseModal();
+            await LoadData();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error saving instructor: {ex.Message}");
-            ToastService.ShowError("Fout bij opslaan van instructeur.");
+            ToastService.ShowError("Fout bij opslaan: " + ex.Message);
         }
-        finally
-        {
-            _isSaving = false;
-        }
+        finally { _isSaving = false; }
     }
 
-    /// <summary>
-    /// Deletes an instructor after validation
-    /// </summary>
-    private async Task DeleteInstructor(int instructorId)
+    // ── Delete ─────────────────────────────────────────────────────────────
+    private async Task DeleteInstructor(int id)
     {
-        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Weet je zeker dat je deze instructeur wilt verwijderen?"))
+        if (!await JS.InvokeAsync<bool>("confirm", "Weet je zeker dat je deze instructeur wilt verwijderen?"))
             return;
 
-        var (success, message) = await InstructorService.DeleteInstructorAsync(instructorId);
-        
-        if (success)
-        {
-            ToastService.ShowSuccess(message);
-            await LoadData();
-        }
-        else
-        {
-            ToastService.ShowError(message);
-        }
+        var (ok, msg) = await InstructorService.DeleteInstructorAsync(id);
+        if (ok) { ToastService.ShowSuccess(msg); await LoadData(); }
+        else    ToastService.ShowError(msg);
     }
 
-    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+    // ── Helper: wrap bytes as IBrowserFile ─────────────────────────────────
+    private sealed class BytesBrowserFile : IBrowserFile
+    {
+        private readonly byte[] _data;
+        public BytesBrowserFile(string name, string contentType, byte[] data)
+        {
+            Name        = name;
+            ContentType = contentType;
+            Size        = data.Length;
+            _data       = data;
+            LastModified = DateTimeOffset.UtcNow;
+        }
+        public string         Name         { get; }
+        public DateTimeOffset LastModified  { get; }
+        public long           Size         { get; }
+        public string         ContentType  { get; }
+        public Stream OpenReadStream(long maxAllowedSize = 512000, CancellationToken ct = default)
+            => new MemoryStream(_data);
+    }
 }

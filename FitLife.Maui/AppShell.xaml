@@ -3,7 +3,53 @@
     x:Class="FitLife.Maui.AppShell"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    Shell.FlyoutBehavior="Disabled"
+    FlyoutBehavior="Flyout"
+    FlyoutBackgroundColor="#1A1A1A"
     Title="FitLife">
-    <!-- Tabs worden programmatisch opgebouwd in AppShell.xaml.cs op basis van de gebruikersrol -->
+
+    <!--
+        FlyoutItems en FlyoutHeader worden programmatisch opgebouwd in AppShell.xaml.cs.
+        Hier staan alleen de DataTemplates voor consistente item-opmaak.
+    -->
+
+    <!-- Flyout item row: icon + label, wit op donkere achtergrond -->
+    <Shell.ItemTemplate>
+        <DataTemplate>
+            <Grid HeightRequest="54"
+                  ColumnDefinitions="56, *"
+                  Padding="4,0">
+                <Image Grid.Column="0"
+                       Source="{Binding FlyoutIcon}"
+                       WidthRequest="22" HeightRequest="22"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center" />
+                <Label Grid.Column="1"
+                       Text="{Binding Title}"
+                       TextColor="#E5E7EB"
+                       FontSize="15"
+                       VerticalOptions="Center" />
+            </Grid>
+        </DataTemplate>
+    </Shell.ItemTemplate>
+
+    <!-- MenuItem (Uitloggen): rood accent -->
+    <Shell.MenuItemTemplate>
+        <DataTemplate>
+            <Grid HeightRequest="54"
+                  ColumnDefinitions="56, *"
+                  Padding="4,0">
+                <Image Grid.Column="0"
+                       Source="{Binding IconImageSource}"
+                       WidthRequest="22" HeightRequest="22"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center" />
+                <Label Grid.Column="1"
+                       Text="{Binding Text}"
+                       TextColor="#FF6B6B"
+                       FontSize="15"
+                       VerticalOptions="Center" />
+            </Grid>
+        </DataTemplate>
+    </Shell.MenuItemTemplate>
+
 </Shell>

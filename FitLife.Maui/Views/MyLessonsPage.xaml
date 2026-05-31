@@ -4,65 +4,304 @@
              xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
              x:Class="FitLife.Maui.Views.MyLessonsPage"
              x:DataType="vm:MyLessonsViewModel"
-             Title="{Binding Title}">
+             Title="{Binding Title}"
+             Shell.NavBarIsVisible="False">
 
-    <!--
-        Root grid lets us overlay a global busy indicator on top of the list
-        while a server-side cancellation is in progress.
-    -->
-    <Grid>
-        <CollectionView ItemsSource="{Binding EnrolledLessons}">
-            <CollectionView.EmptyView>
-                <Label Text="Je hebt geen lessen gereserveerd."
-                       HorizontalOptions="Center"
-                       VerticalOptions="Center"
-                       HorizontalTextAlignment="Center"
-                       TextColor="Gray"
-                       Margin="20" />
-            </CollectionView.EmptyView>
-            <CollectionView.ItemTemplate>
-                <DataTemplate x:DataType="vm:UserLesson">
-                    <Frame Margin="0,5" Padding="15" CornerRadius="8" HasShadow="True">
-                        <VerticalStackLayout Spacing="5">
-                            <!-- Lesson name -->
-                            <Label Text="{Binding Name}" FontSize="20" FontAttributes="Bold" />
+    <Grid RowDefinitions="Auto, Auto, *">
 
-                            <!-- Lesson date/time -->
-                            <HorizontalStackLayout Spacing="10">
-                                <Label Text="Datum:" FontAttributes="Bold" />
-                                <Label Text="{Binding Time, StringFormat='{0:dd-MM-yyyy HH:mm}'}" />
-                            </HorizontalStackLayout>
+        <!-- ── Back Header ───────────────────────────────────────────────── -->
+        <Grid Grid.Row="0"
+              Style="{StaticResource HeaderGrid}"
+              ColumnDefinitions="Auto, *"
+              Padding="10,8">
+            <ImageButton Source="back_icon.png"
+                         WidthRequest="20" HeightRequest="20"
+                         VerticalOptions="Center"
+                         Clicked="OnBackToHomeClicked" />
+            <Label Grid.Column="1"
+                   Text="Mijn Lessen"
+                   Style="{StaticResource HeaderTitle}"
+                   FontSize="18" />
+        </Grid>
 
-                            <!-- Instructor -->
-                            <HorizontalStackLayout Spacing="10">
-                                <Label Text="Instructeur:" FontAttributes="Bold" />
-                                <Label Text="{Binding Instructor}" />
-                            </HorizontalStackLayout>
+        <!-- ── View Toggle Bar (same style as WeekPage) ──────────────────── -->
+        <Grid Grid.Row="1"
+              BackgroundColor="{StaticResource Black}"
+              ColumnDefinitions="*, *">
 
-                            <!-- Location -->
-                            <HorizontalStackLayout Spacing="10">
-                                <Label Text="Locatie:" FontAttributes="Bold" />
-                                <Label Text="{Binding Location}" />
-                            </HorizontalStackLayout>
-
-                            <Button Text="Reservering Annuleren"
-                                    Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.CancelReservationCommand}"
-                                    CommandParameter="{Binding .}"
-                                    Margin="0,10,0,0" />
-                        </VerticalStackLayout>
-                    </Frame>
-                </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
-
-        <!-- Full-screen overlay that blocks all input while a cancellation is in progress. -->
-        <BoxView IsVisible="{Binding IsBusy}"
-                 InputTransparent="False"
-                 Color="Black"
-                 Opacity="0.3" />
-        <ActivityIndicator IsRunning="{Binding IsBusy}"
-                           IsVisible="{Binding IsBusy}"
+            <!-- Mijn Lessen tab -->
+            <Grid Grid.Column="0" Padding="0,12">
+                <Grid.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding SwitchToMyLessonsCommand}" />
+                </Grid.GestureRecognizers>
+                <VerticalStackLayout HorizontalOptions="Center" Spacing="4">
+                    <Label Text="Mijn Lessen"
                            HorizontalOptions="Center"
-                           VerticalOptions="Center" />
+                           FontSize="14"
+                           TextColor="White"
+                           Opacity="0.45">
+                        <Label.Triggers>
+                            <DataTrigger TargetType="Label"
+                                         Binding="{Binding IsMyLessonsView}"
+                                         Value="True">
+                                <Setter Property="Opacity"        Value="1.0" />
+                                <Setter Property="FontAttributes" Value="Bold" />
+                            </DataTrigger>
+                        </Label.Triggers>
+                    </Label>
+                    <BoxView HeightRequest="2"
+                             WidthRequest="70"
+                             HorizontalOptions="Center"
+                             Color="{StaticResource Primary}"
+                             IsVisible="{Binding IsMyLessonsView}" />
+                </VerticalStackLayout>
+            </Grid>
+
+            <!-- Geschiedenis tab -->
+            <Grid Grid.Column="1" Padding="0,12">
+                <Grid.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding SwitchToHistoryCommand}" />
+                </Grid.GestureRecognizers>
+                <VerticalStackLayout HorizontalOptions="Center" Spacing="4">
+                    <Label Text="Geschiedenis"
+                           HorizontalOptions="Center"
+                           FontSize="14"
+                           TextColor="White"
+                           Opacity="0.45">
+                        <Label.Triggers>
+                            <DataTrigger TargetType="Label"
+                                         Binding="{Binding IsHistoryView}"
+                                         Value="True">
+                                <Setter Property="Opacity"        Value="1.0" />
+                                <Setter Property="FontAttributes" Value="Bold" />
+                            </DataTrigger>
+                        </Label.Triggers>
+                    </Label>
+                    <BoxView HeightRequest="2"
+                             WidthRequest="70"
+                             HorizontalOptions="Center"
+                             Color="{StaticResource Primary}"
+                             IsVisible="{Binding IsHistoryView}" />
+                </VerticalStackLayout>
+            </Grid>
+        </Grid>
+
+        <!-- ── Content area ──────────────────────────────────────────────── -->
+        <Grid Grid.Row="2">
+
+            <!-- Loading overlay -->
+            <BoxView IsVisible="{Binding IsBusy}"
+                     InputTransparent="False"
+                     Color="Black"
+                     Opacity="0.3" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               IsVisible="{Binding IsBusy}"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center" />
+
+            <!-- ── MIJN LESSEN view ─────────────────────────────────────── -->
+            <CollectionView ItemsSource="{Binding EnrolledLessons}"
+                            IsVisible="{Binding IsMyLessonsView}">
+                <CollectionView.EmptyView>
+                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center"
+                                         Spacing="12" Padding="30">
+                        <Label Text="📅"
+                               FontSize="48"
+                               HorizontalOptions="Center" />
+                        <Label Text="Geen aankomende lessen"
+                               FontSize="16"
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center"
+                               HorizontalTextAlignment="Center" />
+                        <Label Text="Reserveer een les via het rooster om hem hier te zien."
+                               FontSize="13"
+                               TextColor="Gray"
+                               HorizontalOptions="Center"
+                               HorizontalTextAlignment="Center" />
+                    </VerticalStackLayout>
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:UserLesson">
+                        <Frame Margin="12,6" Padding="15" CornerRadius="10" HasShadow="True">
+                            <Grid ColumnDefinitions="4, *" ColumnSpacing="12">
+                                <!-- Accent bar -->
+                                <BoxView Grid.Column="0"
+                                         BackgroundColor="{StaticResource Primary}"
+                                         CornerRadius="2"
+                                         VerticalOptions="Fill" />
+
+                                <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                    <Label Text="{Binding Name}"
+                                           FontSize="17"
+                                           FontAttributes="Bold" />
+                                    <Label Text="{Binding Time, StringFormat='{0:dddd d MMMM yyyy · HH:mm}'}"
+                                           FontSize="13"
+                                           TextColor="Gray" />
+                                    <HorizontalStackLayout Spacing="16" Margin="0,2,0,0">
+                                        <HorizontalStackLayout Spacing="4">
+                                            <Label Text="👤" FontSize="13" VerticalOptions="Center" />
+                                            <Label Text="{Binding Instructor}" FontSize="13" VerticalOptions="Center" />
+                                        </HorizontalStackLayout>
+                                        <HorizontalStackLayout Spacing="4">
+                                            <Label Text="📍" FontSize="13" VerticalOptions="Center" />
+                                            <Label Text="{Binding Location}" FontSize="13" VerticalOptions="Center" />
+                                        </HorizontalStackLayout>
+                                    </HorizontalStackLayout>
+                                    <Button Text="Annuleren"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.CancelReservationCommand}"
+                                            CommandParameter="{Binding .}"
+                                            BackgroundColor="#e50000"
+                                            TextColor="White"
+                                            FontSize="13"
+                                            HeightRequest="36"
+                                            CornerRadius="6"
+                                            Margin="0,8,0,0" />
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <!-- ── GESCHIEDENIS view ───────────────────────────────────── -->
+            <ScrollView IsVisible="{Binding IsHistoryView}">
+                <VerticalStackLayout Spacing="0">
+
+                    <!-- Stats cards -->
+                    <Grid ColumnDefinitions="*, *, *"
+                          Padding="12,12,12,6"
+                          ColumnSpacing="8">
+
+                        <!-- Totaal -->
+                        <Frame Grid.Column="0" Padding="10,12" CornerRadius="10" HasShadow="False"
+                               BackgroundColor="{StaticResource Primary}">
+                            <VerticalStackLayout Spacing="2" HorizontalOptions="Center">
+                                <Label Text="{Binding TotalLessonsAttended}"
+                                       FontSize="28"
+                                       FontAttributes="Bold"
+                                       TextColor="White"
+                                       HorizontalOptions="Center" />
+                                <Label Text="Totaal"
+                                       FontSize="11"
+                                       TextColor="White"
+                                       Opacity="0.85"
+                                       HorizontalOptions="Center" />
+                            </VerticalStackLayout>
+                        </Frame>
+
+                        <!-- Deze maand -->
+                        <Frame Grid.Column="1" Padding="10,12" CornerRadius="10" HasShadow="False"
+                               BackgroundColor="{StaticResource PrimaryLight}">
+                            <VerticalStackLayout Spacing="2" HorizontalOptions="Center">
+                                <Label Text="{Binding LessonsThisMonth}"
+                                       FontSize="28"
+                                       FontAttributes="Bold"
+                                       TextColor="White"
+                                       HorizontalOptions="Center" />
+                                <Label Text="Deze maand"
+                                       FontSize="11"
+                                       TextColor="White"
+                                       Opacity="0.85"
+                                       HorizontalOptions="Center" />
+                            </VerticalStackLayout>
+                        </Frame>
+
+                        <!-- Dit jaar -->
+                        <Frame Grid.Column="2" Padding="10,12" CornerRadius="10" HasShadow="False"
+                               BackgroundColor="{StaticResource WorkoutCrossfit}">
+                            <VerticalStackLayout Spacing="2" HorizontalOptions="Center">
+                                <Label Text="{Binding LessonsThisYear}"
+                                       FontSize="28"
+                                       FontAttributes="Bold"
+                                       TextColor="White"
+                                       HorizontalOptions="Center" />
+                                <Label Text="Dit jaar"
+                                       FontSize="11"
+                                       TextColor="White"
+                                       Opacity="0.85"
+                                       HorizontalOptions="Center" />
+                            </VerticalStackLayout>
+                        </Frame>
+                    </Grid>
+
+                    <!-- Meest bezochte les -->
+                    <Frame Margin="12,0,12,12" Padding="14,10" CornerRadius="10" HasShadow="False"
+                           BackgroundColor="{StaticResource LightGray}">
+                        <HorizontalStackLayout Spacing="10">
+                            <Label Text="🏆" FontSize="20" VerticalOptions="Center" />
+                            <VerticalStackLayout Spacing="1" VerticalOptions="Center">
+                                <Label Text="Meest bezochte les"
+                                       FontSize="11"
+                                       TextColor="Gray" />
+                                <Label Text="{Binding MostVisitedWorkout}"
+                                       FontSize="15"
+                                       FontAttributes="Bold" />
+                            </VerticalStackLayout>
+                        </HorizontalStackLayout>
+                    </Frame>
+
+                    <!-- History list -->
+                    <Label Text="Bezochte lessen"
+                           FontSize="15"
+                           FontAttributes="Bold"
+                           Margin="16,4,16,6" />
+
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding HistoryLessons}"
+                                         Spacing="0">
+                        <BindableLayout.EmptyView>
+                            <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center"
+                                                  Padding="30" Spacing="8">
+                                <Label Text="🗓️"
+                                       FontSize="40"
+                                       HorizontalOptions="Center" />
+                                <Label Text="Nog geen lessen bijgewoond"
+                                       FontSize="14"
+                                       TextColor="Gray"
+                                       HorizontalOptions="Center"
+                                       HorizontalTextAlignment="Center" />
+                            </VerticalStackLayout>
+                        </BindableLayout.EmptyView>
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:UserLesson">
+                                <Frame Margin="12,4" Padding="14" CornerRadius="10" HasShadow="False"
+                                       BackgroundColor="White">
+                                    <Grid ColumnDefinitions="4, *" ColumnSpacing="12">
+                                        <BoxView Grid.Column="0"
+                                                 BackgroundColor="{StaticResource Gray300}"
+                                                 CornerRadius="2"
+                                                 VerticalOptions="Fill" />
+                                        <VerticalStackLayout Grid.Column="1" Spacing="3">
+                                            <Label Text="{Binding Name}"
+                                                   FontSize="16"
+                                                   FontAttributes="Bold" />
+                                            <Label Text="{Binding Time, StringFormat='{0:dddd d MMMM yyyy · HH:mm}'}"
+                                                   FontSize="12"
+                                                   TextColor="Gray" />
+                                            <HorizontalStackLayout Spacing="16" Margin="0,2,0,0">
+                                                <HorizontalStackLayout Spacing="4">
+                                                    <Label Text="👤" FontSize="12" VerticalOptions="Center" />
+                                                    <Label Text="{Binding Instructor}" FontSize="12"
+                                                           TextColor="Gray" VerticalOptions="Center" />
+                                                </HorizontalStackLayout>
+                                                <HorizontalStackLayout Spacing="4">
+                                                    <Label Text="📍" FontSize="12" VerticalOptions="Center" />
+                                                    <Label Text="{Binding Location}" FontSize="12"
+                                                           TextColor="Gray" VerticalOptions="Center" />
+                                                </HorizontalStackLayout>
+                                            </HorizontalStackLayout>
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </Frame>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+
+                    <!-- Bottom padding -->
+                    <BoxView HeightRequest="20" Color="Transparent" />
+
+                </VerticalStackLayout>
+            </ScrollView>
+
+        </Grid>
     </Grid>
 </ContentPage>

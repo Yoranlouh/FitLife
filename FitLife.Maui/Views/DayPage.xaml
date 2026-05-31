@@ -5,13 +5,27 @@
              xmlns:models="clr-namespace:SharedLibrary.DTOs.Responses;assembly=SharedLibrary"
              x:Class="FitLife.Maui.Views.DayPage"
              Title="{Binding Title}"
-             x:DataType="vm:DayViewModel">
+             x:DataType="vm:DayViewModel"
+             Shell.NavBarIsVisible="False">
 
-    <Grid RowDefinitions="Auto, Auto, *">
-        <DatePicker Date="{Binding SelectedDate}" Grid.Row="0" Margin="10" Format="D"/>
-        <Button Text="Refresh" Command="{Binding LoadLessonsCommand}" Grid.Row="1" Margin="10"/>
+    <Grid RowDefinitions="Auto, Auto, Auto, *">
+        <Grid Grid.Row="0"
+              Style="{StaticResource HeaderGrid}"
+              ColumnDefinitions="Auto, *"
+              Padding="10,8">
+            <ImageButton Source="back_icon.png"
+                         WidthRequest="20" HeightRequest="20"
+                         VerticalOptions="Center"
+                         Clicked="OnBackToHomeClicked" />
+            <Label Grid.Column="1"
+                   Text="Dag Overzicht"
+                   Style="{StaticResource HeaderTitle}"
+                   FontSize="18" />
+        </Grid>
+        <DatePicker Date="{Binding SelectedDate}" Grid.Row="1" Margin="10" Format="D"/>
+        <Button Text="Refresh" Command="{Binding LoadLessonsCommand}" Grid.Row="2" Margin="10"/>
         
-        <CollectionView Grid.Row="2" ItemsSource="{Binding Lessons}">
+        <CollectionView Grid.Row="3" ItemsSource="{Binding Lessons}">
             <CollectionView.ItemTemplate>
                 <DataTemplate>
                     <Frame Margin="10" Padding="15" HasShadow="True">

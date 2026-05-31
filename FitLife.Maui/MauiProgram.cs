@@ -107,6 +107,15 @@ public static class MauiProgram
         // Register HttpClient for AuthenticationService
         builder.Services.AddHttpClient(nameof(AuthenticationService));
 
+        // Photo upload service
+        builder.Services.AddHttpClient<IPhotoService, PhotoService>(client =>
+        {
+            string baseUrl = DeviceInfo.Platform == DevicePlatform.Android
+                ? "http://10.0.2.2:8080/"
+                : "http://localhost:8080/";
+            client.BaseAddress = new Uri(baseUrl);
+        });
+
         // ViewModels - Use Transient for pages that need fresh state on each navigation
         builder.Services.AddTransient<LoginViewModel>();
         builder.Services.AddSingleton<HomeViewModel>();
@@ -137,8 +146,10 @@ public static class MauiProgram
 		builder.Services.AddTransient<ParticipantsPage>();
 		builder.Services.AddSingleton<InstructorLessonsPage>();
 		builder.Services.AddTransient<ManageLessonPage>();
+		builder.Services.AddSingleton<SettingsPage>();
+		builder.Services.AddSingleton<MySportclubPage>();
 
-		// AppShell needs DI to build role-based tabs after login
+		// AppShell needs DI to build role-based flyout after login
 		builder.Services.AddTransient<AppShell>();
 
 			return builder.Build();

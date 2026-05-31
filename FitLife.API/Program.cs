@@ -3,6 +3,7 @@ using SharedLibrary.DTOs.Responses;
 using System.Text.Json.Serialization;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,6 +31,15 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+
+// Serve uploaded user photos as static files
+var uploadsDir = Path.Combine(app.Environment.ContentRootPath, "uploads");
+Directory.CreateDirectory(uploadsDir);
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(uploadsDir),
+    RequestPath = "/uploads"
+});
 
 // Enable CORS
 app.UseCors("AllowFitLifeClients");
@@ -538,7 +548,7 @@ app.MapPost("/auth/login", async (IConfiguration configuration, LoginRequestDto 
                 ? email.Split('@')[0]
                 : reader.GetString("display_name");
             var photoUrl = reader.IsDBNull(reader.GetOrdinal("photo_url"))
-                ? "https://ui-avatars.com/api/?name=User&size=200&background=6366F1&color=fff"
+                ? null
                 : reader.GetString("photo_url");
             var role = reader.GetString("role");
             var credits = reader.IsDBNull(reader.GetOrdinal("credits")) ? 0 : reader.GetInt32("credits");
@@ -1261,6 +1271,48 @@ app.MapPost("/subscriptions/change-billing", async (IConfiguration configuration
         return Results.Problem("Er is een fout opgetreden bij het wijzigen van de factureringsperiode.");
     }
 });
+
+// POST /upload/photo/{userId} — upload & save profile photo
+app.MapPost("/upload/photo/{userId:int}", async (int userId, HttpRequest request, IConfiguration configuration) =>
+{
+    if (!request.HasFormContentType || request.Form.Files.Count == 0)
+        return Results.BadRequest("Geen bestand ontvangen.");
+
+    var photo = request.Form.Files[0];
+    if (photo.Length == 0)
+        return Results.BadRequest("Bestand is leeg.");
+
+    var ext = Path.GetExtension(photo.FileName).ToLowerInvariant();
+    if (ext is not (".jpg" or ".jpeg" or ".png" or ".webp"))
+        return Results.BadRequest("Alleen JPG, PNG en WebP zijn toegestaan.");
+
+    if (photo.Length > 5 * 1024 * 1024)
+        return Results.BadRequest("Bestand te groot (max 5 MB).");
+
+    // Remove previous photo for this user
+    foreach (var old in Directory.GetFiles(uploadsDir, $"user_{userId}_*"))
+        File.Delete(old);
+
+    var fileName  = $"user_{userId}_{Guid.NewGuid():N}{ext}";
+    var filePath  = Path.Combine(uploadsDir, fileName);
+    await using (var stream = File.Create(filePath))
+        await photo.CopyToAsync(stream);
+
+    var photoUrl = $"{request.Scheme}://{request.Host}/uploads/{fileName}";
+
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+    await using var connection = new MySqlConnection(connectionString);
+    await connection.OpenAsync();
+    await using var cmd = new MySqlCommand(
+        "UPDATE users SET photo_url = @url WHERE id = @id", connection);
+    cmd.Parameters.AddWithValue("@url", photoUrl);
+    cmd.Parameters.AddWithValue("@id", userId);
+    var rows = await cmd.ExecuteNonQueryAsync();
+
+    return rows > 0
+        ? Results.Ok(new { photoUrl })
+        : Results.NotFound("Gebruiker niet gevonden.");
+}).DisableAntiforgery();
 
 app.Run();
 

@@ -13,9 +13,14 @@
         <!-- Header -->
         <Grid Grid.Row="0"
               Style="{StaticResource HeaderGrid}"
-              ColumnDefinitions="*,Auto"
-              Padding="16,10">
-            <Label Grid.Column="0"
+              ColumnDefinitions="Auto, *, Auto"
+              Padding="10,8">
+            <ImageButton Grid.Column="0"
+                         Source="back_icon.png"
+                         WidthRequest="20" HeightRequest="20"
+                         VerticalOptions="Center"
+                         Clicked="OnBackToHomeClicked" />
+            <Label Grid.Column="1"
                    Text="Mijn Lessen als Trainer"
                    Style="{StaticResource HeaderTitle}"
                    FontSize="18"

@@ -9,71 +9,81 @@ using SharedLibrary.DTOs.Responses;
 namespace FitLife.Maui.ViewModels;
 
 /// <summary>
-/// ViewModel for the MyLessonsPage, responsible for displaying lessons the user is enrolled in.
-/// Listens for messages from other ViewModels to update the list in real-time and performs
-/// reservation cancellations against the FitLife.API.
+/// ViewModel for the MyLessonsPage — shows upcoming reservations and attendance history.
 /// </summary>
 public partial class MyLessonsViewModel : BaseViewModel
 {
-    // Server-side reservation service (HTTP).
-    private readonly IReservationService _reservationService;
-
-    // Authentication service used to retrieve the current user's id,
-    // which the API needs to identify whose reservation must be cancelled.
+    private readonly IReservationService    _reservationService;
     private readonly IAuthenticationService _authenticationService;
 
-    /// <summary>
-    /// Collection of lessons the user is currently enrolled in.
-    /// </summary>
+    // ── Collections ───────────────────────────────────────────────────────
+    /// <summary>Upcoming (future) enrolled lessons.</summary>
     public ObservableCollection<UserLesson> EnrolledLessons { get; } = new();
 
-    public MyLessonsViewModel(IReservationService reservationService,
+    /// <summary>Past (attended) lessons, newest first.</summary>
+    public ObservableCollection<UserLesson> HistoryLessons { get; } = new();
+
+    // ── View toggle ───────────────────────────────────────────────────────
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsHistoryView))]
+    private bool _isMyLessonsView = true;
+
+    public bool IsHistoryView => !IsMyLessonsView;
+
+    // ── History stats ─────────────────────────────────────────────────────
+    [ObservableProperty] private int    _totalLessonsAttended;
+    [ObservableProperty] private int    _lessonsThisMonth;
+    [ObservableProperty] private int    _lessonsThisYear;
+    [ObservableProperty] private string _mostVisitedWorkout = "—";
+
+    public MyLessonsViewModel(IReservationService    reservationService,
                               IAuthenticationService authenticationService)
     {
-        _reservationService = reservationService;
+        _reservationService    = reservationService;
         _authenticationService = authenticationService;
-
         Title = "Mijn Lessen";
 
-        // Listen for new reservations from LessonDetailPage.
+        // New reservation from LessonDetailPage → add to upcoming list
         WeakReferenceMessenger.Default.Register<LessonReservedMessage>(this, (r, m) =>
         {
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 var lesson = m.Value;
-                // Avoid duplicates.
                 if (!EnrolledLessons.Any(l => l.Id == lesson.Id))
-                {
                     EnrolledLessons.Add(new UserLesson
                     {
-                        Id = lesson.Id,
-                        Name = lesson.WorkoutName,
-                        Time = lesson.StartTime,
+                        Id         = lesson.Id,
+                        Name       = lesson.WorkoutName,
+                        Time       = lesson.StartTime,
                         Instructor = lesson.InstructorName,
-                        Location = lesson.LocationName
+                        Location   = lesson.LocationName
                     });
-                }
             });
         });
 
-        // Listen for unregistrations from LessonDetailPage so the list stays in sync.
+        // Cancellation from LessonDetailPage → remove from upcoming list
         WeakReferenceMessenger.Default.Register<LessonUnregisteredMessage>(this, (r, m) =>
         {
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                var lessonId = m.Value;
-                var lessonToRemove = EnrolledLessons.FirstOrDefault(l => l.Id == lessonId);
-                if (lessonToRemove != null)
-                {
-                    EnrolledLessons.Remove(lessonToRemove);
-                }
+                var toRemove = EnrolledLessons.FirstOrDefault(l => l.Id == m.Value);
+                if (toRemove != null) EnrolledLessons.Remove(toRemove);
             });
         });
 
     }
 
+    // ── View switch commands ───────────────────────────────────────────────
+    [RelayCommand]
+    private void SwitchToMyLessons() => IsMyLessonsView = true;
+
+    [RelayCommand]
+    private void SwitchToHistory() => IsMyLessonsView = false;
+
+    // ── Data loading ───────────────────────────────────────────────────────
     /// <summary>
-    /// Loads (or refreshes) the list from the API. Safe to call on every OnAppearing.
+    /// Loads all reservations from the API and splits them into upcoming / history.
+    /// Safe to call on every OnAppearing.
     /// </summary>
     public async Task LoadMyLessonsAsync()
     {
@@ -85,29 +95,52 @@ public partial class MyLessonsViewModel : BaseViewModel
         try
         {
             IsBusy = true;
-            var lessons = await _reservationService.GetUserLessonsAsync(userId.Value);
+            var all = (await _reservationService.GetUserLessonsAsync(userId.Value)).ToList();
+            var now = DateTime.Now;
+
+            var upcoming = all.Where(l => l.StartTime >= now)
+                              .OrderBy(l => l.StartTime)
+                              .ToList();
+
+            var history  = all.Where(l => l.StartTime < now)
+                              .OrderByDescending(l => l.StartTime)
+                              .ToList();
 
             MainThread.BeginInvokeOnMainThread(() =>
             {
+                // Upcoming
                 EnrolledLessons.Clear();
-                foreach (var lesson in lessons)
-                {
-                    EnrolledLessons.Add(new UserLesson
-                    {
-                        Id         = lesson.Id,
-                        Name       = lesson.WorkoutName,
-                        Time       = lesson.StartTime,
-                        Instructor = lesson.InstructorName,
-                        Location   = lesson.LocationName
-                    });
-                }
+                foreach (var l in upcoming)
+                    EnrolledLessons.Add(Map(l));
+
+                // History
+                HistoryLessons.Clear();
+                foreach (var l in history)
+                    HistoryLessons.Add(Map(l));
+
+                // Stats
+                TotalLessonsAttended = history.Count;
+                LessonsThisMonth     = history.Count(l => l.StartTime.Year  == now.Year &&
+                                                          l.StartTime.Month == now.Month);
+                LessonsThisYear      = history.Count(l => l.StartTime.Year  == now.Year);
+                MostVisitedWorkout   = history
+                    .GroupBy(l => l.WorkoutName)
+                    .OrderByDescending(g => g.Count())
+                    .Select(g => g.Key)
+                    .FirstOrDefault() ?? "—";
             });
         }
-        finally
-        {
-            IsBusy = false;
-        }
+        finally { IsBusy = false; }
     }
+
+    private static UserLesson Map(UserLessonDto d) => new()
+    {
+        Id         = d.Id,
+        Name       = d.WorkoutName,
+        Time       = d.StartTime,
+        Instructor = d.InstructorName,
+        Location   = d.LocationName
+    };
 
     /// <summary>
     /// Cancels the given reservation server-side via the FitLife.API.

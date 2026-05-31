@@ -2,34 +2,52 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
+             xmlns:controls="clr-namespace:FitLife.Maui.Controls"
              x:Class="FitLife.Maui.Views.ProfilePage"
              x:DataType="vm:ProfileViewModel"
-             Title="{Binding Title}">
-    
-    <ScrollView>
+             Title="{Binding Title}"
+             Shell.NavBarIsVisible="False">
+
+    <Grid RowDefinitions="Auto, *">
+        <Grid Grid.Row="0"
+              Style="{StaticResource HeaderGrid}"
+              ColumnDefinitions="Auto, *"
+              Padding="10,8">
+            <ImageButton Source="back_icon.png"
+                         WidthRequest="20" HeightRequest="20"
+                         VerticalOptions="Center"
+                         Clicked="OnBackToHomeClicked" />
+            <Label Grid.Column="1"
+                   Text="Mijn Profiel"
+                   Style="{StaticResource HeaderTitle}"
+                   FontSize="18" />
+        </Grid>
+        <ScrollView Grid.Row="1">
         <VerticalStackLayout Spacing="20" Padding="20">
             <!-- Profiel Sectie -->
             <Frame CornerRadius="10" Padding="15" HasShadow="True">
                 <VerticalStackLayout Spacing="10" HorizontalOptions="Center">
-                    <Image Source="{Binding ProfilePictureUrl}"
-                           HeightRequest="120"
-                           WidthRequest="120"
-                           Aspect="AspectFill"
-                           HorizontalOptions="Center">
-                        <Image.Clip>
-                            <EllipseGeometry RadiusX="60" RadiusY="60" Center="60,60" />
-                        </Image.Clip>
-                    </Image>
-                    
-                    <Label Text="{Binding FirstName}" 
-                           FontSize="24" 
-                           FontAttributes="Bold" 
+                    <Grid HorizontalOptions="Center" WidthRequest="120" HeightRequest="120">
+                        <controls:UserAvatarView PhotoUrl="{Binding ProfilePictureUrl}"
+                                                AvatarSize="120" />
+                        <ActivityIndicator IsRunning="{Binding IsUploadingPhoto}"
+                                           IsVisible="{Binding IsUploadingPhoto}"
+                                           Color="White"
+                                           HorizontalOptions="Center"
+                                           VerticalOptions="Center" />
+                    </Grid>
+
+                    <Label Text="{Binding FirstName}"
+                           FontSize="24"
+                           FontAttributes="Bold"
                            HorizontalOptions="Center" />
-                    <Label Text="{Binding LastName}" 
-                           FontSize="18" 
+                    <Label Text="{Binding LastName}"
+                           FontSize="18"
                            HorizontalOptions="Center" />
-                    
-                    <Button Text="Foto wijzigen" 
+
+                    <Button Text="Foto wijzigen"
+                            Command="{Binding PickPhotoCommand}"
+                            IsEnabled="{Binding IsUploadingPhoto, Converter={StaticResource InvertedBoolConverter}}"
                             Margin="0,10,0,0" />
                 </VerticalStackLayout>
             </Frame>
@@ -111,5 +129,6 @@
                     TextColor="White"
                     Margin="0,20,0,0" />
         </VerticalStackLayout>
-    </ScrollView>
+        </ScrollView>
+    </Grid>
 </ContentPage>

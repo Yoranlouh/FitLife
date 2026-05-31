@@ -2,11 +2,27 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
+             xmlns:controls="clr-namespace:FitLife.Maui.Controls"
              x:Class="FitLife.Maui.Views.ParticipantsPage"
              Title="{Binding Title}"
-             x:DataType="vm:ParticipantsViewModel">
+             x:DataType="vm:ParticipantsViewModel"
+             Shell.NavBarIsVisible="False">
 
-    <ScrollView>
+    <Grid RowDefinitions="Auto, *">
+        <Grid Grid.Row="0"
+              Style="{StaticResource HeaderGrid}"
+              ColumnDefinitions="Auto, *"
+              Padding="10,8">
+            <ImageButton Source="back_icon.png"
+                         WidthRequest="20" HeightRequest="20"
+                         VerticalOptions="Center"
+                         Clicked="OnBackToHomeClicked" />
+            <Label Grid.Column="1"
+                   Text="Deelnemers"
+                   Style="{StaticResource HeaderTitle}"
+                   FontSize="18" />
+        </Grid>
+        <ScrollView Grid.Row="1">
         <VerticalStackLayout Spacing="0">
             <!-- Header Section -->
             <VerticalStackLayout Padding="20" Spacing="5">
@@ -47,15 +63,7 @@
                     <DataTemplate x:DataType="vm:ParticipantItemViewModel">
                         <VerticalStackLayout>
                             <Grid Padding="20, 10" ColumnDefinitions="Auto, *, Auto" ColumnSpacing="15">
-                                <Frame CornerRadius="25"
-                                       HeightRequest="50"
-                                       WidthRequest="50"
-                                       Padding="0"
-                                       IsClippedToBounds="True"
-                                       HasShadow="False"
-                                       BorderColor="Transparent">
-                                    <Image Source="{Binding ImageUrl}" Aspect="AspectFill" />
-                                </Frame>
+                                <controls:UserAvatarView PhotoUrl="{Binding ImageUrl}" AvatarSize="50" />
 
                                 <Label Grid.Column="1"
                                        Text="{Binding Name}"
@@ -89,15 +97,7 @@
                     <DataTemplate x:DataType="vm:ParticipantItemViewModel">
                         <VerticalStackLayout>
                             <Grid Padding="20, 10" ColumnDefinitions="Auto, *, Auto" ColumnSpacing="15">
-                                <Frame CornerRadius="25"
-                                       HeightRequest="50"
-                                       WidthRequest="50"
-                                       Padding="0"
-                                       IsClippedToBounds="True"
-                                       HasShadow="False"
-                                       BorderColor="Transparent">
-                                    <Image Source="{Binding ImageUrl}" Aspect="AspectFill" />
-                                </Frame>
+                                <controls:UserAvatarView PhotoUrl="{Binding ImageUrl}" AvatarSize="50" />
 
                                 <Label Grid.Column="1"
                                        Text="{Binding Name}"
@@ -118,5 +118,6 @@
                 </BindableLayout.ItemTemplate>
             </VerticalStackLayout>
         </VerticalStackLayout>
-    </ScrollView>
+        </ScrollView>
+    </Grid>
 </ContentPage>

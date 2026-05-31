@@ -10,7 +10,8 @@
     <Grid RowDefinitions="Auto, Auto, Auto, *">
         <!-- Header -->
         <Grid Grid.Row="0" Style="{StaticResource HeaderGrid}" ColumnDefinitions="Auto, *, Auto" Padding="10, 5">
-            <ImageButton Source="back_icon.png" WidthRequest="20" HeightRequest="20" VerticalOptions="Center"/>
+            <ImageButton Source="back_icon.png" WidthRequest="20" HeightRequest="20" VerticalOptions="Center"
+                         Clicked="OnBackToHomeClicked" />
             <StackLayout Grid.Column="1" HorizontalOptions="Center">
                 <Label Text="FitLife" Style="{StaticResource HeaderTitle}" FontSize="14"/>
             </StackLayout>

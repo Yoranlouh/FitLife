@@ -1,7 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FitLife.Maui.Services;
-using SharedLibrary.Domain.Entities;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FitLife.Maui.ViewModels;
@@ -9,7 +8,8 @@ namespace FitLife.Maui.ViewModels;
 public partial class ProfileViewModel : BaseViewModel
 {
     private readonly IAuthenticationService _authService;
-    private readonly ISubscriptionService? _subscriptionService;
+    private readonly ISubscriptionService?  _subscriptionService;
+    private readonly IPhotoService          _photoService;
 
     // ObservableProperty fields - these will be populated from authentication service when user logs in
     [ObservableProperty]
@@ -19,7 +19,7 @@ public partial class ProfileViewModel : BaseViewModel
     private string _lastName = string.Empty;
 
     [ObservableProperty]
-    private string _profilePictureUrl = "https://ui-avatars.com/api/?name=User&size=128";
+    private string? _profilePictureUrl;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CreditsDisplay))]
@@ -43,9 +43,13 @@ public partial class ProfileViewModel : BaseViewModel
     [ObservableProperty]
     private string _pendingSubscriptionInfo = string.Empty;
 
-    public ProfileViewModel(IAuthenticationService authService, ISubscriptionService? subscriptionService = null)
+    [ObservableProperty]
+    private bool _isUploadingPhoto = false;
+
+    public ProfileViewModel(IAuthenticationService authService, IPhotoService photoService, ISubscriptionService? subscriptionService = null)
     {
-        _authService = authService;
+        _authService         = authService;
+        _photoService        = photoService;
         _subscriptionService = subscriptionService;
         Title = "Mijn Profiel";
         System.Diagnostics.Debug.WriteLine($"[ProfileViewModel] Constructor called. AuthService instance: {authService.GetHashCode()}");
@@ -96,9 +100,7 @@ public partial class ProfileViewModel : BaseViewModel
 
             System.Diagnostics.Debug.WriteLine($"[ProfileViewModel] Set FirstName: {FirstName}, LastName: {LastName}");
 
-            // Get profile photo URL from database, or fallback to generated avatar
-            ProfilePictureUrl = _authService.CurrentUserPhotoUrl
-                ?? $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(displayName)}&size=200&background=6366F1&color=fff";
+            ProfilePictureUrl = _authService.CurrentUserPhotoUrl;
 
             System.Diagnostics.Debug.WriteLine($"[ProfileViewModel] ProfilePictureUrl: {ProfilePictureUrl}");
 
@@ -172,6 +174,34 @@ public partial class ProfileViewModel : BaseViewModel
             System.Diagnostics.Debug.WriteLine($"[ProfileViewModel] Error loading subscription status: {ex.Message}");
             HasPendingSubscriptionChange = false;
             PendingSubscriptionInfo = string.Empty;
+        }
+    }
+
+    [RelayCommand]
+    private async Task PickPhoto()
+    {
+        if (_authService.CurrentUserId is not int userId) return;
+
+        IsUploadingPhoto = true;
+        try
+        {
+            var newUrl = await _photoService.PickAndUploadAsync(userId);
+            if (newUrl != null)
+            {
+                ProfilePictureUrl = newUrl;
+                await Application.Current!.MainPage!.DisplayAlert(
+                    "Gelukt", "Profielfoto bijgewerkt.", "OK");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ProfileViewModel] Photo upload error: {ex.Message}");
+            await Application.Current!.MainPage!.DisplayAlert(
+                "Fout", "Foto uploaden mislukt. Controleer je verbinding.", "OK");
+        }
+        finally
+        {
+            IsUploadingPhoto = false;
         }
     }
 

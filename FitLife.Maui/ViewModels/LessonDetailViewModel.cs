@@ -20,12 +20,6 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
     private bool _isReserved;
 
     [ObservableProperty]
-    private string _instructorPhone = "06-44221137";
-
-    [ObservableProperty]
-    private string _paymentMethod = "1 credit";
-
-    [ObservableProperty]
     private int _participantCount;
 
     [ObservableProperty]
@@ -34,12 +28,46 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
     [ObservableProperty]
     private bool _isOnWaitlist;
 
+    // ── Subscription & credits (real data from auth service) ──────────────
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CreditsDisplay))]
+    [NotifyPropertyChangedFor(nameof(SubscriptionLineDisplay))]
+    private int? _currentCredits;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CreditsDisplay))]
+    [NotifyPropertyChangedFor(nameof(SubscriptionLineDisplay))]
+    private string _subscriptionName = string.Empty;
+
+    [ObservableProperty]
+    private string _renewalDateDisplay = string.Empty;
+
+    /// <summary>e.g. "Onbeperkt" or "4 credits over"</summary>
+    public string CreditsDisplay
+    {
+        get
+        {
+            if (IsAdvanced) return "Onbeperkt";
+            return CurrentCredits.HasValue ? $"{CurrentCredits.Value} credits over" : "—";
+        }
+    }
+
+    /// <summary>e.g. "Advanced abonnement" or "Rookie · 1 credit per les"</summary>
+    public string SubscriptionLineDisplay
+        => IsAdvanced
+            ? $"{SubscriptionName} · Onbeperkt lessen"
+            : $"{SubscriptionName} · 1 credit per les";
+
+    private bool IsAdvanced
+        => string.Equals(SubscriptionName, "Advanced", StringComparison.OrdinalIgnoreCase)
+           || CurrentCredits >= 999;
+
     public LessonDetailViewModel(IParticipantService participantService,
                                  IReservationService reservationService,
                                  IAuthenticationService authenticationService)
     {
-        _participantService = participantService;
-        _reservationService = reservationService;
+        _participantService    = participantService;
+        _reservationService    = reservationService;
         _authenticationService = authenticationService;
         Title = "Groepsevent";
     }
@@ -48,10 +76,27 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
     {
         if (query.TryGetValue("Lesson", out var lessonObj) && lessonObj is LessonResponse lesson)
         {
-            Lesson = lesson;
+            Lesson          = lesson;
             MaxParticipants = lesson.MaxParticipants;
 
+            LoadSubscriptionData();
             await LoadParticipantData();
+        }
+    }
+
+    private void LoadSubscriptionData()
+    {
+        SubscriptionName = _authenticationService.CurrentUserSubscriptionType ?? "Onbekend";
+        CurrentCredits   = _authenticationService.CurrentUserCredits;
+
+        if (!string.IsNullOrEmpty(_authenticationService.CurrentUserSubscriptionRenewalDate)
+            && DateTime.TryParse(_authenticationService.CurrentUserSubscriptionRenewalDate, out var renewal))
+        {
+            RenewalDateDisplay = $"Verloopt: {renewal:d MMMM yyyy}";
+        }
+        else
+        {
+            RenewalDateDisplay = string.Empty;
         }
     }
 
@@ -74,15 +119,56 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
     [RelayCommand]
     private async Task Reserve()
     {
-        if (Lesson == null) return;
+        if (Lesson == null || IsBusy) return;
 
-        IsReserved = true;
-        ParticipantCount++;
+        var userId = _authenticationService.CurrentUserId;
+        if (userId is null or <= 0)
+        {
+            await Shell.Current.DisplayAlert(
+                "Niet ingelogd",
+                "Log opnieuw in om een les te reserveren.",
+                "OK");
+            return;
+        }
 
-        // Notify MyLessonsViewModel so the new reservation appears in "Mijn Lessen".
-        WeakReferenceMessenger.Default.Send(new LessonReservedMessage(Lesson));
+        try
+        {
+            IsBusy = true;
 
-        await Shell.Current.DisplayAlert("Succes", "Je bent ingeschreven voor deze les.", "OK");
+            var result = await _reservationService.ReserveAsync(Lesson.Id, userId.Value);
+
+            if (result.Success)
+            {
+                IsReserved = true;
+                ParticipantCount++;
+
+                // Update credits immediately (-1), unless advanced/unlimited
+                if (!IsAdvanced && result.RemainingCredits.HasValue)
+                    CurrentCredits = result.RemainingCredits.Value;
+                else if (!IsAdvanced && CurrentCredits.HasValue)
+                    CurrentCredits = CurrentCredits.Value - 1;
+
+                WeakReferenceMessenger.Default.Send(new LessonReservedMessage(Lesson));
+
+                var msg = string.IsNullOrWhiteSpace(result.Message)
+                    ? "Je bent ingeschreven voor deze les."
+                    : result.Message;
+                await Shell.Current.DisplayAlert("Ingeschreven!", msg, "OK");
+            }
+            else
+            {
+                await Shell.Current.DisplayAlert(
+                    "Inschrijven mislukt",
+                    string.IsNullOrWhiteSpace(result.Message)
+                        ? "Je kon niet worden ingeschreven."
+                        : result.Message,
+                    "OK");
+            }
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     /// <summary>
@@ -113,9 +199,14 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
 
             if (result.Success)
             {
-                // Only mutate local state after the server confirmed the cancellation.
                 IsReserved = false;
                 if (ParticipantCount > 0) ParticipantCount--;
+
+                // Refund 1 credit on cancellation, unless advanced/unlimited
+                if (!IsAdvanced && result.RemainingCredits.HasValue)
+                    CurrentCredits = result.RemainingCredits.Value;
+                else if (!IsAdvanced && CurrentCredits.HasValue)
+                    CurrentCredits = CurrentCredits.Value + 1;
 
                 WeakReferenceMessenger.Default.Send(new LessonUnregisteredMessage(Lesson.Id));
 

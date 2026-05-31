@@ -9,6 +9,12 @@
     --fitlife-danger: #e50000;
     --fitlife-warning: #FFEB3B;
     --fitlife-info: #3F51B5;
+
+    /* Override Bootstrap's primary so ALL bg-primary/text-primary/border-primary use FitLife green */
+    --bs-primary: #5B6636;
+    --bs-primary-rgb: 91, 102, 54;
+    --bs-link-color: #5B6636;
+    --bs-link-hover-color: #4A542B;
 }
 
 html, body {
@@ -122,6 +128,21 @@ h1:focus {
 .nav-link.active {
     background-color: var(--fitlife-primary-light) !important;
     color: white !important;
+}
+
+/* ── FitLife User Avatar Default ───────────────────────────────────────────
+   Dedicated class that NEVER inherits a Bootstrap or browser colour.
+   The UserAvatar component uses only this class — NOT bg-primary.
+   ──────────────────────────────────────────────────────────────────────── */
+.fitlife-avatar-default {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background-color: #5B6636 !important;   /* hard-coded FitLife green, never overridable */
+    color: #ffffff !important;
+    user-select: none;
 }
 
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {

@@ -59,16 +59,7 @@
                                 <tr>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            @if (!string.IsNullOrEmpty(user.PhotoUrl))
-                                            {
-                                                <img src="@user.PhotoUrl" alt="@user.DisplayName" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover;" />
-                                            }
-                                            else
-                                            {
-                                                <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; font-size: 14px;">
-                                                    @user.DisplayName.Substring(0, 1).ToUpper()
-                                                </div>
-                                            }
+                                            <UserAvatar PhotoUrl="@user.PhotoUrl" DisplayName="@user.DisplayName" Size="32" CssClass="me-2" />
                                             <strong>@user.DisplayName</strong>
                                         </div>
                                     </td>

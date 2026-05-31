@@ -4,12 +4,25 @@
              xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
              x:Class="FitLife.Maui.Views.ManageLessonPage"
              x:DataType="vm:ManageLessonViewModel"
-             Shell.NavBarIsVisible="True"
+             Shell.NavBarIsVisible="False"
              BackgroundColor="White"
              Title="{Binding Title}">
 
-    <Grid RowDefinitions="*">
-        <ScrollView>
+    <Grid RowDefinitions="Auto, *">
+        <Grid Grid.Row="0"
+              Style="{StaticResource HeaderGrid}"
+              ColumnDefinitions="Auto, *"
+              Padding="10,8">
+            <ImageButton Source="back_icon.png"
+                         WidthRequest="20" HeightRequest="20"
+                         VerticalOptions="Center"
+                         Clicked="OnBackToHomeClicked" />
+            <Label Grid.Column="1"
+                   Text="{Binding Title}"
+                   Style="{StaticResource HeaderTitle}"
+                   FontSize="18" />
+        </Grid>
+        <ScrollView Grid.Row="1">
             <VerticalStackLayout Padding="20" Spacing="16">
 
                 <!-- Workout type -->

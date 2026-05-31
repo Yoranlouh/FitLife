@@ -21,7 +21,7 @@
                          WidthRequest="20"
                          HeightRequest="20"
                          VerticalOptions="Center"
-                         Command="{Binding GoToWeekViewCommand}" />
+                         Clicked="OnBackToHomeClicked" />
 
             <StackLayout Grid.Column="1" HorizontalOptions="Center">
                 <Label Text="FitLife"

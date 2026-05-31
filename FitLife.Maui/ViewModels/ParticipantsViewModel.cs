@@ -59,9 +59,7 @@ public partial class ParticipantsViewModel : BaseViewModel, IQueryAttributable
                 Participants.Add(new ParticipantItemViewModel
                 {
                     Name = participant.Name,
-                    ImageUrl = string.IsNullOrWhiteSpace(participant.ImageUrl)
-                        ? "dotnet_bot.svg"
-                        : participant.ImageUrl,
+                    ImageUrl = participant.ImageUrl,
                     IsBuddyVisible = participant.IsBuddy
                 });
             }
@@ -71,9 +69,7 @@ public partial class ParticipantsViewModel : BaseViewModel, IQueryAttributable
                 Waitlist.Add(new ParticipantItemViewModel
                 {
                     Name = waitlistItem.Name,
-                    ImageUrl = string.IsNullOrWhiteSpace(waitlistItem.ImageUrl)
-                        ? "dotnet_bot.svg"
-                        : waitlistItem.ImageUrl,
+                    ImageUrl = waitlistItem.ImageUrl,
                     IsBuddyVisible = waitlistItem.IsBuddy
                 });
             }
@@ -93,7 +89,7 @@ public partial class ParticipantItemViewModel : ObservableObject
     private string _name = string.Empty;
 
     [ObservableProperty]
-    private string _imageUrl = "dotnet_bot.svg";
+    private string? _imageUrl;
 
     [ObservableProperty]
     private bool _isBuddyVisible;

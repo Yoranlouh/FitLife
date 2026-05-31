@@ -5,9 +5,24 @@
              x:Class="FitLife.Maui.Views.LessonDetailPage"
              Title="{Binding Title}"
              x:DataType="vm:LessonDetailViewModel"
-             BackgroundColor="White">
+             BackgroundColor="White"
+             Shell.NavBarIsVisible="False">
 
-    <ScrollView>
+    <Grid RowDefinitions="Auto, *">
+        <Grid Grid.Row="0"
+              Style="{StaticResource HeaderGrid}"
+              ColumnDefinitions="Auto, *"
+              Padding="10,8">
+            <ImageButton Source="back_icon.png"
+                         WidthRequest="20" HeightRequest="20"
+                         VerticalOptions="Center"
+                         Clicked="OnBackToHomeClicked" />
+            <Label Grid.Column="1"
+                   Text="{Binding Lesson.WorkoutName}"
+                   Style="{StaticResource HeaderTitle}"
+                   FontSize="18" />
+        </Grid>
+        <ScrollView Grid.Row="1">
         <VerticalStackLayout Padding="20" Spacing="0">
             <!-- Title and Date/Time -->
             <Grid ColumnDefinitions="*, Auto" Margin="0,0,0,15">
@@ -47,12 +62,25 @@
             <!-- Info block below logo -->
             <Grid ColumnDefinitions="*, Auto" Margin="0,0,0,20">
                 <VerticalStackLayout>
-                    <Label Text="{Binding Lesson.LocationName}" FontSize="14" TextColor="Black"/>
-                    <Label Text="Rookie - 5 credits/month" FontSize="14" TextColor="Gray"/>
+                    <Label Text="{Binding Lesson.LocationName}"
+                           FontSize="14"
+                           TextColor="Black" />
+                    <Label Text="{Binding SubscriptionLineDisplay}"
+                           FontSize="14"
+                           TextColor="Gray" />
                 </VerticalStackLayout>
                 <VerticalStackLayout Grid.Column="1" HorizontalOptions="End">
-                    <Label Text="1 / 5 credits" FontSize="14" HorizontalOptions="End" TextColor="Black"/>
-                    <Label Text="01-05-2026 - 01-06-2026" FontSize="14" HorizontalOptions="End" TextColor="Gray"/>
+                    <Label Text="{Binding CreditsDisplay}"
+                           FontSize="14"
+                           FontAttributes="Bold"
+                           HorizontalOptions="End"
+                           TextColor="Black" />
+                    <Label Text="{Binding RenewalDateDisplay}"
+                           FontSize="12"
+                           HorizontalOptions="End"
+                           TextColor="Gray"
+                           IsVisible="{Binding RenewalDateDisplay,
+                               Converter={StaticResource StringNotEmptyConverter}}" />
                 </VerticalStackLayout>
             </Grid>
 
@@ -91,12 +119,13 @@
                 <!-- Betaalmethode -->
                 <VerticalStackLayout Grid.Column="3" Grid.Row="0">
                     <Label Text="Betaalmethode" FontSize="14" FontAttributes="Bold" TextColor="Black"/>
-                    <Label Text="{Binding PaymentMethod}" FontSize="14" TextColor="Black"/>
+                    <Label Text="{Binding CreditsDisplay}" FontSize="14" TextColor="Black"/>
                 </VerticalStackLayout>
 
-                <!-- Phone -->
-                <Label Text="📞" Grid.Column="0" Grid.Row="1" VerticalOptions="Center" Margin="0,0,10,0"/>
-                <Label Text="{Binding InstructorPhone}" Grid.Column="1" Grid.Row="1" VerticalOptions="Center" TextColor="Black"/>
+                <!-- Credits resterend -->
+                <Label Text="💳" Grid.Column="0" Grid.Row="1" VerticalOptions="Center" Margin="0,0,10,0"/>
+                <Label Text="{Binding SubscriptionName}" Grid.Column="1" Grid.Row="1"
+                       VerticalOptions="Center" TextColor="Black"/>
 
                 <!-- Eindtijd -->
                 <VerticalStackLayout Grid.Column="3" Grid.Row="1">
@@ -128,5 +157,6 @@
                 <Label Text="Geen aanvullende informatie beschikbaar." FontSize="14" TextColor="Black"/>
             </VerticalStackLayout>
         </VerticalStackLayout>
-    </ScrollView>
+        </ScrollView>
+    </Grid>
 </ContentPage>

@@ -24,6 +24,9 @@ builder.Services.AddSession(options =>
 // Add Blazored toast notifications
 builder.Services.AddBlazoredToast();
 
+// Photo upload — stored locally in wwwroot/uploads/
+builder.Services.AddScoped<IPhotoUploadService, PhotoUploadService>();
+
 // Register session service
 builder.Services.AddSingleton<ISessionService, SessionService>();
 
@@ -66,6 +69,13 @@ if (!app.Environment.IsDevelopment())
 
 app.UseStatusCodePagesWithReExecute("/not-found");
 app.UseHttpsRedirection();
+
+// Serve wwwroot files including dynamically uploaded photos
+app.UseStaticFiles();
+
+// Ensure uploads directory exists on startup
+var uploadsDir = Path.Combine(app.Environment.WebRootPath, "uploads");
+Directory.CreateDirectory(uploadsDir);
 
 // Enable session middleware
 app.UseSession();

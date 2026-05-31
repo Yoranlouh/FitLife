@@ -51,6 +51,11 @@ public partial class WeekPage : ContentPage
         }, TaskScheduler.Default);
     }
 
+    private async void OnBackToHomeClicked(object sender, EventArgs e)
+    {
+        await Shell.Current.GoToAsync("//HomePage");
+    }
+
     protected override void OnDisappearing()
     {
         base.OnDisappearing();
@@ -370,5 +375,11 @@ public partial class WeekPage : ContentPage
             return (Color)color;
 
         return Colors.Gray;
+    }
+
+    protected override bool OnBackButtonPressed()
+    {
+        _ = Shell.Current.GoToAsync("//HomePage");
+        return true;
     }
 }
