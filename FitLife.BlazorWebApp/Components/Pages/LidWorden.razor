@@ -112,6 +112,14 @@
                             <!-- Abonnement -->
                             <h6 class="lw-section-label">Abonnement</h6>
                             <div class="mb-3">
+                                <label class="form-label">Startdatum abonnement</label>
+                                <InputDate @bind-Value="model.StartDate" class="form-control" min="@TodayIso" />
+                                <ValidationMessage For="@(() => model.StartDate)" />
+                                <div class="form-text text-muted">
+                                    <i class="bi bi-calendar-check me-1"></i>Kies per wanneer uw abonnement actief wordt.
+                                </div>
+                            </div>
+                            <div class="mb-3">
                                 <label class="form-label">Factureringsperiode</label>
                                 <div class="btn-group w-100" role="group">
                                     <input type="radio" class="btn-check" name="billingPeriod" id="monthly"
@@ -299,6 +307,9 @@
                                         <dt class="col-6 fw-normal text-muted">Periode</dt>
                                         <dd class="col-6 fw-semibold">@(completedSession.IsYearly ? "Jaarlijks" : "Maandelijks")</dd>
 
+                                        <dt class="col-6 fw-normal text-muted">Startdatum</dt>
+                                        <dd class="col-6 fw-semibold">@completedSession.StartDate.ToString("d MMMM yyyy", new System.Globalization.CultureInfo("nl-NL"))</dd>
+
                                         <dt class="col-6 fw-normal text-muted">Betaalmethode</dt>
                                         <dd class="col-6 fw-semibold">iDEAL / Wero &mdash; @completedSession.Bank</dd>
 
@@ -392,6 +403,8 @@
     private bool   showPassword    = false;
     private bool   showConfirm     = false;
     private string? registrationError;
+
+    private string TodayIso => DateTime.Today.ToString("yyyy-MM-dd");
 
     private bool ConfirmMismatch =>
         !string.IsNullOrEmpty(model.Password) &&
@@ -498,7 +511,8 @@
             subMethod:    "ideal",
             bank:         model.SelectedBank,
             phone:        null,
-            passwordHash: HashPassword(model.Password)
+            passwordHash: HashPassword(model.Password),
+            startDate:    model.StartDate
         );
 
         Nav.NavigateTo($"/betaal-simulatie?sid={session.Id}");
@@ -525,6 +539,17 @@
             : ("Goed",  "text-primary");
     }
 
+    // ── Custom validation ────────────────────────────────────────────────
+    public class StartDateNotInPastAttribute : ValidationAttribute
+    {
+        protected override ValidationResult? IsValid(object? value, ValidationContext ctx)
+        {
+            if (value is DateTime dt && dt.Date < DateTime.Today)
+                return new ValidationResult(ErrorMessage ?? "Startdatum mag niet in het verleden liggen");
+            return ValidationResult.Success;
+        }
+    }
+
     // ── Form model ──────────────────────────────────────────────────────
     public class FormModel
     {
@@ -549,5 +574,9 @@
         public string SelectedPlan { get; set; } = "Rookie";
         public bool   IsYearly     { get; set; }
         public string SelectedBank { get; set; } = "";
+
+        [Required(ErrorMessage = "Kies een startdatum")]
+        [StartDateNotInPast(ErrorMessage = "Startdatum mag niet in het verleden liggen")]
+        public DateTime StartDate  { get; set; } = DateTime.Today;
     }
 }

@@ -40,7 +40,7 @@
                                     WidthRequest="60" 
                                     HeightRequest="60" 
                                     StrokeThickness="0"
-                                    BackgroundColor="{Binding WorkoutName, Converter={StaticResource WorkoutColorConverter}}">
+                                    BackgroundColor="{Binding WorkoutColor, Converter={StaticResource WorkoutColorConverter}}">
                                 <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="0">
                                     <HorizontalStackLayout HorizontalOptions="Center" Spacing="2">
                                         <Label Text="{Binding CurrentParticipantCount}" 

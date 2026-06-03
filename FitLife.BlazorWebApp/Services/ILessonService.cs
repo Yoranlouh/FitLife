@@ -7,7 +7,7 @@ namespace FitLife.BlazorWebApp.Services;
 /// </summary>
 public interface ILessonService
 {
-    Task<List<LessonDto>> GetAllLessonsAsync(DateTime? fromDate = null, DateTime? toDate = null);
+    Task<List<LessonDto>> GetAllLessonsAsync(DateTime? fromDate = null, DateTime? toDate = null, bool archivedOnly = false);
     Task<List<LessonDto>> GetLessonsByInstructorAsync(int instructorId, DateTime? fromDate = null);
     Task<LessonDto?> GetLessonByIdAsync(int lessonId);
     Task<(bool Success, string Message)> CreateLessonAsync(LessonEditDto lesson);

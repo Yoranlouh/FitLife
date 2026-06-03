@@ -18,7 +18,10 @@ public partial class HomePage : ContentPage
     {
         base.OnAppearing();
         if (BindingContext is HomeViewModel vm)
+        {
             vm.RefreshRole();
+            vm.RefreshUnreadCount();
+        }
     }
 
     private async void OnViewLessonsClicked(object sender, EventArgs e)
@@ -54,5 +57,10 @@ public partial class HomePage : ContentPage
     private void OnHamburgerClicked(object sender, EventArgs e)
     {
         Shell.Current.FlyoutIsPresented = true;
+    }
+
+    private async void OnNotificationClicked(object sender, EventArgs e)
+    {
+        await Shell.Current.GoToAsync("NotificationsPage");
     }
 }

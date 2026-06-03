@@ -1,8 +1,12 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using FitLife.BlazorWebApp.Services
-@inject AuthenticationStateProvider AuthStateProvider
-@inject NavigationManager NavigationManager
-@inject IAuthService AuthService
+
+<style>
+    .nav-scrollable .nav-link {
+        display: flex;
+        align-items: center;
+    }
+</style>
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -10,9 +14,9 @@
         <AuthorizeView>
             <Authorized>
                 <span class="text-white me-3">@context.User.Identity?.Name</span>
-                <button class="btn btn-sm btn-outline-light" @onclick="Logout">
+                <a href="/admin/logout" class="btn btn-sm btn-outline-light">
                     <i class="bi bi-box-arrow-right"></i> Uitloggen
-                </button>
+                </a>
             </Authorized>
         </AuthorizeView>
     </div>
@@ -110,14 +114,3 @@
     </nav>
 </div>
 
-@code {
-    /// <summary>
-    /// Handles user logout by clearing authentication state and redirecting to login page
-    /// </summary>
-    private async Task Logout()
-    {
-        await AuthService.LogoutAsync();
-        ((CustomAuthenticationStateProvider)AuthStateProvider).NotifyAuthenticationStateChanged();
-        NavigationManager.NavigateTo("/admin/login", true);
-    }
-}

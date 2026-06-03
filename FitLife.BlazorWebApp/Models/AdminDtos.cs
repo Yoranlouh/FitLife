@@ -107,6 +107,8 @@ public class WorkoutDto
     [Range(1, 1000, ErrorMessage = "Capaciteit moet tussen 1 en 1000 zijn")]
     public int DefaultCapacity { get; set; }
 
+    public string Color { get; set; } = "#5B6636";
+
     public int TotalLessons { get; set; }
 }
 
@@ -202,6 +204,37 @@ public class InstructorWorkoutStatDto
 }
 
 /// <summary>
+/// DTO for manually creating a new member from the admin panel
+/// </summary>
+public class AdminCreateMemberDto
+{
+    [Required(ErrorMessage = "Voornaam is verplicht")]
+    public string FirstName { get; set; } = "";
+
+    [Required(ErrorMessage = "Achternaam is verplicht")]
+    public string LastName { get; set; } = "";
+
+    [Required(ErrorMessage = "E-mailadres is verplicht")]
+    [EmailAddress(ErrorMessage = "Ongeldig e-mailadres")]
+    public string Email { get; set; } = "";
+
+    [Required(ErrorMessage = "Wachtwoord is verplicht")]
+    [MinLength(8, ErrorMessage = "Wachtwoord moet minimaal 8 tekens zijn")]
+    public string Password { get; set; } = "";
+
+    [Required(ErrorMessage = "Herhaal wachtwoord")]
+    public string ConfirmPassword { get; set; } = "";
+
+    [Required]
+    public string SubscriptionPlan { get; set; } = "Rookie";
+
+    public bool IsYearly { get; set; } = false;
+
+    [Required(ErrorMessage = "Kies een startdatum")]
+    public DateTime StartDate { get; set; } = DateTime.Today;
+}
+
+/// <summary>
 /// DTO for member/user management
 /// </summary>
 public class MemberDto
@@ -214,4 +247,7 @@ public class MemberDto
     public DateTime? CreatedAt { get; set; }
     public int TotalReservations { get; set; }
     public DateTime? LastActivity { get; set; }
+    public string? SubscriptionType { get; set; }
+    public DateTime? SubscriptionRenewalDate { get; set; }
+    public bool SubscriptionPaused { get; set; }
 }

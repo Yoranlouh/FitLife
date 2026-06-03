@@ -3,9 +3,8 @@ using MySqlConnector;
 
 namespace FitLife.BlazorWebApp.Services;
 
-/// <summary>
-/// Service for managing locations in the database
-/// </summary>
+// Service for managing gym locations (halls/rooms) directly in the MySQL database.
+// Used by the Blazor admin panel — does NOT go through the REST API.
 public class LocationService : ILocationService
 {
     private readonly IConfiguration _configuration;
@@ -17,20 +16,20 @@ public class LocationService : ILocationService
 
     private string GetConnectionString()
     {
-        return _configuration.GetConnectionString("DefaultConnection") 
+        return _configuration.GetConnectionString("DefaultConnection")
                ?? throw new InvalidOperationException("Database connection not configured.");
     }
 
-    /// <summary>
-    /// Retrieves all locations
-    /// </summary>
+    // Retrieves all locations ordered alphabetically with a count of how many lessons
+    // are assigned to each one (used in the admin table for "in use" awareness).
     public async Task<List<LocationDto>> GetAllLocationsAsync()
     {
         var locations = new List<LocationDto>();
-        
+
         await using var connection = new MySqlConnection(GetConnectionString());
         await connection.OpenAsync();
 
+        // Subquery counts the total number of lessons linked to each location
         const string sql = """
             SELECT
                 l.id,
@@ -42,15 +41,15 @@ public class LocationService : ILocationService
             """;
 
         await using var command = new MySqlCommand(sql, connection);
-        await using var reader = await command.ExecuteReaderAsync();
+        await using var reader  = await command.ExecuteReaderAsync();
 
         while (await reader.ReadAsync())
         {
             locations.Add(new LocationDto
             {
-                Id = reader.GetInt32("id"),
-                Name = reader.GetString("name"),
-                Capacity = reader.GetInt32("capacity"),
+                Id           = reader.GetInt32("id"),
+                Name         = reader.GetString("name"),
+                Capacity     = reader.GetInt32("capacity"),
                 TotalLessons = reader.GetInt32("total_lessons")
             });
         }
@@ -58,9 +57,7 @@ public class LocationService : ILocationService
         return locations;
     }
 
-    /// <summary>
-    /// Gets a single location by ID
-    /// </summary>
+    // Returns a single location by its primary key, or null if not found.
     public async Task<LocationDto?> GetLocationByIdAsync(int locationId)
     {
         await using var connection = new MySqlConnection(GetConnectionString());
@@ -85,9 +82,9 @@ public class LocationService : ILocationService
         {
             return new LocationDto
             {
-                Id = reader.GetInt32("id"),
-                Name = reader.GetString("name"),
-                Capacity = reader.GetInt32("capacity"),
+                Id           = reader.GetInt32("id"),
+                Name         = reader.GetString("name"),
+                Capacity     = reader.GetInt32("capacity"),
                 TotalLessons = reader.GetInt32("total_lessons")
             };
         }
@@ -95,9 +92,7 @@ public class LocationService : ILocationService
         return null;
     }
 
-    /// <summary>
-    /// Creates a new location
-    /// </summary>
+    // Inserts a new location row and returns the generated ID in the success message.
     public async Task<(bool Success, string Message)> CreateLocationAsync(LocationDto location)
     {
         try
@@ -112,12 +107,11 @@ public class LocationService : ILocationService
                 """;
 
             await using var command = new MySqlCommand(sql, connection);
-            command.Parameters.AddWithValue("@name", location.Name);
-            command.Parameters.AddWithValue("@address", location.Address ?? (object)DBNull.Value);
+            command.Parameters.AddWithValue("@name",     location.Name);
+            command.Parameters.AddWithValue("@address",  location.Address ?? (object)DBNull.Value);
             command.Parameters.AddWithValue("@capacity", location.Capacity);
 
             var result = await command.ExecuteScalarAsync();
-            
             return (true, $"Locatie succesvol aangemaakt met ID {result}.");
         }
         catch (Exception ex)
@@ -127,9 +121,8 @@ public class LocationService : ILocationService
         }
     }
 
-    /// <summary>
-    /// Updates an existing location
-    /// </summary>
+    // Updates the capacity of an existing location.
+    // Name changes are currently not supported to avoid breaking existing lesson references.
     public async Task<(bool Success, string Message)> UpdateLocationAsync(LocationDto location)
     {
         try
@@ -137,24 +130,15 @@ public class LocationService : ILocationService
             await using var connection = new MySqlConnection(GetConnectionString());
             await connection.OpenAsync();
 
-            const string sql = """
-                UPDATE locations SET
-                    name = @name,
-                    address = @address,
-                    capacity = @capacity
-                WHERE id = @id
-                """;
+            const string sql = "UPDATE locations SET capacity = @capacity WHERE id = @id";
 
             await using var command = new MySqlCommand(sql, connection);
-            command.Parameters.AddWithValue("@id", location.Id);
-            command.Parameters.AddWithValue("@name", location.Name);
-            command.Parameters.AddWithValue("@address", location.Address ?? (object)DBNull.Value);
+            command.Parameters.AddWithValue("@id",       location.Id);
             command.Parameters.AddWithValue("@capacity", location.Capacity);
 
             var rowsAffected = await command.ExecuteNonQueryAsync();
-            
-            return rowsAffected > 0 
-                ? (true, "Locatie succesvol bijgewerkt.") 
+            return rowsAffected > 0
+                ? (true,  "Locatie succesvol bijgewerkt.")
                 : (false, "Locatie niet gevonden.");
         }
         catch (Exception ex)
@@ -164,9 +148,8 @@ public class LocationService : ILocationService
         }
     }
 
-    /// <summary>
-    /// Deletes a location
-    /// </summary>
+    // Deletes a location. Refuses the deletion if any lessons still reference it,
+    // protecting foreign key integrity.
     public async Task<(bool Success, string Message)> DeleteLocationAsync(int locationId)
     {
         try
@@ -174,24 +157,22 @@ public class LocationService : ILocationService
             await using var connection = new MySqlConnection(GetConnectionString());
             await connection.OpenAsync();
 
+            // Safety check: prevent deletion of locations that still have lessons
             const string checkSql = "SELECT COUNT(*) FROM lessons WHERE location_id = @locationId";
             await using var checkCommand = new MySqlCommand(checkSql, connection);
             checkCommand.Parameters.AddWithValue("@locationId", locationId);
-            
+
             var lessonCount = Convert.ToInt32(await checkCommand.ExecuteScalarAsync());
             if (lessonCount > 0)
-            {
                 return (false, $"Kan locatie niet verwijderen: er zijn nog {lessonCount} gekoppelde lessen.");
-            }
 
             const string sql = "DELETE FROM locations WHERE id = @locationId";
             await using var command = new MySqlCommand(sql, connection);
             command.Parameters.AddWithValue("@locationId", locationId);
 
             var rowsAffected = await command.ExecuteNonQueryAsync();
-            
-            return rowsAffected > 0 
-                ? (true, "Locatie succesvol verwijderd.") 
+            return rowsAffected > 0
+                ? (true,  "Locatie succesvol verwijderd.")
                 : (false, "Locatie niet gevonden.");
         }
         catch (Exception ex)

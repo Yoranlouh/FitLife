@@ -1,13 +1,16 @@
+using FitLife.Maui.ViewModels;
+
 namespace FitLife.Maui.Views;
 
 public partial class SettingsPage : ContentPage
 {
-    public SettingsPage()
+    public SettingsPage(SettingsViewModel viewModel)
     {
         InitializeComponent();
+        BindingContext = viewModel;
     }
 
-    private async void OnBackToHomeClicked(object sender, EventArgs e)
+    private async void OnBackClicked(object sender, EventArgs e)
         => await Shell.Current.GoToAsync("//HomePage");
 
     protected override bool OnBackButtonPressed()

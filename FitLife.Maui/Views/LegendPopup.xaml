@@ -2,15 +2,16 @@
 <toolkit:Popup xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
                xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
                xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+               xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
                x:Class="FitLife.Maui.Views.LegendPopup"
                Color="Transparent">
-    
-    <Border BackgroundColor="White" 
-            StrokeShape="RoundRectangle 16" 
+
+    <Border BackgroundColor="White"
+            StrokeShape="RoundRectangle 16"
             Padding="20"
             WidthRequest="340">
         <VerticalStackLayout Spacing="16">
-            
+
             <!-- Status row -->
             <Grid ColumnDefinitions="*, *" ColumnSpacing="12">
                 <Border Stroke="#E0E0E0" StrokeThickness="1" StrokeShape="RoundRectangle 8" Padding="12,10">
@@ -26,36 +27,29 @@
                     </HorizontalStackLayout>
                 </Border>
             </Grid>
-            
-            <!-- Workout types -->
-            <Grid ColumnDefinitions="*, *" RowDefinitions="Auto,Auto,Auto" RowSpacing="12" ColumnSpacing="12">
-                <HorizontalStackLayout Spacing="10">
-                    <BoxView WidthRequest="22" HeightRequest="22" Color="{StaticResource WorkoutCrossfit}" CornerRadius="3"/>
-                    <Label Text="CrossFit" VerticalOptions="Center"/>
-                </HorizontalStackLayout>
-                <HorizontalStackLayout Grid.Column="1" Spacing="10">
-                    <BoxView WidthRequest="22" HeightRequest="22" Color="{StaticResource WorkoutSpinning}" CornerRadius="3"/>
-                    <Label Text="Spinning" VerticalOptions="Center"/>
-                </HorizontalStackLayout>
-                
-                <HorizontalStackLayout Grid.Row="1" Spacing="10">
-                    <BoxView WidthRequest="22" HeightRequest="22" Color="{StaticResource WorkoutSweatClub}" CornerRadius="3"/>
-                    <Label Text="Sweat Club" VerticalOptions="Center"/>
-                </HorizontalStackLayout>
-                <HorizontalStackLayout Grid.Row="1" Grid.Column="1" Spacing="10">
-                    <BoxView WidthRequest="22" HeightRequest="22" Color="{StaticResource WorkoutOpenGym}" CornerRadius="3"/>
-                    <Label Text="Open Gym" VerticalOptions="Center"/>
-                </HorizontalStackLayout>
-                
-                <HorizontalStackLayout Grid.Row="2" Spacing="10">
-                    <BoxView WidthRequest="22" HeightRequest="22" Color="{StaticResource WorkoutHyrox}" CornerRadius="3"/>
-                    <Label Text="HYROX" VerticalOptions="Center"/>
-                </HorizontalStackLayout>
-                <HorizontalStackLayout Grid.Row="2" Grid.Column="1" Spacing="10">
-                    <BoxView WidthRequest="22" HeightRequest="22" Color="{StaticResource WorkoutGymnastics}" CornerRadius="3"/>
-                    <Label Text="Gymnastics" VerticalOptions="Center"/>
-                </HorizontalStackLayout>
-            </Grid>
+
+            <!-- Workout types - dynamic based on current week's lessons -->
+            <FlexLayout BindableLayout.ItemsSource="{Binding Items}"
+                        Wrap="Wrap"
+                        Direction="Row"
+                        JustifyContent="SpaceBetween">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:WorkoutLegendItem">
+                        <HorizontalStackLayout Spacing="8" Margin="0,0,0,10" WidthRequest="140">
+                            <BoxView WidthRequest="22"
+                                     HeightRequest="22"
+                                     CornerRadius="3"
+                                     Color="{Binding Color, Converter={StaticResource WorkoutColorConverter}}" />
+                            <Label Text="{Binding Name}"
+                                   VerticalOptions="Center"
+                                   FontSize="14"
+                                   LineBreakMode="TailTruncation"
+                                   MaximumWidthRequest="108" />
+                        </HorizontalStackLayout>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </FlexLayout>
+
         </VerticalStackLayout>
     </Border>
 </toolkit:Popup>

@@ -3,9 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace FitLife.Maui.Services;
 
-/// <summary>
-/// DTO for login request sent to the API
-/// </summary>
+// Request body sent to POST /auth/login
 public class LoginRequest
 {
     [JsonPropertyName("email")]
@@ -15,9 +13,8 @@ public class LoginRequest
     public string Password { get; set; } = string.Empty;
 }
 
-/// <summary>
-/// DTO for login response received from the API
-/// </summary>
+// Response received from POST /auth/login.
+// When Success = true, all user fields are populated.
 public class LoginResponse
 {
     [JsonPropertyName("success")]
@@ -38,6 +35,7 @@ public class LoginResponse
     [JsonPropertyName("email")]
     public string? Email { get; set; }
 
+    // Role values: "member", "instructor", or "admin"
     [JsonPropertyName("role")]
     public string? Role { get; set; }
 
@@ -51,13 +49,14 @@ public class LoginResponse
     public string? SubscriptionRenewalDate { get; set; }
 }
 
-/// <summary>
-/// Interface for authentication service
-/// </summary>
+// Contract for the authentication service.
+// Exposes the current session state as read-only properties and
+// provides Login/Logout/UpdatePhotoUrl operations.
 public interface IAuthenticationService
 {
     Task<LoginResponse> LoginAsync(string email, string password);
     Task LogoutAsync();
+
     bool IsAuthenticated { get; }
     string? CurrentUserName { get; }
     string? CurrentUserPhotoUrl { get; }
@@ -69,14 +68,20 @@ public interface IAuthenticationService
     bool IsAdmin { get; }
     bool IsInstructor { get; }
     bool IsMember { get; }
+
+    // Updates the cached photo URL after a successful upload.
+    // Without this, LoadUserData() would reset the profile picture back to the
+    // login-time URL every time the profile page re-appears.
+    void UpdatePhotoUrl(string? photoUrl);
 }
 
-/// <summary>
-/// Service that handles user authentication by communicating with the API
-/// </summary>
+// Singleton implementation that keeps the logged-in user's data in memory.
+// Registered as Singleton so the session persists across all page navigations.
 public class AuthenticationService : IAuthenticationService
 {
     private readonly HttpClient _httpClient;
+
+    // Holds the full login response while the user is logged in; null when logged out
     private LoginResponse? _currentUser;
 
     public AuthenticationService(HttpClient httpClient)
@@ -84,50 +89,25 @@ public class AuthenticationService : IAuthenticationService
         _httpClient = httpClient;
     }
 
-    /// <summary>
-    /// Check if a user is currently authenticated
-    /// </summary>
+    // True when a user is currently logged in
     public bool IsAuthenticated => _currentUser != null;
 
-    /// <summary>
-    /// Get the current user's display name
-    /// </summary>
-    public string? CurrentUserName => _currentUser?.DisplayName;
-
-    /// <summary>
-    /// Get the current user's profile photo URL
-    /// </summary>
-    public string? CurrentUserPhotoUrl => _currentUser?.PhotoUrl;
-
-    /// <summary>
-    /// Get the current user's ID
-    /// </summary>
-    public int? CurrentUserId => _currentUser?.UserId;
-
-    /// <summary>
-    /// Get the current user's remaining credits
-    /// </summary>
-    public int? CurrentUserCredits => _currentUser?.Credits;
-
-    /// <summary>
-    /// Get the current user's subscription type
-    /// </summary>
-    public string? CurrentUserSubscriptionType => _currentUser?.SubscriptionType;
-
-    /// <summary>
-    /// Get the current user's subscription renewal date
-    /// </summary>
+    public string? CurrentUserName               => _currentUser?.DisplayName;
+    public string? CurrentUserPhotoUrl           => _currentUser?.PhotoUrl;
+    public int?    CurrentUserId                 => _currentUser?.UserId;
+    public int?    CurrentUserCredits            => _currentUser?.Credits;
+    public string? CurrentUserSubscriptionType   => _currentUser?.SubscriptionType;
     public string? CurrentUserSubscriptionRenewalDate => _currentUser?.SubscriptionRenewalDate;
+    public string? CurrentUserRole               => _currentUser?.Role;
 
-    public string? CurrentUserRole => _currentUser?.Role;
-    public bool IsAdmin => string.Equals(_currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
-    public bool IsInstructor => string.Equals(_currentUser?.Role, "instructor", StringComparison.OrdinalIgnoreCase);
-    public bool IsMember => !IsAdmin && !IsInstructor;
+    // Role helpers used by the app to show/hide role-specific UI elements
+    public bool IsAdmin      => string.Equals(_currentUser?.Role, "admin",       StringComparison.OrdinalIgnoreCase);
+    public bool IsInstructor => string.Equals(_currentUser?.Role, "instructor",  StringComparison.OrdinalIgnoreCase);
+    public bool IsMember     => !IsAdmin && !IsInstructor;
 
-    /// <summary>
-    /// Attempt to login with email and password
-    /// Returns a LoginResponse with success status and user details if successful
-    /// </summary>
+    // Sends the login credentials to POST /auth/login.
+    // On success, stores the response in _currentUser so all session properties become available.
+    // Note: currently calls the API twice due to a stream-reading workaround; can be simplified.
     public async Task<LoginResponse> LoginAsync(string email, string password)
     {
         try
@@ -136,14 +116,8 @@ public class AuthenticationService : IAuthenticationService
             System.Diagnostics.Debug.WriteLine($"[AuthenticationService] HttpClient BaseAddress: {_httpClient.BaseAddress}");
             System.Diagnostics.Debug.WriteLine($"[AuthenticationService] AuthenticationService instance: {this.GetHashCode()}");
 
-            // Create login request
-            var loginRequest = new LoginRequest
-            {
-                Email = email,
-                Password = password
-            };
+            var loginRequest = new LoginRequest { Email = email, Password = password };
 
-            // Send POST request to API
             var response = await _httpClient.PostAsJsonAsync("auth/login", loginRequest);
             System.Diagnostics.Debug.WriteLine($"[AuthenticationService] API Response Status: {response.StatusCode}");
 
@@ -152,14 +126,13 @@ public class AuthenticationService : IAuthenticationService
                 var responseContent = await response.Content.ReadAsStringAsync();
                 System.Diagnostics.Debug.WriteLine($"[AuthenticationService] API Response Body: {responseContent}");
 
-                // Parse response - need to reset stream position
+                // Re-send the request to read the JSON (stream was already consumed above)
                 response = await _httpClient.PostAsJsonAsync("auth/login", loginRequest);
                 var loginResponse = await response.Content.ReadFromJsonAsync<LoginResponse>();
 
                 if (loginResponse != null && loginResponse.Success)
                 {
-                    // Store current user information
-                    _currentUser = loginResponse;
+                    _currentUser = loginResponse;  // cache session data
                     System.Diagnostics.Debug.WriteLine($"[AuthenticationService] Login successful!");
                     System.Diagnostics.Debug.WriteLine($"[AuthenticationService]   UserId: {loginResponse.UserId}");
                     System.Diagnostics.Debug.WriteLine($"[AuthenticationService]   DisplayName: '{loginResponse.DisplayName}'");
@@ -198,9 +171,15 @@ public class AuthenticationService : IAuthenticationService
         }
     }
 
-    /// <summary>
-    /// Logout the current user
-    /// </summary>
+    // Mutates the cached photo URL so subsequent reads of CurrentUserPhotoUrl return the new value.
+    // Called immediately after a successful photo upload in ProfileViewModel.
+    public void UpdatePhotoUrl(string? photoUrl)
+    {
+        if (_currentUser != null)
+            _currentUser.PhotoUrl = photoUrl;
+    }
+
+    // Clears the session so IsAuthenticated returns false and all CurrentUser* properties return null.
     public Task LogoutAsync()
     {
         _currentUser = null;

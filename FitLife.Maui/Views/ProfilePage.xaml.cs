@@ -35,7 +35,7 @@ public partial class ProfilePage : ContentPage
         await Shell.Current.GoToAsync("MyLessonsPage");
     }
 
-    private async void OnBackToHomeClicked(object sender, EventArgs e)
+    private async void OnBackClicked(object sender, EventArgs e)
         => await Shell.Current.GoToAsync("//HomePage");
 
     protected override bool OnBackButtonPressed()

@@ -35,3 +35,4 @@ services:
 volumes:
   api_mysql_data:
     external: true
+ 

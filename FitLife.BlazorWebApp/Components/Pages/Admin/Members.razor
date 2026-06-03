@@ -1,7 +1,9 @@
 @page "/admin/members"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @attribute [Authorize(Roles = "employee,instructor")]
 @inject IUserService UserService
 @inject Blazored.Toast.Services.IToastService ToastService
+@using System.ComponentModel.DataAnnotations
 
 <PageTitle>Leden Beheer - FitLife Admin</PageTitle>
 
@@ -11,7 +13,10 @@
             <h1 class="display-6 fw-bold">Leden Beheer</h1>
             <p class="text-muted">Overzicht van alle gebruikers</p>
         </div>
-        <div class="col-auto">
+        <div class="col-auto d-flex gap-2 align-items-start">
+            <button class="btn btn-success" @onclick="OpenCreateMemberModal">
+                <i class="bi bi-person-plus-fill me-1"></i>Nieuw lid
+            </button>
             <div class="btn-group" role="group">
                 <button type="button" class="btn @(_roleFilter == null ? "btn-primary" : "btn-outline-primary")" @onclick='() => FilterByRole(null)'>
                     Alle (@_allUsers.Count)
@@ -41,14 +46,14 @@
         <div class="card shadow-sm">
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table table-hover align-middle">
                         <thead>
                             <tr>
                                 <th>Gebruiker</th>
                                 <th>Email</th>
                                 <th>Rol</th>
+                                <th>Abonnement</th>
                                 <th>Reserveringen</th>
-                                <th>Laatste Activiteit</th>
                                 <th>Lid Sinds</th>
                                 <th class="text-end">Acties</th>
                             </tr>
@@ -70,17 +75,21 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <span class="badge bg-info">@user.TotalReservations</span>
-                                    </td>
-                                    <td>
-                                        @if (user.LastActivity.HasValue)
+                                        @if (!string.IsNullOrEmpty(user.SubscriptionType))
                                         {
-                                            <small class="text-muted">@user.LastActivity.Value.ToString("dd MMM yyyy")</small>
+                                            <span class="badge bg-primary me-1">@user.SubscriptionType</span>
+                                            @if (user.SubscriptionPaused)
+                                            {
+                                                <span class="badge bg-warning text-dark">Gepauzeerd</span>
+                                            }
                                         }
                                         else
                                         {
-                                            <small class="text-muted">Nooit</small>
+                                            <span class="text-muted small">—</span>
                                         }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">@user.TotalReservations</span>
                                     </td>
                                     <td>
                                         @if (user.CreatedAt.HasValue)
@@ -93,22 +102,71 @@
                                         }
                                     </td>
                                     <td class="text-end">
-                                        <div class="dropdown">
-                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                        <div class="position-relative d-inline-block">
+                                            <button class="btn btn-sm btn-outline-secondary" type="button"
+                                                    @onclick='() => ToggleDropdown(user.Id)'
+                                                    @onclick:stopPropagation="true">
                                                 <i class="bi bi-three-dots-vertical"></i>
                                             </button>
-                                            <ul class="dropdown-menu">
-                                                <li><h6 class="dropdown-header">Wijzig Rol</h6></li>
-                                                <li><button class="dropdown-item" @onclick='() => UpdateUserRole(user.Id, "member")'>
-                                                    <i class="bi bi-person me-2"></i>Lid
-                                                </button></li>
-                                                <li><button class="dropdown-item" @onclick='() => UpdateUserRole(user.Id, "instructor")'>
-                                                    <i class="bi bi-person-badge me-2"></i>Instructeur
-                                                </button></li>
-                                                <li><button class="dropdown-item" @onclick='() => UpdateUserRole(user.Id, "admin")'>
-                                                    <i class="bi bi-shield-check me-2"></i>Admin
-                                                </button></li>
-                                            </ul>
+                                            @if (_activeDropdownUserId == user.Id)
+                                            {
+                                                <ul class="dropdown-menu show dropdown-menu-end"
+                                                    style="position:absolute; right:0; top:100%; z-index:1050; min-width:200px;">
+                                                    <li><h6 class="dropdown-header">Wijzig Rol</h6></li>
+                                                    <li><button class="dropdown-item" @onclick='async () => { CloseDropdown(); await UpdateUserRole(user.Id, "member"); }'>
+                                                        <i class="bi bi-person me-2"></i>Lid
+                                                    </button></li>
+                                                    <li><button class="dropdown-item" @onclick='async () => { CloseDropdown(); await UpdateUserRole(user.Id, "instructor"); }'>
+                                                        <i class="bi bi-person-badge me-2"></i>Instructeur
+                                                    </button></li>
+                                                    <li><button class="dropdown-item" @onclick='async () => { CloseDropdown(); await UpdateUserRole(user.Id, "admin"); }'>
+                                                        <i class="bi bi-shield-check me-2"></i>Admin
+                                                    </button></li>
+
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li><h6 class="dropdown-header">Abonnement</h6></li>
+
+                                                    @if (!string.IsNullOrEmpty(user.SubscriptionType))
+                                                    {
+                                                        <li>
+                                                            <button class="dropdown-item" @onclick='() => OpenChangeSubscriptionModal(user)'>
+                                                                <i class="bi bi-arrow-left-right me-2"></i>Abonnement wijzigen
+                                                            </button>
+                                                        </li>
+                                                        @if (user.SubscriptionPaused)
+                                                        {
+                                                            <li>
+                                                                <button class="dropdown-item text-success" @onclick='() => TogglePauseSubscription(user, false)'>
+                                                                    <i class="bi bi-play-circle me-2"></i>Abonnement hervatten
+                                                                </button>
+                                                            </li>
+                                                        }
+                                                        else
+                                                        {
+                                                            <li>
+                                                                <button class="dropdown-item text-warning" @onclick='() => TogglePauseSubscription(user, true)'>
+                                                                    <i class="bi bi-pause-circle me-2"></i>Abonnement pauzeren
+                                                                </button>
+                                                            </li>
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        <li>
+                                                            <button class="dropdown-item" @onclick='() => OpenChangeSubscriptionModal(user)'>
+                                                                <i class="bi bi-plus-circle me-2"></i>Abonnement toewijzen
+                                                            </button>
+                                                        </li>
+                                                    }
+
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <button class="dropdown-item text-danger" @onclick='() => OpenDeleteModal(user)'>
+                                                            <i class="bi bi-trash me-2"></i>Lid verwijderen
+                                                        </button>
+                                                    </li>
+                                                </ul>
+                                            }
                                         </div>
                                     </td>
                                 </tr>
@@ -131,23 +189,268 @@
     }
 </div>
 
+@* Modal: Lid verwijderen bevestigen *@
+@if (_showDeleteModal && _selectedUser != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,.5)">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title text-danger">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Lid verwijderen
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseModals"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Weet je zeker dat je <strong>@_selectedUser.DisplayName</strong> wilt verwijderen?</p>
+                    <div class="alert alert-warning py-2 small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Alle reserveringen van dit lid worden ook verwijderd. Deze actie kan niet ongedaan worden gemaakt.
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button class="btn btn-secondary" @onclick="CloseModals" disabled="@_isProcessing">Annuleren</button>
+                    <button class="btn btn-danger" @onclick="ConfirmDelete" disabled="@_isProcessing">
+                        @if (_isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        Verwijderen
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Modal: Abonnement wijzigen *@
+@if (_showSubscriptionModal && _selectedUser != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,.5)">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title">
+                        <i class="bi bi-arrow-left-right me-2"></i>Abonnement wijzigen
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseModals"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-3">
+                        Huidig abonnement van <strong>@_selectedUser.DisplayName</strong>:
+                        @if (!string.IsNullOrEmpty(_selectedUser.SubscriptionType))
+                        {
+                            <span class="badge bg-primary ms-1">@_selectedUser.SubscriptionType</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted ms-1">Geen</span>
+                        }
+                    </p>
+
+                    <div class="d-flex flex-column gap-2">
+                        @foreach (var plan in _plans)
+                        {
+                            var isCurrent = _selectedUser.SubscriptionType == plan.Name;
+                            <button class="btn @(isCurrent ? "btn-primary" : "btn-outline-primary") text-start d-flex justify-content-between align-items-center"
+                                    @onclick='() => SelectNewPlan(plan.Name)'
+                                    disabled="@isCurrent">
+                                <span>
+                                    <strong>@plan.Name</strong>
+                                    <small class="ms-2 fw-normal">@plan.Description</small>
+                                </span>
+                                <span>
+                                    @if (isCurrent)
+                                    {
+                                        <span class="badge bg-light text-dark me-2">Huidig</span>
+                                    }
+                                    <span class="fw-bold">€@plan.MonthlyPrice/mnd</span>
+                                </span>
+                            </button>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button class="btn btn-secondary" @onclick="CloseModals">Annuleren</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Modal: Nieuw lid aanmaken *@
+@if (_showCreateMemberModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,.5)">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title">
+                        <i class="bi bi-person-plus-fill text-success me-2"></i>Nieuw lid aanmaken
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseCreateMemberModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="_newMember" OnValidSubmit="SubmitCreateMember">
+                        <DataAnnotationsValidator />
+
+                        <h6 class="text-muted text-uppercase small fw-semibold mb-3">Persoonlijke gegevens</h6>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Voornaam</label>
+                                <InputText @bind-Value="_newMember.FirstName" class="form-control" placeholder="Jan" />
+                                <ValidationMessage For="@(() => _newMember.FirstName)" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Achternaam</label>
+                                <InputText @bind-Value="_newMember.LastName" class="form-control" placeholder="de Vries" />
+                                <ValidationMessage For="@(() => _newMember.LastName)" />
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">E-mailadres</label>
+                            <InputText @bind-Value="_newMember.Email" class="form-control" placeholder="jan@example.nl" />
+                            <ValidationMessage For="@(() => _newMember.Email)" />
+                        </div>
+
+                        <hr class="my-3" />
+                        <h6 class="text-muted text-uppercase small fw-semibold mb-3">Inloggegevens (FitLife app)</h6>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Wachtwoord</label>
+                                <InputText type="password" @bind-Value="_newMember.Password" class="form-control" placeholder="Min. 8 tekens" />
+                                <ValidationMessage For="@(() => _newMember.Password)" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Herhaal wachtwoord</label>
+                                <input type="password"
+                                       class="@("form-control" + (_newMemberPasswordMismatch ? " is-invalid" : ""))"
+                                       placeholder="Herhaal wachtwoord"
+                                       @bind="_newMember.ConfirmPassword"
+                                       @bind:event="oninput" />
+                                @if (_newMemberPasswordMismatch)
+                                {
+                                    <div class="invalid-feedback d-block small">Wachtwoorden komen niet overeen.</div>
+                                }
+                            </div>
+                        </div>
+
+                        <hr class="my-3" />
+                        <h6 class="text-muted text-uppercase small fw-semibold mb-3">Abonnement</h6>
+                        <div class="mb-3">
+                            <label class="form-label">Startdatum</label>
+                            <InputDate @bind-Value="_newMember.StartDate" class="form-control" />
+                            <ValidationMessage For="@(() => _newMember.StartDate)" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Factureringsperiode</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="newMemberBilling" id="nmMonthly"
+                                       autocomplete="off" checked="@(!_newMember.IsYearly)"
+                                       @onclick="@(() => _newMember.IsYearly = false)" />
+                                <label class="btn btn-outline-success" for="nmMonthly">Maandelijks</label>
+                                <input type="radio" class="btn-check" name="newMemberBilling" id="nmYearly"
+                                       autocomplete="off" checked="@(_newMember.IsYearly)"
+                                       @onclick="@(() => _newMember.IsYearly = true)" />
+                                <label class="btn btn-outline-success" for="nmYearly">
+                                    Jaarlijks <span class="badge bg-warning text-dark ms-1">~15% korting</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label">Abonnement</label>
+                            <InputSelect @bind-Value="_newMember.SubscriptionPlan" class="form-select">
+                                <option value="Rookie">Rookie — 9 credits/mnd · €@(_newMember.IsYearly ? "459" : "45")/@(_newMember.IsYearly ? "jr" : "mnd")</option>
+                                <option value="Intermediate">Intermediate — 13 credits/mnd · €@(_newMember.IsYearly ? "663" : "65")/@(_newMember.IsYearly ? "jr" : "mnd")</option>
+                                <option value="Advanced">Advanced — Onbeperkt · €@(_newMember.IsYearly ? "867" : "85")/@(_newMember.IsYearly ? "jr" : "mnd")</option>
+                            </InputSelect>
+                        </div>
+
+                        <div class="alert alert-info py-2 small">
+                            <i class="bi bi-envelope me-1"></i>
+                            Na aanmaken wordt automatisch een <strong>betaalverzoek per e-mail</strong> verstuurd naar het nieuwe lid.
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-2">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseCreateMemberModal" disabled="@_isProcessing">
+                                Annuleren
+                            </button>
+                            <button type="submit" class="btn btn-success" disabled="@_isProcessing">
+                                @if (_isProcessing)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                <i class="bi bi-person-check-fill me-1"></i>Lid aanmaken &amp; betaalverzoek sturen
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Modal: Betaalverzoek bevestiging *@
+@if (_showPaymentRequestConfirm)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,.5)">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center py-4">
+                    <div class="text-success mb-3" style="font-size:3.5rem;line-height:1">
+                        <i class="bi bi-check-circle-fill"></i>
+                    </div>
+                    <h5 class="fw-bold mb-1">Lid aangemaakt!</h5>
+                    <p class="text-muted mb-3">@_createdMemberName is toegevoegd aan de ledenadministratie.</p>
+                    <div class="alert alert-success text-start py-2 small">
+                        <i class="bi bi-envelope-check-fill me-2"></i>
+                        Een betaalverzoek is verstuurd naar <strong>@_createdMemberEmail</strong>.
+                        Het nieuwe lid kan via de betaallink in de mail zijn/haar abonnement activeren en de eerste betaling afhandelen.
+                    </div>
+                </div>
+                <div class="modal-footer border-0 justify-content-center">
+                    <button class="btn btn-success px-4" @onclick="ClosePaymentConfirm">Sluiten</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private List<MemberDto> _allUsers = new();
     private List<MemberDto> _displayedUsers = new();
     private bool _isLoading = true;
+    private bool _isProcessing = false;
     private string? _roleFilter = null;
 
-    /// <summary>
-    /// Loads all users when component initializes
-    /// </summary>
+    private bool _showDeleteModal = false;
+    private bool _showSubscriptionModal = false;
+    private bool _showCreateMemberModal = false;
+    private bool _showPaymentRequestConfirm = false;
+    private MemberDto? _selectedUser = null;
+    private int? _activeDropdownUserId = null;
+
+    private AdminCreateMemberDto _newMember = new();
+    private string _createdMemberName = "";
+    private string _createdMemberEmail = "";
+    private bool _newMemberPasswordMismatch =>
+        !string.IsNullOrEmpty(_newMember.Password) &&
+        !string.IsNullOrEmpty(_newMember.ConfirmPassword) &&
+        _newMember.Password != _newMember.ConfirmPassword;
+
+    private record PlanInfo(string Name, string Description, int MonthlyPrice);
+    private static readonly List<PlanInfo> _plans = new()
+    {
+        new("Rookie",       "9 credits/mnd",     45),
+        new("Intermediate", "13 credits/mnd",    65),
+        new("Advanced",     "Onbeperkt credits",  85),
+    };
+
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
     }
 
-    /// <summary>
-    /// Loads all users from the database
-    /// </summary>
     private async Task LoadData()
     {
         _isLoading = true;
@@ -167,18 +470,12 @@
         }
     }
 
-    /// <summary>
-    /// Filters users by role
-    /// </summary>
     private void FilterByRole(string? role)
     {
         _roleFilter = role;
         ApplyFilter();
     }
 
-    /// <summary>
-    /// Applies the current filter to the user list
-    /// </summary>
     private void ApplyFilter()
     {
         _displayedUsers = string.IsNullOrEmpty(_roleFilter)
@@ -186,57 +483,167 @@
             : _allUsers.Where(u => u.Role == _roleFilter).ToList();
     }
 
-    /// <summary>
-    /// Updates a user's role
-    /// </summary>
     private async Task UpdateUserRole(int userId, string newRole)
     {
-        try
+        var (success, message) = await UserService.UpdateUserRoleAsync(userId, newRole);
+        if (success)
         {
-            var (success, message) = await UserService.UpdateUserRoleAsync(userId, newRole);
-            
-            if (success)
-            {
-                ToastService.ShowSuccess(message);
-                await LoadData();
-            }
-            else
-            {
-                ToastService.ShowError(message);
-            }
+            ToastService.ShowSuccess(message);
+            await LoadData();
         }
-        catch (Exception ex)
+        else
         {
-            Console.WriteLine($"Error updating user role: {ex.Message}");
-            ToastService.ShowError("Fout bij bijwerken van gebruikersrol.");
+            ToastService.ShowError(message);
         }
     }
 
-    /// <summary>
-    /// Returns Bootstrap badge class based on role
-    /// </summary>
-    private string GetRoleBadgeClass(string role)
+    // ── Create member ────────────────────────────────────────────────────
+
+    private void OpenCreateMemberModal()
     {
-        return role switch
-        {
-            "admin" => "bg-danger",
-            "instructor" => "bg-success",
-            "member" => "bg-primary",
-            _ => "bg-secondary"
-        };
+        _newMember = new AdminCreateMemberDto { StartDate = DateTime.Today };
+        _showCreateMemberModal = true;
     }
 
-    /// <summary>
-    /// Returns Dutch display name for role
-    /// </summary>
-    private string GetRoleDisplayName(string role)
+    private void CloseCreateMemberModal()
     {
-        return role switch
-        {
-            "admin" => "Admin",
-            "instructor" => "Instructeur",
-            "member" => "Lid",
-            _ => role
-        };
+        _showCreateMemberModal = false;
+        _newMember = new();
     }
+
+    private async Task SubmitCreateMember()
+    {
+        if (_newMemberPasswordMismatch) return;
+
+        _isProcessing = true;
+        var (success, message) = await UserService.CreateMemberAsync(_newMember);
+        _isProcessing = false;
+
+        if (success)
+        {
+            _createdMemberName  = $"{_newMember.FirstName} {_newMember.LastName}".Trim();
+            _createdMemberEmail = _newMember.Email;
+            CloseCreateMemberModal();
+            _showPaymentRequestConfirm = true;
+            await LoadData();
+        }
+        else
+        {
+            ToastService.ShowError(message);
+        }
+    }
+
+    private void ClosePaymentConfirm()
+    {
+        _showPaymentRequestConfirm = false;
+    }
+
+    // ── Dropdown ─────────────────────────────────────────────────────────
+
+    private void ToggleDropdown(int userId)
+    {
+        _activeDropdownUserId = _activeDropdownUserId == userId ? null : userId;
+    }
+
+    private void CloseDropdown()
+    {
+        _activeDropdownUserId = null;
+    }
+
+    // ── Delete ────────────────────────────────────────────────────────────
+
+    private void OpenDeleteModal(MemberDto user)
+    {
+        _selectedUser = user;
+        _showDeleteModal = true;
+        _showSubscriptionModal = false;
+        _activeDropdownUserId = null;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (_selectedUser == null) return;
+        _isProcessing = true;
+        var (success, message) = await UserService.DeleteUserAsync(_selectedUser.Id);
+        _isProcessing = false;
+        CloseModals();
+        if (success)
+        {
+            ToastService.ShowSuccess(message);
+            await LoadData();
+        }
+        else
+        {
+            ToastService.ShowError(message);
+        }
+    }
+
+    // ── Pause / Resume ────────────────────────────────────────────────────
+
+    private async Task TogglePauseSubscription(MemberDto user, bool pause)
+    {
+        _activeDropdownUserId = null;
+        var (success, message) = await UserService.PauseSubscriptionAsync(user.Id, pause);
+        if (success)
+        {
+            ToastService.ShowSuccess(message);
+            await LoadData();
+        }
+        else
+        {
+            ToastService.ShowError(message);
+        }
+    }
+
+    // ── Change subscription ───────────────────────────────────────────────
+
+    private void OpenChangeSubscriptionModal(MemberDto user)
+    {
+        _selectedUser = user;
+        _showSubscriptionModal = true;
+        _showDeleteModal = false;
+        _activeDropdownUserId = null;
+    }
+
+    private async Task SelectNewPlan(string planName)
+    {
+        if (_selectedUser == null) return;
+        var userId = _selectedUser.Id;
+        CloseModals();
+        var (success, message) = await UserService.ChangeSubscriptionAsync(userId, planName);
+        if (success)
+        {
+            ToastService.ShowSuccess(message);
+            await LoadData();
+        }
+        else
+        {
+            ToastService.ShowError(message);
+        }
+    }
+
+    private void CloseModals()
+    {
+        _showDeleteModal = false;
+        _showSubscriptionModal = false;
+        _selectedUser = null;
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────
+
+    private string GetRoleBadgeClass(string role) => role switch
+    {
+        "admin"      => "bg-danger",
+        "instructor" => "bg-success",
+        "member"     => "bg-primary",
+        _            => "bg-secondary"
+    };
+
+    private string GetRoleDisplayName(string role) => role switch
+    {
+        "admin"      => "Admin",
+        "instructor" => "Instructeur",
+        "member"     => "Lid",
+        _            => role
+    };
 }

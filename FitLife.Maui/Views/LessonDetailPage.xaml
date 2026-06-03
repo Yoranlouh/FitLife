@@ -11,16 +11,21 @@
     <Grid RowDefinitions="Auto, *">
         <Grid Grid.Row="0"
               Style="{StaticResource HeaderGrid}"
-              ColumnDefinitions="Auto, *"
               Padding="10,8">
-            <ImageButton Source="back_icon.png"
-                         WidthRequest="20" HeightRequest="20"
-                         VerticalOptions="Center"
-                         Clicked="OnBackToHomeClicked" />
-            <Label Grid.Column="1"
-                   Text="{Binding Lesson.WorkoutName}"
+            <Button Text="&lt;"
+                    TextColor="{StaticResource White}"
+                    BackgroundColor="Transparent"
+                    FontSize="24"
+                    FontAttributes="Bold"
+                    Padding="0"
+                    VerticalOptions="Center"
+                    WidthRequest="44"
+                    HorizontalOptions="Start"
+                    Clicked="OnBackClicked" />
+            <Label Text="{Binding Lesson.WorkoutName}"
                    Style="{StaticResource HeaderTitle}"
-                   FontSize="18" />
+                   FontSize="18"
+                   HorizontalOptions="Center" />
         </Grid>
         <ScrollView Grid.Row="1">
         <VerticalStackLayout Padding="20" Spacing="0">
@@ -84,26 +89,66 @@
                 </VerticalStackLayout>
             </Grid>
 
-            <!-- Action Button -->
-            <Button Text="Aanmelden" 
-                    Command="{Binding ReserveCommand}" 
-                    IsVisible="{Binding IsReserved, Converter={StaticResource InvertedBoolConverter}}"
+            <!-- Action Button: Aanmelden -->
+            <Button Text="Aanmelden"
+                    Command="{Binding ReserveCommand}"
+                    IsVisible="{Binding ShowReserveButton}"
                     BackgroundColor="#C5E17A"
                     TextColor="Black"
                     CornerRadius="5"
                     HeightRequest="50"
                     FontAttributes="Bold"
-                    Margin="0,0,0,30"/>
+                    Margin="0,0,0,10"/>
 
-            <Button Text="Afmelden" 
-                    Command="{Binding UnregisterCommand}" 
-                    IsVisible="{Binding IsReserved}" 
+            <!-- Melding: te vroeg om te reserveren -->
+            <Border IsVisible="{Binding IsTooFarInFuture}"
+                    BackgroundColor="#FFF8E1"
+                    Stroke="#FFD54F"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 8"
+                    Padding="12,10"
+                    Margin="0,0,0,20">
+                <HorizontalStackLayout Spacing="8">
+                    <Label Text="📅" FontSize="16" VerticalOptions="Center"/>
+                    <Label Text="{Binding ReservationOpenDateText}"
+                           FontSize="13"
+                           TextColor="#5D4037"
+                           VerticalOptions="Center"
+                           LineBreakMode="WordWrap"
+                           HorizontalOptions="FillAndExpand"/>
+                </HorizontalStackLayout>
+            </Border>
+
+            <!-- Afmelden knop -->
+            <Button Text="Afmelden"
+                    Command="{Binding UnregisterCommand}"
+                    IsVisible="{Binding IsReserved}"
+                    IsEnabled="{Binding IsCancellationDeadlinePassed, Converter={StaticResource InvertedBoolConverter}}"
                     BackgroundColor="#FF3B30"
                     TextColor="White"
                     CornerRadius="5"
                     HeightRequest="50"
                     FontAttributes="Bold"
-                    Margin="0,0,0,30"/>
+                    Margin="0,0,0,8"/>
+
+            <!-- Melding: afmelden niet meer mogelijk -->
+            <Border IsVisible="{Binding ShowCancellationDeadlineWarning}"
+                    BackgroundColor="#FFF3F3"
+                    Stroke="#FF3B30"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 8"
+                    Padding="12,10"
+                    Margin="0,0,0,20">
+                <HorizontalStackLayout Spacing="8">
+                    <Label Text="⚠" FontSize="16" VerticalOptions="Center"/>
+                    <Label Text="Afmelden is niet meer mogelijk (minder dan 1 uur voor aanvang)."
+                           FontSize="13"
+                           TextColor="#C62828"
+                           VerticalOptions="Center"
+                           LineBreakMode="WordWrap"
+                           HorizontalOptions="FillAndExpand"/>
+                </HorizontalStackLayout>
+            </Border>
 
             <!-- Details Grid -->
             <BoxView HeightRequest="1" BackgroundColor="#E5E5E5" HorizontalOptions="Fill"/>
@@ -150,11 +195,29 @@
                 <Label Grid.Column="1" Text="›" FontSize="24" TextColor="Black" VerticalOptions="Center"/>
             </Grid>
 
-            <!-- Info Section -->
+            <!-- Aanvullende informatie -->
             <BoxView HeightRequest="40" BackgroundColor="#E5E5E5" HorizontalOptions="Fill" Margin="-20,0"/>
-            <VerticalStackLayout Padding="0,15" Spacing="15">
-                <Label Text="Informatie" FontSize="16" FontAttributes="Bold" TextColor="Black"/>
-                <Label Text="Geen aanvullende informatie beschikbaar." FontSize="14" TextColor="Black"/>
+            <VerticalStackLayout Padding="0,16" Spacing="12">
+                <Label Text="Aanvullende informatie"
+                       FontSize="16"
+                       FontAttributes="Bold"
+                       TextColor="Black"/>
+                <Grid ColumnDefinitions="24, *" ColumnSpacing="10">
+                    <Label Grid.Column="0" Text="⏱" FontSize="15" VerticalOptions="Start" Margin="0,1,0,0"/>
+                    <Label Grid.Column="1"
+                           Text="Je kunt je afmelden tot 1 uur voor aanvang van de les."
+                           FontSize="14"
+                           TextColor="Black"
+                           LineBreakMode="WordWrap"/>
+                </Grid>
+                <Grid ColumnDefinitions="24, *" ColumnSpacing="10">
+                    <Label Grid.Column="0" Text="📅" FontSize="15" VerticalOptions="Start" Margin="0,1,0,0"/>
+                    <Label Grid.Column="1"
+                           Text="Reserveren is mogelijk tot maximaal 1 week van tevoren."
+                           FontSize="14"
+                           TextColor="Black"
+                           LineBreakMode="WordWrap"/>
+                </Grid>
             </VerticalStackLayout>
         </VerticalStackLayout>
         </ScrollView>

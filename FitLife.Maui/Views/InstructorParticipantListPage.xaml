@@ -9,16 +9,21 @@
     <Grid RowDefinitions="Auto, *">
         <Grid Grid.Row="0"
               Style="{StaticResource HeaderGrid}"
-              ColumnDefinitions="Auto, *"
               Padding="10,8">
-            <ImageButton Source="back_icon.png"
-                         WidthRequest="20" HeightRequest="20"
-                         VerticalOptions="Center"
-                         Clicked="OnBackToHomeClicked" />
-            <Label Grid.Column="1"
-                   Text="{Binding LessonName}"
+            <Button Text="&lt;"
+                    TextColor="{StaticResource White}"
+                    BackgroundColor="Transparent"
+                    FontSize="24"
+                    FontAttributes="Bold"
+                    Padding="0"
+                    VerticalOptions="Center"
+                    WidthRequest="44"
+                    HorizontalOptions="Start"
+                    Clicked="OnBackClicked" />
+            <Label Text="{Binding LessonName}"
                    Style="{StaticResource HeaderTitle}"
-                   FontSize="18" />
+                   FontSize="18"
+                   HorizontalOptions="Center" />
         </Grid>
         <VerticalStackLayout Grid.Row="1" Spacing="10" Padding="10">
         <Frame BackgroundColor="LightGray" CornerRadius="5">

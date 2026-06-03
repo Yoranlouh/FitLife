@@ -11,16 +11,21 @@
     <Grid RowDefinitions="Auto, Auto, Auto, *">
         <Grid Grid.Row="0"
               Style="{StaticResource HeaderGrid}"
-              ColumnDefinitions="Auto, *"
               Padding="10,8">
-            <ImageButton Source="back_icon.png"
-                         WidthRequest="20" HeightRequest="20"
-                         VerticalOptions="Center"
-                         Clicked="OnBackToHomeClicked" />
-            <Label Grid.Column="1"
-                   Text="Dag Overzicht"
+            <Button Text="&lt;"
+                    TextColor="{StaticResource White}"
+                    BackgroundColor="Transparent"
+                    FontSize="24"
+                    FontAttributes="Bold"
+                    Padding="0"
+                    VerticalOptions="Center"
+                    WidthRequest="44"
+                    HorizontalOptions="Start"
+                    Clicked="OnBackClicked" />
+            <Label Text="Dag Overzicht"
                    Style="{StaticResource HeaderTitle}"
-                   FontSize="18" />
+                   FontSize="18"
+                   HorizontalOptions="Center" />
         </Grid>
         <DatePicker Date="{Binding SelectedDate}" Grid.Row="1" Margin="10" Format="D"/>
         <Button Text="Refresh" Command="{Binding LoadLessonsCommand}" Grid.Row="2" Margin="10"/>

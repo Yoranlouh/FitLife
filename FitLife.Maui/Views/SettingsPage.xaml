@@ -1,44 +1,271 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
              x:Class="FitLife.Maui.Views.SettingsPage"
+             x:DataType="vm:SettingsViewModel"
              Shell.NavBarIsVisible="False"
-             BackgroundColor="White"
+             BackgroundColor="{StaticResource LightGray}"
              Title="Instellingen">
 
     <Grid RowDefinitions="Auto, *">
+
+        <!-- Header -->
         <Grid Grid.Row="0"
               Style="{StaticResource HeaderGrid}"
-              ColumnDefinitions="Auto, *"
               Padding="10,8">
-            <ImageButton Source="back_icon.png"
-                         WidthRequest="20" HeightRequest="20"
-                         VerticalOptions="Center"
-                         Clicked="OnBackToHomeClicked" />
-            <Label Grid.Column="1"
-                   Text="Instellingen"
+            <Button Text="&lt;"
+                    TextColor="{StaticResource White}"
+                    BackgroundColor="Transparent"
+                    FontSize="24"
+                    FontAttributes="Bold"
+                    Padding="0"
+                    VerticalOptions="Center"
+                    WidthRequest="44"
+                    HorizontalOptions="Start"
+                    Clicked="OnBackClicked" />
+            <Label Text="Instellingen"
                    Style="{StaticResource HeaderTitle}"
-                   FontSize="18" />
+                   FontSize="18"
+                   HorizontalOptions="Center" />
         </Grid>
 
-        <VerticalStackLayout Grid.Row="1"
-                             VerticalOptions="Center"
-                             HorizontalOptions="Center"
-                             Spacing="20"
-                             Padding="40">
-            <Image Source="icon_settings.svg"
-                   WidthRequest="72" HeightRequest="72"
-                   HorizontalOptions="Center" />
-            <Label Text="Instellingen"
-                   FontSize="22"
-                   FontAttributes="Bold"
-                   HorizontalOptions="Center"
-                   TextColor="{StaticResource Tertiary}" />
-            <Label Text="Deze functie wordt binnenkort toegevoegd."
-                   FontSize="15"
-                   TextColor="Gray"
-                   HorizontalOptions="Center"
-                   HorizontalTextAlignment="Center" />
-        </VerticalStackLayout>
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="16,20,16,40" Spacing="28">
+
+                <!-- ══════════════════════════════════════
+                     TAAL
+                ══════════════════════════════════════ -->
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="TAAL"
+                           FontSize="11"
+                           FontAttributes="Bold"
+                           CharacterSpacing="1.5"
+                           TextColor="{StaticResource Gray500}"
+                           Margin="4,0,0,0" />
+
+                    <Border BackgroundColor="White" StrokeThickness="0">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="12"/></Border.StrokeShape>
+                        <VerticalStackLayout>
+
+                            <!-- Nederlands -->
+                            <Grid ColumnDefinitions="*, Auto" Padding="16,15" ColumnSpacing="12">
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SelectLanguageCommand}"
+                                                          CommandParameter="nl" />
+                                </Grid.GestureRecognizers>
+                                <Label Grid.Column="0"
+                                       Text="Nederlands"
+                                       FontSize="15"
+                                       VerticalOptions="Center"
+                                       TextColor="{StaticResource Tertiary}" />
+                                <Border Grid.Column="1"
+                                        WidthRequest="22" HeightRequest="22"
+                                        StrokeThickness="2"
+                                        VerticalOptions="Center">
+                                    <Border.StrokeShape><Ellipse/></Border.StrokeShape>
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding LanguageNl}" Value="True">
+                                            <Setter Property="Stroke" Value="{StaticResource Primary}" />
+                                            <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="Border" Binding="{Binding LanguageNl}" Value="False">
+                                            <Setter Property="Stroke" Value="{StaticResource Gray300}" />
+                                            <Setter Property="BackgroundColor" Value="Transparent" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                    <Ellipse WidthRequest="10" HeightRequest="10"
+                                             HorizontalOptions="Center" VerticalOptions="Center"
+                                             InputTransparent="True">
+                                        <Ellipse.Triggers>
+                                            <DataTrigger TargetType="Ellipse" Binding="{Binding LanguageNl}" Value="True">
+                                                <Setter Property="Fill" Value="White" />
+                                            </DataTrigger>
+                                            <DataTrigger TargetType="Ellipse" Binding="{Binding LanguageNl}" Value="False">
+                                                <Setter Property="Fill" Value="Transparent" />
+                                            </DataTrigger>
+                                        </Ellipse.Triggers>
+                                    </Ellipse>
+                                </Border>
+                            </Grid>
+
+                            <BoxView HeightRequest="1" Margin="16,0" Color="{StaticResource Gray100}" />
+
+                            <!-- English -->
+                            <Grid ColumnDefinitions="*, Auto" Padding="16,15" ColumnSpacing="12">
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SelectLanguageCommand}"
+                                                          CommandParameter="en" />
+                                </Grid.GestureRecognizers>
+                                <Label Grid.Column="0"
+                                       Text="English"
+                                       FontSize="15"
+                                       VerticalOptions="Center"
+                                       TextColor="{StaticResource Tertiary}" />
+                                <Border Grid.Column="1"
+                                        WidthRequest="22" HeightRequest="22"
+                                        StrokeThickness="2"
+                                        VerticalOptions="Center">
+                                    <Border.StrokeShape><Ellipse/></Border.StrokeShape>
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding LanguageEn}" Value="True">
+                                            <Setter Property="Stroke" Value="{StaticResource Primary}" />
+                                            <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="Border" Binding="{Binding LanguageEn}" Value="False">
+                                            <Setter Property="Stroke" Value="{StaticResource Gray300}" />
+                                            <Setter Property="BackgroundColor" Value="Transparent" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                    <Ellipse WidthRequest="10" HeightRequest="10"
+                                             HorizontalOptions="Center" VerticalOptions="Center"
+                                             InputTransparent="True">
+                                        <Ellipse.Triggers>
+                                            <DataTrigger TargetType="Ellipse" Binding="{Binding LanguageEn}" Value="True">
+                                                <Setter Property="Fill" Value="White" />
+                                            </DataTrigger>
+                                            <DataTrigger TargetType="Ellipse" Binding="{Binding LanguageEn}" Value="False">
+                                                <Setter Property="Fill" Value="Transparent" />
+                                            </DataTrigger>
+                                        </Ellipse.Triggers>
+                                    </Ellipse>
+                                </Border>
+                            </Grid>
+
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+
+                <!-- ══════════════════════════════════════
+                     NOTIFICATIES
+                ══════════════════════════════════════ -->
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="NOTIFICATIES"
+                           FontSize="11"
+                           FontAttributes="Bold"
+                           CharacterSpacing="1.5"
+                           TextColor="{StaticResource Gray500}"
+                           Margin="4,0,0,0" />
+
+                    <Border BackgroundColor="White" StrokeThickness="0">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="12"/></Border.StrokeShape>
+                        <VerticalStackLayout>
+
+                            <!-- Wachtlijst -->
+                            <Grid ColumnDefinitions="*, Auto" Padding="16,14" ColumnSpacing="12">
+                                <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="2">
+                                    <Label Text="Wachtlijst"
+                                           FontSize="15"
+                                           TextColor="{StaticResource Tertiary}" />
+                                    <Label Text="Melding als er een plek vrijkomt"
+                                           FontSize="12"
+                                           TextColor="{StaticResource Gray400}" />
+                                </VerticalStackLayout>
+                                <Switch Grid.Column="1"
+                                        IsToggled="{Binding NotifyWaitlist}"
+                                        OnColor="{StaticResource Primary}"
+                                        VerticalOptions="Center" />
+                            </Grid>
+
+                            <BoxView HeightRequest="1" Margin="16,0" Color="{StaticResource Gray100}" />
+
+                            <!-- Pushmeldingen -->
+                            <Grid ColumnDefinitions="*, Auto" Padding="16,14" ColumnSpacing="12">
+                                <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="2">
+                                    <Label Text="Pushmeldingen"
+                                           FontSize="15"
+                                           TextColor="{StaticResource Tertiary}" />
+                                    <Label Text="Alle meldingen van de app"
+                                           FontSize="12"
+                                           TextColor="{StaticResource Gray400}" />
+                                </VerticalStackLayout>
+                                <Switch Grid.Column="1"
+                                        IsToggled="{Binding NotifyPush}"
+                                        OnColor="{StaticResource Primary}"
+                                        VerticalOptions="Center" />
+                            </Grid>
+
+                            <BoxView HeightRequest="1" Margin="16,0" Color="{StaticResource Gray100}" />
+
+                            <!-- Afgelaste trainingen -->
+                            <Grid ColumnDefinitions="*, Auto" Padding="16,14" ColumnSpacing="12">
+                                <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="2">
+                                    <Label Text="Afgelaste trainingen"
+                                           FontSize="15"
+                                           TextColor="{StaticResource Tertiary}" />
+                                    <Label Text="Melding bij annulering van een les"
+                                           FontSize="12"
+                                           TextColor="{StaticResource Gray400}" />
+                                </VerticalStackLayout>
+                                <Switch Grid.Column="1"
+                                        IsToggled="{Binding NotifyCancelled}"
+                                        OnColor="{StaticResource Primary}"
+                                        VerticalOptions="Center" />
+                            </Grid>
+
+                            <BoxView HeightRequest="1" Margin="16,0" Color="{StaticResource Gray100}" />
+
+                            <!-- Algemeen & Nieuws -->
+                            <Grid ColumnDefinitions="*, Auto" Padding="16,14" ColumnSpacing="12">
+                                <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="2">
+                                    <Label Text="Algemeen &amp; nieuws"
+                                           FontSize="15"
+                                           TextColor="{StaticResource Tertiary}" />
+                                    <Label Text="Updates en aankondigingen van FitLife"
+                                           FontSize="12"
+                                           TextColor="{StaticResource Gray400}" />
+                                </VerticalStackLayout>
+                                <Switch Grid.Column="1"
+                                        IsToggled="{Binding NotifyNews}"
+                                        OnColor="{StaticResource Primary}"
+                                        VerticalOptions="Center" />
+                            </Grid>
+
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+
+                <!-- ══════════════════════════════════════
+                     LOCATIE
+                ══════════════════════════════════════ -->
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="LOCATIE"
+                           FontSize="11"
+                           FontAttributes="Bold"
+                           CharacterSpacing="1.5"
+                           TextColor="{StaticResource Gray500}"
+                           Margin="4,0,0,0" />
+
+                    <Border BackgroundColor="White" StrokeThickness="0">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="12"/></Border.StrokeShape>
+                        <VerticalStackLayout>
+
+                            <Grid ColumnDefinitions="*, Auto" Padding="16,14" ColumnSpacing="12">
+                                <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="2">
+                                    <Label Text="Locatie delen"
+                                           FontSize="15"
+                                           TextColor="{StaticResource Tertiary}" />
+                                    <Label Text="Toestemming voor automatisch inchecken"
+                                           FontSize="12"
+                                           TextColor="{StaticResource Gray400}" />
+                                </VerticalStackLayout>
+                                <Switch Grid.Column="1"
+                                        IsToggled="{Binding LocationSharing}"
+                                        OnColor="{StaticResource Primary}"
+                                        VerticalOptions="Center" />
+                            </Grid>
+
+                            <Label Text="FitLife vraagt eenmalig toestemming aan je apparaat zodra je dit aanzet. Je kunt dit altijd wijzigen via de app-instellingen van je telefoon."
+                                   FontSize="12"
+                                   TextColor="{StaticResource Gray400}"
+                                   Padding="16,0,16,14"
+                                   LineBreakMode="WordWrap" />
+
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+
+            </VerticalStackLayout>
+        </ScrollView>
     </Grid>
 </ContentPage>

@@ -4,43 +4,44 @@ using FitLife.Maui.Services;
 
 namespace FitLife.Maui.ViewModels;
 
-/// <summary>
-/// ViewModel for the login page
-/// Handles user input validation and authentication logic
-/// </summary>
+// ViewModel for the login page.
+// Validates credentials locally, calls the API, and navigates to the main Shell on success.
 public partial class LoginViewModel : BaseViewModel
 {
     private readonly IAuthenticationService _authenticationService;
+    private readonly INotificationService   _notificationService;
 
+    // Two-way bound to the email and password text fields in the UI
     [ObservableProperty]
     private string _email = string.Empty;
 
     [ObservableProperty]
     private string _password = string.Empty;
 
+    // Displayed below the login button when validation or the API returns an error
     [ObservableProperty]
     private string _errorMessage = string.Empty;
 
+    // True while the API call is in progress — shows a spinner and disables the button
     [ObservableProperty]
     private bool _isLoggingIn;
 
-    public LoginViewModel(IAuthenticationService authenticationService)
+    public LoginViewModel(IAuthenticationService authenticationService,
+                          INotificationService   notificationService)
     {
         _authenticationService = authenticationService;
+        _notificationService   = notificationService;
         Title = "Inloggen";
     }
 
-    /// <summary>
-    /// Command to handle login button click
-    /// Validates input, calls authentication service, and navigates on success
-    /// </summary>
+    // Validates the form, calls POST /auth/login, loads persisted notifications from the
+    // database, then replaces the app's MainPage with the role-correct AppShell.
     [RelayCommand]
     private async Task LoginAsync()
     {
-        // Clear previous error message
         ErrorMessage = string.Empty;
 
-        // Validate input
+        // Client-side validation before making the API call
         if (string.IsNullOrWhiteSpace(Email))
         {
             ErrorMessage = "Voer je email adres in.";
@@ -53,17 +54,19 @@ public partial class LoginViewModel : BaseViewModel
             return;
         }
 
-        // Show loading state
         IsLoggingIn = true;
 
         try
         {
-            // Attempt login
             var result = await _authenticationService.LoginAsync(Email, Password);
 
             if (result.Success)
             {
-                // Login successful - navigate to main app Shell via DI so role-based tabs are built correctly
+                // Restore notifications saved from previous sessions
+                if (result.UserId.HasValue)
+                    await _notificationService.LoadAsync(result.UserId.Value);
+
+                // Replace the root page with AppShell — the Shell builds role-based tabs/flyout
                 if (Application.Current != null)
                 {
                     var shell = IPlatformApplication.Current?.Services.GetRequiredService<AppShell>();
@@ -74,42 +77,31 @@ public partial class LoginViewModel : BaseViewModel
             }
             else
             {
-                // Login failed - show error message
-                ErrorMessage = result.Message;
+                ErrorMessage = result.Message;  // show the server-provided error text
             }
         }
         catch (Exception ex)
         {
-            // Handle unexpected errors
             ErrorMessage = "Er is een fout opgetreden. Probeer het opnieuw.";
             System.Diagnostics.Debug.WriteLine($"Login error: {ex.Message}");
         }
         finally
         {
-            // Hide loading state
             IsLoggingIn = false;
         }
     }
 
-    /// <summary>
-    /// Clear error message when user starts typing
-    /// </summary>
+    // Clears the error message as soon as the user starts editing the email field
     partial void OnEmailChanged(string value)
     {
         if (!string.IsNullOrEmpty(ErrorMessage))
-        {
             ErrorMessage = string.Empty;
-        }
     }
 
-    /// <summary>
-    /// Clear error message when user starts typing
-    /// </summary>
+    // Clears the error message as soon as the user starts editing the password field
     partial void OnPasswordChanged(string value)
     {
         if (!string.IsNullOrEmpty(ErrorMessage))
-        {
             ErrorMessage = string.Empty;
-        }
     }
 }

@@ -17,6 +17,7 @@ public class PaymentSession
     public string? Bank        { get; set; }
     public string? Phone       { get; set; }
     public string PasswordHash { get; set; } = "";
+    public DateTime StartDate  { get; set; } = DateTime.Today;
     public PaymentStatus Status    { get; set; } = PaymentStatus.Pending;
     public bool          IsRegistered { get; set; } = false;
     public DateTime CreatedAt  { get; set; } = DateTime.UtcNow;
@@ -28,7 +29,7 @@ public interface IPaymentService
         string firstName, string lastName, string email,
         string plan, bool isYearly, decimal amount,
         string subMethod, string? bank, string? phone,
-        string passwordHash);
+        string passwordHash, DateTime startDate);
 
     PaymentSession? GetSession(string sessionId);
     bool ConfirmSession(string sessionId);
@@ -43,7 +44,7 @@ public class PaymentService : IPaymentService
         string firstName, string lastName, string email,
         string plan, bool isYearly, decimal amount,
         string subMethod, string? bank, string? phone,
-        string passwordHash)
+        string passwordHash, DateTime startDate)
     {
         var session = new PaymentSession
         {
@@ -57,6 +58,7 @@ public class PaymentService : IPaymentService
             Bank         = bank,
             Phone        = phone,
             PasswordHash = passwordHash,
+            StartDate    = startDate,
         };
         _sessions[session.Id] = session;
         return Task.FromResult(session);

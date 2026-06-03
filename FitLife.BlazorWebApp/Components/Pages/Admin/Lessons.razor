@@ -13,12 +13,28 @@
     <div class="row mb-4">
         <div class="col">
             <h1 class="display-6 fw-bold">Lessen Beheer</h1>
-            <p class="text-muted">Beheer alle geplande lessen</p>
+            <p class="text-muted">
+                @if (_showArchive)
+                {
+                    <span><i class="bi bi-archive me-1"></i>Archief — verlopen lessen</span>
+                }
+                else
+                {
+                    <span>Aankomende en huidige lessen</span>
+                }
+            </p>
         </div>
-        <div class="col-auto">
-            <button class="btn btn-primary" @onclick="OpenCreateModal">
-                <i class="bi bi-plus-circle me-2"></i>Nieuwe Les
+        <div class="col-auto d-flex gap-2">
+            <button class="btn @(_showArchive ? "btn-secondary" : "btn-outline-secondary")"
+                    @onclick="ToggleArchive">
+                <i class="bi bi-archive me-1"></i>@(_showArchive ? "Toon aankomend" : "Archief")
             </button>
+            @if (!_showArchive)
+            {
+                <button class="btn btn-primary" @onclick="OpenCreateModal">
+                    <i class="bi bi-plus-circle me-2"></i>Nieuwe Les
+                </button>
+            }
         </div>
     </div>
 
@@ -80,7 +96,15 @@
     else
     {
         <div class="alert alert-info">
-            <i class="bi bi-info-circle me-2"></i>Geen lessen gevonden. Maak een nieuwe les aan.
+            <i class="bi bi-info-circle me-2"></i>
+            @if (_showArchive)
+            {
+                <span>Geen gearchiveerde lessen gevonden.</span>
+            }
+            else
+            {
+                <span>Geen aankomende lessen gevonden. Maak een nieuwe les aan.</span>
+            }
         </div>
     }
 </div>
@@ -203,6 +227,7 @@
     private bool _isSaving = false;
     private bool _showModal = false;
     private bool _showDeleteConfirm = false;
+    private bool _showArchive = false;
     private int _deleteTargetId = 0;
 
     private LessonEditDto _editingLesson = new();
@@ -212,15 +237,18 @@
         await LoadData();
     }
 
+    private async Task ToggleArchive()
+    {
+        _showArchive = !_showArchive;
+        await LoadData();
+    }
+
     private async Task LoadData()
     {
         _isLoading = true;
         try
         {
-            var from = DateTime.Today.AddMonths(-1);
-            var to = DateTime.Today.AddMonths(3);
-
-            var lessonsTask = LessonService.GetAllLessonsAsync(from, to);
+            var lessonsTask = LessonService.GetAllLessonsAsync(archivedOnly: _showArchive);
             var workoutsTask = WorkoutService.GetAllWorkoutsAsync();
             var instructorsTask = InstructorService.GetAllInstructorsAsync();
             var locationsTask = LocationService.GetAllLocationsAsync();

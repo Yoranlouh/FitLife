@@ -28,5 +28,7 @@
 	</array>
 	<key>XSAppIconAssets</key>
 	<string>Assets.xcassets/appicon.appiconset</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>FitLife gebruikt je locatie om je automatisch in te checken bij een sportclub.</string>
 </dict>
 </plist>

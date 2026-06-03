@@ -9,13 +9,21 @@
 
     <Grid RowDefinitions="Auto, Auto, Auto, *">
         <!-- Header -->
-        <Grid Grid.Row="0" Style="{StaticResource HeaderGrid}" ColumnDefinitions="Auto, *, Auto" Padding="10, 5">
-            <ImageButton Source="back_icon.png" WidthRequest="20" HeightRequest="20" VerticalOptions="Center"
-                         Clicked="OnBackToHomeClicked" />
-            <StackLayout Grid.Column="1" HorizontalOptions="Center">
+        <Grid Grid.Row="0" Style="{StaticResource HeaderGrid}" Padding="10, 5">
+            <Button Text="&lt;"
+                    TextColor="{StaticResource White}"
+                    BackgroundColor="Transparent"
+                    FontSize="24"
+                    FontAttributes="Bold"
+                    Padding="0"
+                    VerticalOptions="Center"
+                    WidthRequest="44"
+                    HorizontalOptions="Start"
+                    Clicked="OnBackClicked" />
+            <StackLayout HorizontalOptions="Center">
                 <Label Text="FitLife" Style="{StaticResource HeaderTitle}" FontSize="14"/>
             </StackLayout>
-            <ImageButton Grid.Column="2" Source="calendar_icon.png" WidthRequest="20" HeightRequest="20" VerticalOptions="Center"/>
+            <ImageButton Source="calendar_icon.png" WidthRequest="20" HeightRequest="20" VerticalOptions="Center" HorizontalOptions="End"/>
         </Grid>
 
         <!-- View Selector -->

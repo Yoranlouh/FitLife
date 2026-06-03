@@ -51,7 +51,7 @@ public partial class WeekPage : ContentPage
         }, TaskScheduler.Default);
     }
 
-    private async void OnBackToHomeClicked(object sender, EventArgs e)
+    private async void OnBackClicked(object sender, EventArgs e)
     {
         await Shell.Current.GoToAsync("//HomePage");
     }
@@ -188,11 +188,11 @@ public partial class WeekPage : ContentPage
                 // Kleuren instellen
                 if (count == 1)
                 {
-                    border.BackgroundColor = GetWorkoutColor(lessonsInSlot.First().WorkoutName);
+                    border.BackgroundColor = GetWorkoutColor(lessonsInSlot.First().WorkoutColor);
                 }
                 else
                 {
-                    var colors = lessonsInSlot.Select(l => GetWorkoutColor(l.WorkoutName)).ToList();
+                    var colors = lessonsInSlot.Select(l => GetWorkoutColor(l.WorkoutColor)).ToList();
                     AddDiagonalBackground(cellGrid, colors);
                 }
 
@@ -350,13 +350,17 @@ public partial class WeekPage : ContentPage
         }
     }
 
-    private static Color GetWorkoutColor(string? workoutName)
+    private static Color GetWorkoutColor(string? workoutColor)
     {
-        if (string.IsNullOrEmpty(workoutName))
+        if (string.IsNullOrEmpty(workoutColor))
             return GetResourceColor("Primary");
 
-        // Geef verschillende kleuren op basis van workout type
-        return workoutName.ToLower() switch
+        if (workoutColor.StartsWith('#'))
+        {
+            try { return Color.FromArgb(workoutColor); } catch { }
+        }
+
+        return workoutColor.ToLower() switch
         {
             var n when n.Contains("crossfit") => GetResourceColor("WorkoutCrossfit"),
             var n when n.Contains("spinning") => GetResourceColor("WorkoutSpinning"),

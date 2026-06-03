@@ -28,11 +28,31 @@
                        Style="{StaticResource HeaderTitle}"
                        FontSize="20" />
             </VerticalStackLayout>
-            <Grid Grid.Column="2" VerticalOptions="Center">
-                <Label Text="✉" TextColor="{StaticResource White}" FontSize="30" VerticalOptions="Center" />
-                <Ellipse Fill="Red" WidthRequest="10" HeightRequest="10"
-                         HorizontalOptions="End" VerticalOptions="Start"
-                         TranslationX="2" TranslationY="-2" />
+            <Grid Grid.Column="2"
+                  VerticalOptions="Center"
+                  WidthRequest="44" HeightRequest="44">
+                <Grid.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnNotificationClicked" />
+                </Grid.GestureRecognizers>
+                <Image Source="icon_bell.svg"
+                       WidthRequest="26" HeightRequest="26"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center" />
+                <Border IsVisible="{Binding HasUnread}"
+                        BackgroundColor="#E53935"
+                        StrokeThickness="0"
+                        StrokeShape="Ellipse"
+                        WidthRequest="18" HeightRequest="18"
+                        HorizontalOptions="End"
+                        VerticalOptions="Start"
+                        TranslationX="2" TranslationY="-2">
+                    <Label Text="{Binding UnreadCount}"
+                           FontSize="10"
+                           FontAttributes="Bold"
+                           TextColor="White"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center" />
+                </Border>
             </Grid>
         </Grid>
 

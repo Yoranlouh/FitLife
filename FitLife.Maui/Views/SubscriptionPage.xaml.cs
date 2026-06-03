@@ -22,12 +22,12 @@ public partial class SubscriptionPage : ContentPage
         await _viewModel.LoadDataAsync();
     }
 
-    private async void OnBackToHomeClicked(object sender, EventArgs e)
-        => await Shell.Current.GoToAsync("//HomePage");
+    private async void OnBackClicked(object sender, EventArgs e)
+        => await Shell.Current.GoToAsync("..");
 
     protected override bool OnBackButtonPressed()
     {
-        _ = Shell.Current.GoToAsync("//HomePage");
+        _ = Shell.Current.GoToAsync("..");
         return true;
     }
 }

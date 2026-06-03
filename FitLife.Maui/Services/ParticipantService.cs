@@ -3,12 +3,17 @@ using System.Net.Http.Json;
 
 namespace FitLife.Maui.Services;
 
+// Interface for fetching lesson participants and the waitlist from the API.
 public interface IParticipantService
 {
+    // Returns all confirmed participants for the given lesson (non-cancelled reservations).
     Task<IEnumerable<ParticipantResponse>> GetParticipantsAsync(int lessonId);
+
+    // Returns all users currently on the waitlist for the given lesson.
     Task<IEnumerable<ParticipantResponse>> GetWaitlistAsync(int lessonId);
 }
 
+// HTTP implementation that talks to the FitLife REST API.
 public class ParticipantService : IParticipantService
 {
     private readonly HttpClient _httpClient;
@@ -18,6 +23,8 @@ public class ParticipantService : IParticipantService
         _httpClient = httpClient;
     }
 
+    // Calls GET /lessons/{lessonId}/participants.
+    // Returns an empty list on network error so the UI degrades gracefully.
     public async Task<IEnumerable<ParticipantResponse>> GetParticipantsAsync(int lessonId)
     {
         try
@@ -26,6 +33,7 @@ public class ParticipantService : IParticipantService
 
             if (response.IsSuccessStatusCode)
             {
+                // Deserialise the JSON array into a list of ParticipantResponse objects
                 return await response.Content.ReadFromJsonAsync<IEnumerable<ParticipantResponse>>()
                        ?? Enumerable.Empty<ParticipantResponse>();
             }
@@ -38,6 +46,8 @@ public class ParticipantService : IParticipantService
         return Enumerable.Empty<ParticipantResponse>();
     }
 
+    // Calls GET /lessons/{lessonId}/waitlist.
+    // Returns an empty list on network error.
     public async Task<IEnumerable<ParticipantResponse>> GetWaitlistAsync(int lessonId)
     {
         try

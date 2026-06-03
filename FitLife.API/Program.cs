@@ -5,11 +5,21 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.FileProviders;
 
+// ──────────────────────────────────────────────────────────────────────────────
+// FitLife REST API — ASP.NET Core Minimal API
+// All endpoints are defined inline below using MapGet/Post/Put/Delete.
+// The API is consumed by:
+//   • FitLife.Maui   — the mobile app for members and instructors
+//   • FitLife.BlazorWebApp — connects directly to MySQL (not via this API)
+// Database: MySQL via MySqlConnector (no ORM — raw SQL for full control).
+// ──────────────────────────────────────────────────────────────────────────────
 var builder = WebApplication.CreateBuilder(args);
 
+// Register OpenAPI (Swagger) metadata — accessible at /openapi in development
 builder.Services.AddOpenApi();
 
-// Add CORS policy for Blazor and MAUI apps
+// Allow all origins/headers/methods so the MAUI app and any future web clients
+// can call this API without CORS preflight failures.
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFitLifeClients", policy =>
@@ -32,26 +42,88 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
-// Serve uploaded user photos as static files
+// Serve profile photos uploaded via POST /upload/photo/{userId} as static files
+// under the /uploads URL path (e.g. http://localhost:8080/uploads/user_1_abc.jpg)
 var uploadsDir = Path.Combine(app.Environment.ContentRootPath, "uploads");
 Directory.CreateDirectory(uploadsDir);
+
+// ── Database migrations ───────────────────────────────────────────────────────
+// Run at startup to add missing columns/tables without a migration framework.
+// Auto-migrate: add 'color' column to workouts if it does not exist
+try
+{
+    var migConnStr = app.Configuration.GetConnectionString("DefaultConnection");
+    if (!string.IsNullOrEmpty(migConnStr))
+    {
+        await using var migConn = new MySqlConnection(migConnStr);
+        await migConn.OpenAsync();
+        const string checkCol = "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='workouts' AND COLUMN_NAME='color'";
+        await using var checkCmd = new MySqlCommand(checkCol, migConn);
+        if (Convert.ToInt32(await checkCmd.ExecuteScalarAsync()) == 0)
+        {
+            await using var addCmd = new MySqlCommand(
+                "ALTER TABLE workouts ADD COLUMN color VARCHAR(7) NULL DEFAULT NULL;",
+                migConn);
+            await addCmd.ExecuteNonQueryAsync();
+        }
+
+        // Add 'is_archived' flag to lessons (used by LessonArchiveService in the Blazor app)
+        const string checkArchived = "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='lessons' AND COLUMN_NAME='is_archived'";
+        await using var checkArchivedCmd = new MySqlCommand(checkArchived, migConn);
+        if (Convert.ToInt32(await checkArchivedCmd.ExecuteScalarAsync()) == 0)
+        {
+            await using var addArchivedCmd = new MySqlCommand(
+                "ALTER TABLE lessons ADD COLUMN is_archived TINYINT(1) NOT NULL DEFAULT 0;",
+                migConn);
+            await addArchivedCmd.ExecuteNonQueryAsync();
+        }
+
+        // Create the notifications table for persistent in-app notifications
+        const string checkNotifTable = "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='notifications'";
+        await using var checkNotifCmd = new MySqlCommand(checkNotifTable, migConn);
+        if (Convert.ToInt32(await checkNotifCmd.ExecuteScalarAsync()) == 0)
+        {
+            const string createNotif = """
+                CREATE TABLE notifications (
+                    id CHAR(36) NOT NULL PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    title VARCHAR(255) NOT NULL,
+                    message TEXT NOT NULL,
+                    type INT NOT NULL DEFAULT 0,
+                    is_read TINYINT(1) NOT NULL DEFAULT 0,
+                    created_at DATETIME NOT NULL DEFAULT NOW(),
+                    INDEX idx_notifications_user (user_id)
+                );
+                """;
+            await using var createNotifCmd = new MySqlCommand(createNotif, migConn);
+            await createNotifCmd.ExecuteNonQueryAsync();
+        }
+    }
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"[Migration] color kolom: {ex.Message}");
+}
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(uploadsDir),
     RequestPath = "/uploads"
 });
 
-// Enable CORS
+// ── HTTP pipeline ─────────────────────────────────────────────────────────────
 app.UseCors("AllowFitLifeClients");
 
-// GET /workouts - Simple list for dropdowns
+// ── Endpoints ─────────────────────────────────────────────────────────────────
+
+// GET /workouts — Returns all workout types as id+name pairs for dropdown selectors
+// Used by the MAUI ManageLessonPage to populate the workout picker
 app.MapGet("/workouts", async (IConfiguration configuration) =>
 {
     var connectionString = configuration.GetConnectionString("DefaultConnection");
     if (string.IsNullOrWhiteSpace(connectionString))
         return Results.Problem("Connection string 'DefaultConnection' is niet gevonden.");
 
-    var items = new List<object>();
+    var items = new List<DropdownItemDto>();
     await using var connection = new MySqlConnection(connectionString);
     await connection.OpenAsync();
 
@@ -59,19 +131,19 @@ app.MapGet("/workouts", async (IConfiguration configuration) =>
     await using var command = new MySqlCommand(sql, connection);
     await using var reader = await command.ExecuteReaderAsync();
     while (await reader.ReadAsync())
-        items.Add(new { id = reader.GetInt32("id"), name = reader.GetString("name") });
+        items.Add(new DropdownItemDto { Id = reader.GetInt32("id"), Name = reader.GetString("name") });
 
     return Results.Ok(items);
 });
 
-// GET /locations - Simple list for dropdowns
+// GET /locations — Returns all locations/halls as id+name pairs for dropdown selectors
 app.MapGet("/locations", async (IConfiguration configuration) =>
 {
     var connectionString = configuration.GetConnectionString("DefaultConnection");
     if (string.IsNullOrWhiteSpace(connectionString))
         return Results.Problem("Connection string 'DefaultConnection' is niet gevonden.");
 
-    var items = new List<object>();
+    var items = new List<DropdownItemDto>();
     await using var connection = new MySqlConnection(connectionString);
     await connection.OpenAsync();
 
@@ -79,19 +151,19 @@ app.MapGet("/locations", async (IConfiguration configuration) =>
     await using var command = new MySqlCommand(sql, connection);
     await using var reader = await command.ExecuteReaderAsync();
     while (await reader.ReadAsync())
-        items.Add(new { id = reader.GetInt32("id"), name = reader.GetString("name") });
+        items.Add(new DropdownItemDto { Id = reader.GetInt32("id"), Name = reader.GetString("name") });
 
     return Results.Ok(items);
 });
 
-// GET /instructors - Simple list for dropdowns
+// GET /instructors — Returns all instructors (role='instructor') as id+name pairs
 app.MapGet("/instructors", async (IConfiguration configuration) =>
 {
     var connectionString = configuration.GetConnectionString("DefaultConnection");
     if (string.IsNullOrWhiteSpace(connectionString))
         return Results.Problem("Connection string 'DefaultConnection' is niet gevonden.");
 
-    var items = new List<object>();
+    var items = new List<DropdownItemDto>();
     await using var connection = new MySqlConnection(connectionString);
     await connection.OpenAsync();
 
@@ -99,12 +171,17 @@ app.MapGet("/instructors", async (IConfiguration configuration) =>
     await using var command = new MySqlCommand(sql, connection);
     await using var reader = await command.ExecuteReaderAsync();
     while (await reader.ReadAsync())
-        items.Add(new { id = reader.GetInt32("id"), name = reader.IsDBNull(reader.GetOrdinal("name")) ? "Onbekend" : reader.GetString("name") });
+        items.Add(new DropdownItemDto
+        {
+            Id   = reader.GetInt32("id"),
+            Name = reader.IsDBNull(reader.GetOrdinal("name")) ? "Onbekend" : reader.GetString("name")
+        });
 
     return Results.Ok(items);
 });
 
-// GET /lessons/instructor/{instructorId} - Lessons given by a specific instructor
+// GET /lessons/instructor/{instructorId} — All lessons where the given user is the instructor.
+// Used by the MAUI InstructorLessonsPage to show a trainer their own schedule.
 app.MapGet("/lessons/instructor/{instructorId:int}", async (int instructorId, IConfiguration configuration) =>
 {
     var connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -114,6 +191,7 @@ app.MapGet("/lessons/instructor/{instructorId:int}", async (int instructorId, IC
     var lessons = new List<LessonResponse>();
     await using var connection = new MySqlConnection(connectionString);
     await connection.OpenAsync();
+    try { if (Convert.ToInt32(await new MySqlCommand("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='workouts' AND COLUMN_NAME='color'", connection).ExecuteScalarAsync()) == 0) { await new MySqlCommand("ALTER TABLE workouts ADD COLUMN color VARCHAR(7) NULL DEFAULT NULL;", connection).ExecuteNonQueryAsync(); } } catch { }
 
     const string sql = """
         SELECT
@@ -123,6 +201,7 @@ app.MapGet("/lessons/instructor/{instructorId:int}", async (int instructorId, IC
             COALESCE(l.capacity_override, w.default_capacity, loc.capacity, 0) AS max_participants,
             l.workout_id,
             w.name AS workout_name,
+            COALESCE(w.color, '#5B6636') AS workout_color,
             l.instructor_id,
             u.display_name AS instructor_name,
             l.location_id,
@@ -151,6 +230,7 @@ app.MapGet("/lessons/instructor/{instructorId:int}", async (int instructorId, IC
             MaxParticipants = reader.GetInt32("max_participants"),
             WorkoutId = reader.GetInt32("workout_id"),
             WorkoutName = reader.GetString("workout_name"),
+            WorkoutColor = reader.GetString("workout_color"),
             InstructorId = instructorId,
             InstructorName = reader.IsDBNull(reader.GetOrdinal("instructor_name")) ? "Onbekende instructeur" : reader.GetString("instructor_name"),
             LocationId = reader.GetInt32("location_id"),
@@ -163,7 +243,7 @@ app.MapGet("/lessons/instructor/{instructorId:int}", async (int instructorId, IC
     return Results.Ok(lessons);
 });
 
-// POST /lessons - Create a new lesson
+// POST /lessons — Creates a new lesson. Body: LessonSaveDto. Returns the new lesson ID.
 app.MapPost("/lessons", async (IConfiguration configuration, LessonSaveDto request) =>
 {
     var connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -203,7 +283,7 @@ app.MapPost("/lessons", async (IConfiguration configuration, LessonSaveDto reque
     }
 });
 
-// PUT /lessons/{lessonId} - Update an existing lesson
+// PUT /lessons/{lessonId} — Updates all editable fields of an existing lesson.
 app.MapPut("/lessons/{lessonId:int}", async (int lessonId, IConfiguration configuration, LessonSaveDto request) =>
 {
     var connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -250,7 +330,7 @@ app.MapPut("/lessons/{lessonId:int}", async (int lessonId, IConfiguration config
     }
 });
 
-// DELETE /lessons/{lessonId} - Delete a lesson
+// DELETE /lessons/{lessonId} — Deletes a lesson. Rejected if active reservations exist.
 app.MapDelete("/lessons/{lessonId:int}", async (int lessonId, IConfiguration configuration) =>
 {
     var connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -286,7 +366,8 @@ app.MapDelete("/lessons/{lessonId:int}", async (int lessonId, IConfiguration con
     }
 });
 
-// POST /lessons/{lessonId}/add-member - Add a member to a lesson (no credit deduction)
+// POST /lessons/{lessonId}/add-member — Admin-only: adds a member to a lesson
+// without deducting a credit. Checks capacity before inserting the reservation.
 app.MapPost("/lessons/{lessonId:int}/add-member", async (int lessonId, IConfiguration configuration, AddMemberDto request) =>
 {
     var connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -353,6 +434,9 @@ app.MapPost("/lessons/{lessonId:int}/add-member", async (int lessonId, IConfigur
     }
 });
 
+// GET /lessons — Returns the full lesson catalogue with randomised participant counts
+// to make the schedule look realistic during development/demo.
+// In production the random counts should be replaced with real DB data.
 app.MapGet("/lessons", async (IConfiguration configuration) =>
 {
     var connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -366,6 +450,7 @@ app.MapGet("/lessons", async (IConfiguration configuration) =>
 
     await using var connection = new MySqlConnection(connectionString);
     await connection.OpenAsync();
+    try { if (Convert.ToInt32(await new MySqlCommand("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='workouts' AND COLUMN_NAME='color'", connection).ExecuteScalarAsync()) == 0) { await new MySqlCommand("ALTER TABLE workouts ADD COLUMN color VARCHAR(7) NULL DEFAULT NULL;", connection).ExecuteNonQueryAsync(); } } catch { }
 
     const string sql = """
         SELECT
@@ -375,6 +460,7 @@ app.MapGet("/lessons", async (IConfiguration configuration) =>
             COALESCE(l.capacity_override, w.default_capacity, loc.capacity, 0) AS max_participants,
             l.workout_id,
             w.name AS workout_name,
+            COALESCE(w.color, '#5B6636') AS workout_color,
             l.instructor_id,
             u.display_name AS instructor_name,
             l.location_id,
@@ -433,6 +519,7 @@ app.MapGet("/lessons", async (IConfiguration configuration) =>
             MaxParticipants = maxParticipants,
             WorkoutId = reader.GetInt32("workout_id"),
             WorkoutName = reader.GetString("workout_name"),
+            WorkoutColor = reader.GetString("workout_color"),
             InstructorId = reader.IsDBNull(reader.GetOrdinal("instructor_id")) ? 0 : reader.GetInt32("instructor_id"),
             InstructorName = reader.IsDBNull(reader.GetOrdinal("instructor_name")) ? "Onbekende instructeur" : reader.GetString("instructor_name"),
             LocationId = reader.GetInt32("location_id"),
@@ -446,6 +533,7 @@ app.MapGet("/lessons", async (IConfiguration configuration) =>
     return Results.Ok(lessons);
 });
 
+// GET /lessons/{lessonId}/participants — Returns all non-cancelled members enrolled in a lesson.
 app.MapGet("/lessons/{lessonId:int}/participants", async (int lessonId, IConfiguration configuration) =>
 {
     var connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -494,15 +582,17 @@ app.MapGet("/lessons/{lessonId:int}/participants", async (int lessonId, IConfigu
     return Results.Ok(participants);
 });
 
+// GET /lessons/{lessonId}/waitlist — Waitlist query placeholder.
+// Returns an empty list until the waitlist_entries table is fully implemented.
 app.MapGet("/lessons/{lessonId:int}/waitlist", async (int lessonId, IConfiguration configuration) =>
 {
-    // Waitlist functionality not implemented yet - return empty list
-    // TODO: Create waitlist_entries table and implement waitlist logic
     var waitlist = new List<ParticipantResponse>();
     return Results.Ok(waitlist);
 });
 
-// Authentication endpoint - POST /auth/login
+// POST /auth/login — Verifies email + password against the database and returns
+// the full user profile (id, name, role, credits, subscription) on success.
+// Password is stored as SHA-256 hex; plaintext is also accepted for legacy seeds.
 app.MapPost("/auth/login", async (IConfiguration configuration, LoginRequestDto request) =>
 {
     var connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -608,7 +698,9 @@ app.MapPost("/auth/login", async (IConfiguration configuration, LoginRequestDto 
     }
 });
 
-// POST /lessons/{lessonId}/reserve - Reserve a lesson and deduct 1 credit
+// POST /lessons/{lessonId}/reserve — Creates a reservation for the given user.
+// Checks: user has ≥1 credit, lesson exists and has capacity, not already reserved.
+// Uses a transaction so credit deduction and reservation insert are atomic.
 app.MapPost("/lessons/{lessonId:int}/reserve", async (int lessonId, IConfiguration configuration, ReservationRequestDto request) =>
 {
     var connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -725,7 +817,8 @@ app.MapPost("/lessons/{lessonId:int}/reserve", async (int lessonId, IConfigurati
     }
 });
 
-// DELETE /lessons/{lessonId}/cancel - Cancel a reservation and refund 1 credit
+// DELETE /lessons/{lessonId}/cancel?userId={userId} — Cancels the user's reservation
+// and refunds 1 credit. Uses a transaction so the cancellation and credit refund are atomic.
 app.MapDelete("/lessons/{lessonId:int}/cancel", async (int lessonId, IConfiguration configuration, int userId) =>
 {
     var connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -792,8 +885,9 @@ app.MapDelete("/lessons/{lessonId:int}/cancel", async (int lessonId, IConfigurat
     }
 });
 
-// Helper method to compute SHA256 hash (for demo purposes)
-// In production, use proper password hashing like BCrypt
+// Helper: computes a lowercase hex SHA-256 hash of the input string.
+// Used to verify passwords stored in the database.
+// Note: for production use BCrypt or Argon2 instead of plain SHA-256.
 static string ComputeSha256Hash(string rawData)
 {
     using (SHA256 sha256Hash = SHA256.Create())
@@ -808,7 +902,8 @@ static string ComputeSha256Hash(string rawData)
     }
 }
 
-// GET /users/{userId}/lessons - Get all active reservations for a user
+// GET /users/{userId}/lessons — Returns all non-cancelled reservations for the user,
+// joined with lesson, workout, instructor, and location data for display in MyLessonsPage.
 app.MapGet("/users/{userId:int}/lessons", async (int userId, IConfiguration configuration) =>
 {
     var connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -857,9 +952,10 @@ app.MapGet("/users/{userId:int}/lessons", async (int userId, IConfiguration conf
     return Results.Ok(lessons);
 });
 
-// Subscription Management Endpoints
+// ── Subscription endpoints ────────────────────────────────────────────────────
 
-// GET /subscriptions/plans - Get available subscription plans with pricing
+// GET /subscriptions/plans — Returns the three fixed subscription tiers
+// (Rookie, Intermediate, Advanced) with monthly/yearly pricing and credit counts.
 app.MapGet("/subscriptions/plans", () =>
 {
     var plans = new List<SubscriptionPlanDto>
@@ -896,7 +992,8 @@ app.MapGet("/subscriptions/plans", () =>
     return Results.Ok(plans);
 });
 
-// POST /subscriptions/change - Request a subscription change (applied on renewal date)
+// POST /subscriptions/change — Changes the user's subscription type and resets their
+// credits to match the new plan. Applied immediately (not deferred to the renewal date).
 app.MapPost("/subscriptions/change", async (IConfiguration configuration, SubscriptionChangeRequestDto request) =>
 {
     var connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -1002,7 +1099,8 @@ app.MapPost("/subscriptions/change", async (IConfiguration configuration, Subscr
     }
 });
 
-// GET /subscriptions/status/{userId} - Get current subscription status including pending changes
+// GET /subscriptions/status/{userId} — Returns the user's current subscription type,
+// renewal date, and credit balance. Used by ProfileViewModel and SubscriptionViewModel.
 app.MapGet("/subscriptions/status/{userId}", async (IConfiguration configuration, int userId) =>
 {
     var connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -1058,7 +1156,8 @@ app.MapGet("/subscriptions/status/{userId}", async (IConfiguration configuration
     }
 });
 
-// POST /subscriptions/cancel - Cancel subscription (applied on renewal date)
+// POST /subscriptions/cancel — Sets subscription_type to NULL and credits to 0,
+// effectively cancelling the subscription immediately.
 app.MapPost("/subscriptions/cancel", async (IConfiguration configuration, SubscriptionCancelRequestDto request) =>
 {
     var connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -1162,7 +1261,8 @@ app.MapPost("/subscriptions/cancel", async (IConfiguration configuration, Subscr
     }
 });
 
-// POST /subscriptions/change-billing - Change billing cycle for current subscription
+// POST /subscriptions/change-billing — Updates the subscription renewal date to 1 month
+// or 1 year from now depending on the requested billing cycle.
 app.MapPost("/subscriptions/change-billing", async (IConfiguration configuration, ChangeBillingCycleRequestDto request) =>
 {
     var connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -1272,7 +1372,9 @@ app.MapPost("/subscriptions/change-billing", async (IConfiguration configuration
     }
 });
 
-// POST /upload/photo/{userId} — upload & save profile photo
+// POST /upload/photo/{userId} — Accepts a multipart/form-data upload (max 5 MB, jpg/png/webp),
+// saves it to the /uploads directory, and updates the user's photo_url in the database.
+// Returns { "photoUrl": "http://..." } so the client can display the new image immediately.
 app.MapPost("/upload/photo/{userId:int}", async (int userId, HttpRequest request, IConfiguration configuration) =>
 {
     if (!request.HasFormContentType || request.Form.Files.Count == 0)
@@ -1314,9 +1416,103 @@ app.MapPost("/upload/photo/{userId:int}", async (int userId, HttpRequest request
         : Results.NotFound("Gebruiker niet gevonden.");
 }).DisableAntiforgery();
 
+// GET /users/{userId}/notifications — Returns up to 100 notifications for the user,
+// newest first. Called by NotificationService.LoadAsync() after login.
+app.MapGet("/users/{userId:int}/notifications", async (int userId, IConfiguration configuration) =>
+{
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrWhiteSpace(connectionString))
+        return Results.Problem("Connection string niet gevonden.");
+
+    var items = new List<NotificationDto>();
+    await using var connection = new MySqlConnection(connectionString);
+    await connection.OpenAsync();
+
+    const string sql = """
+        SELECT id, title, message, type, is_read, created_at
+        FROM notifications
+        WHERE user_id = @userId
+        ORDER BY created_at DESC
+        LIMIT 100
+        """;
+    await using var cmd = new MySqlCommand(sql, connection);
+    cmd.Parameters.AddWithValue("@userId", userId);
+    await using var reader = await cmd.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+        items.Add(new NotificationDto
+        {
+            Id        = reader.GetString("id"),
+            Title     = reader.GetString("title"),
+            Message   = reader.GetString("message"),
+            Type      = reader.GetInt32("type"),
+            IsRead    = reader.GetBoolean("is_read"),
+            CreatedAt = reader.GetDateTime("created_at")
+        });
+    }
+    return Results.Ok(items);
+});
+
+// POST /users/{userId}/notifications — Inserts a notification into the database.
+// ON DUPLICATE KEY UPDATE is a no-op, making this safe to retry (idempotent).
+app.MapPost("/users/{userId:int}/notifications", async (int userId, IConfiguration configuration, NotificationDto dto) =>
+{
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrWhiteSpace(connectionString))
+        return Results.Problem("Connection string niet gevonden.");
+
+    try
+    {
+        await using var connection = new MySqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        const string sql = """
+            INSERT INTO notifications (id, user_id, title, message, type, is_read, created_at)
+            VALUES (@id, @userId, @title, @message, @type, 0, @createdAt)
+            ON DUPLICATE KEY UPDATE id = id
+            """;
+        await using var cmd = new MySqlCommand(sql, connection);
+        cmd.Parameters.AddWithValue("@id", dto.Id);
+        cmd.Parameters.AddWithValue("@userId", userId);
+        cmd.Parameters.AddWithValue("@title", dto.Title);
+        cmd.Parameters.AddWithValue("@message", dto.Message);
+        cmd.Parameters.AddWithValue("@type", dto.Type);
+        cmd.Parameters.AddWithValue("@createdAt", dto.CreatedAt);
+        await cmd.ExecuteNonQueryAsync();
+
+        return Results.Ok(new { success = true });
+    }
+    catch (Exception ex)
+    {
+        System.Diagnostics.Debug.WriteLine($"Error saving notification: {ex.Message}");
+        return Results.Problem("Fout bij opslaan notificatie.");
+    }
+});
+
+// PUT /users/{userId}/notifications/mark-all-read — Sets is_read=1 for all of
+// the user's notifications. Called when the user opens the notifications page.
+app.MapPut("/users/{userId:int}/notifications/mark-all-read", async (int userId, IConfiguration configuration) =>
+{
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrWhiteSpace(connectionString))
+        return Results.Problem("Connection string niet gevonden.");
+
+    await using var connection = new MySqlConnection(connectionString);
+    await connection.OpenAsync();
+    const string sql = "UPDATE notifications SET is_read = 1 WHERE user_id = @userId";
+    await using var cmd = new MySqlCommand(sql, connection);
+    cmd.Parameters.AddWithValue("@userId", userId);
+    await cmd.ExecuteNonQueryAsync();
+    return Results.Ok(new { success = true });
+});
+
 app.Run();
 
-// DTO's for authentication - must be declared after app.Run() for top-level statements
+// ── DTOs ─────────────────────────────────────────────────────────────────────
+// Data Transfer Objects used by the Minimal API endpoints.
+// JsonPropertyName attributes control the camelCase JSON keys returned to clients.
+
+// Request body for POST /auth/login
 public class LoginRequestDto
 {
     [JsonPropertyName("email")]
@@ -1450,6 +1646,17 @@ public class ChangeBillingCycleRequestDto
     public bool IsYearly { get; set; }
 }
 
+// Strongly-typed DTO for the three dropdown endpoints (workouts / locations / instructors).
+// Must be a named class — anonymous types are serialised as empty objects {} by System.Text.Json.
+public class DropdownItemDto
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+}
+
 public class UserLessonDto
 {
     [JsonPropertyName("id")]
@@ -1493,4 +1700,26 @@ public class AddMemberDto
 {
     [JsonPropertyName("userId")]
     public int UserId { get; set; }
+}
+
+// DTO for the notification endpoints — used for both read (GET) and write (POST) operations.
+public class NotificationDto
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+
+    [JsonPropertyName("title")]
+    public string Title { get; set; } = string.Empty;
+
+    [JsonPropertyName("message")]
+    public string Message { get; set; } = string.Empty;
+
+    [JsonPropertyName("type")]
+    public int Type { get; set; }
+
+    [JsonPropertyName("isRead")]
+    public bool IsRead { get; set; }
+
+    [JsonPropertyName("createdAt")]
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
 }

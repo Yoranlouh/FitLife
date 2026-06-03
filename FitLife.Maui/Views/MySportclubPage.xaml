@@ -6,39 +6,70 @@
              BackgroundColor="White"
              Title="Mijn Sportclub">
 
-    <Grid RowDefinitions="Auto, *">
+    <Grid RowDefinitions="Auto, Auto, *">
+
+        <!-- Header -->
         <Grid Grid.Row="0"
               Style="{StaticResource HeaderGrid}"
-              ColumnDefinitions="Auto, *"
               Padding="10,8">
-            <ImageButton Source="back_icon.png"
-                         WidthRequest="20" HeightRequest="20"
-                         VerticalOptions="Center"
-                         Clicked="OnBackToHomeClicked" />
-            <Label Grid.Column="1"
-                   Text="Mijn Sportclub"
+            <Button Text="&lt;"
+                    TextColor="{StaticResource White}"
+                    BackgroundColor="Transparent"
+                    FontSize="24"
+                    FontAttributes="Bold"
+                    Padding="0"
+                    VerticalOptions="Center"
+                    WidthRequest="44"
+                    HorizontalOptions="Start"
+                    Clicked="OnBackClicked" />
+            <Label Text="Mijn Sportclub"
                    Style="{StaticResource HeaderTitle}"
-                   FontSize="18" />
+                   FontSize="18"
+                   HorizontalOptions="Center" />
         </Grid>
 
-        <VerticalStackLayout Grid.Row="1"
-                             VerticalOptions="Center"
-                             HorizontalOptions="Center"
-                             Spacing="20"
-                             Padding="40">
-            <Image Source="icon_sportclub.svg"
-                   WidthRequest="72" HeightRequest="72"
-                   HorizontalOptions="Center" />
-            <Label Text="Mijn Sportclub"
-                   FontSize="22"
-                   FontAttributes="Bold"
-                   HorizontalOptions="Center"
-                   TextColor="{StaticResource Tertiary}" />
-            <Label Text="Deze functie wordt binnenkort toegevoegd."
-                   FontSize="15"
-                   TextColor="Gray"
-                   HorizontalOptions="Center"
-                   HorizontalTextAlignment="Center" />
-        </VerticalStackLayout>
+        <!-- Info balk -->
+        <Border Grid.Row="1"
+                BackgroundColor="White"
+                StrokeThickness="0"
+                Padding="16,12">
+            <Border.Shadow>
+                <Shadow Brush="Black" Offset="0,2" Radius="6" Opacity="0.08" />
+            </Border.Shadow>
+            <Grid ColumnDefinitions="*, Auto" ColumnSpacing="12">
+                <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="2">
+                    <Label Text="FitLife"
+                           FontSize="16"
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource Tertiary}" />
+                    <Label Text="Hogeschoollaan 1, 4818 CR Breda"
+                           FontSize="13"
+                           TextColor="{StaticResource Gray500}" />
+                </VerticalStackLayout>
+
+                <Border Grid.Column="1"
+                        BackgroundColor="{StaticResource Primary}"
+                        StrokeThickness="0"
+                        Padding="12,8"
+                        VerticalOptions="Center">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="8" />
+                    </Border.StrokeShape>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnDirectionsTapped" />
+                    </Border.GestureRecognizers>
+                    <Label Text="Routebeschrijving"
+                           TextColor="White"
+                           FontSize="13"
+                           FontAttributes="Bold"
+                           InputTransparent="True" />
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Google Maps WebView -->
+        <WebView Grid.Row="2"
+                 x:Name="MapView" />
+
     </Grid>
 </ContentPage>

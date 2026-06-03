@@ -3,7 +3,6 @@
 @attribute [Authorize(Roles = "employee,instructor")]
 @inject IWorkoutService WorkoutService
 @inject Blazored.Toast.Services.IToastService ToastService
-@inject IJSRuntime JSRuntime
 
 <PageTitle>Workouts Beheer - FitLife Admin</PageTitle>
 
@@ -33,14 +32,17 @@
             @foreach (var workout in _workouts)
             {
                 <div class="col-md-6 col-lg-4">
-                    <div class="card shadow-sm h-100">
+                    <div class="card shadow-sm h-100" style="border-top: 4px solid @workout.Color">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-3">
                                 <div>
-                                    <h5 class="card-title fw-bold">@workout.Name</h5>
-                                    <span class="badge bg-info">Max @workout.DefaultCapacity pers.</span>
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <div style="width:18px;height:18px;border-radius:5px;background:@workout.Color;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.25)"></div>
+                                        <h5 class="card-title fw-bold mb-0">@workout.Name</h5>
+                                    </div>
+                                    <span class="badge bg-secondary">Max @workout.DefaultCapacity pers.</span>
                                 </div>
-                                <i class="bi bi-lightning-charge-fill fs-1 text-warning opacity-50"></i>
+                                <i class="bi bi-lightning-charge-fill fs-1" style="color:@workout.Color;opacity:.2"></i>
                             </div>
 
                             @if (!string.IsNullOrEmpty(workout.Description))
@@ -48,7 +50,7 @@
                                 <p class="card-text text-muted small mb-3">@workout.Description</p>
                             }
 
-                            <div class="alert alert-light mb-3">
+                            <div class="alert alert-light mb-3 py-2">
                                 <i class="bi bi-calendar-check me-2"></i>
                                 <strong>@workout.TotalLessons</strong> geplande lessen
                             </div>
@@ -57,7 +59,7 @@
                                 <button class="btn btn-outline-primary btn-sm" @onclick="() => OpenEditModal(workout)">
                                     <i class="bi bi-pencil me-1"></i>Bewerken
                                 </button>
-                                <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteWorkout(workout.Id)">
+                                <button class="btn btn-outline-danger btn-sm" @onclick="() => ConfirmDelete(workout)">
                                     <i class="bi bi-trash me-1"></i>Verwijderen
                                 </button>
                             </div>
@@ -79,40 +81,171 @@
 @if (_showModal)
 {
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">@(_editingWorkout.Id == 0 ? "Nieuwe Workout Aanmaken" : "Workout Bewerken")</h5>
+                <div class="modal-header" style="border-bottom: 3px solid @_editingWorkout.Color">
+                    <div class="d-flex align-items-center gap-2">
+                        <div style="width:20px;height:20px;border-radius:5px;background:@_editingWorkout.Color;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>
+                        <h5 class="modal-title mb-0">@(_editingWorkout.Id == 0 ? "Nieuwe Workout Aanmaken" : "Workout Bewerken")</h5>
+                    </div>
                     <button type="button" class="btn-close" @onclick="CloseModal"></button>
                 </div>
                 <div class="modal-body">
                     <EditForm Model="@_editingWorkout" OnValidSubmit="SaveWorkout">
                         <DataAnnotationsValidator />
 
-                        <div class="mb-3">
-                            <label class="form-label">Naam *</label>
-                            <InputText @bind-Value="_editingWorkout.Name" class="form-control" placeholder="Yoga, Spinning, CrossFit..." />
-                            <ValidationMessage For="@(() => _editingWorkout.Name)" />
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Naam *</label>
+                                    <InputText @bind-Value="_editingWorkout.Name" class="form-control" placeholder="Yoga, Spinning, CrossFit..." />
+                                    <ValidationMessage For="@(() => _editingWorkout.Name)" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Beschrijving</label>
+                                    <InputTextArea @bind-Value="_editingWorkout.Description" class="form-control" rows="3" placeholder="Korte beschrijving van de workout..." />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Standaard Capaciteit *</label>
+                                    <InputNumber @bind-Value="_editingWorkout.DefaultCapacity" class="form-control" />
+                                    <ValidationMessage For="@(() => _editingWorkout.DefaultCapacity)" />
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <!-- Live preview kaart -->
+                                <label class="form-label fw-semibold">Voorbeeld in app</label>
+                                <div class="border rounded overflow-hidden" style="border-top: 4px solid @_editingWorkout.Color !important">
+                                    <div class="p-3">
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            <div style="width:40px;height:40px;border-radius:8px;background:@_editingWorkout.Color;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:13px;flex-shrink:0">
+                                                @(string.IsNullOrEmpty(_editingWorkout.Name) ? "?" : _editingWorkout.Name.Substring(0, Math.Min(2, _editingWorkout.Name.Length)).ToUpper())
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold small">@(string.IsNullOrEmpty(_editingWorkout.Name) ? "Naam workout" : _editingWorkout.Name)</div>
+                                                <div class="text-muted" style="font-size:.7rem">09:00 – 10:00</div>
+                                            </div>
+                                        </div>
+                                        <div class="text-muted small">
+                                            <i class="bi bi-people me-1"></i>12 / @_editingWorkout.DefaultCapacity
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
+                        <!-- ─── Color picker ─── -->
                         <div class="mb-3">
-                            <label class="form-label">Beschrijving</label>
-                            <InputTextArea @bind-Value="_editingWorkout.Description" class="form-control" rows="3" placeholder="Korte beschrijving van de workout..." />
+                            <label class="form-label fw-semibold">
+                                Kleur
+                                <small class="text-muted fw-normal ms-1">— zichtbaar in de MAUI week- en lessenweergave</small>
+                            </label>
+
+                            <div class="border rounded p-3">
+
+                                <!-- Palette: gegroepeerd in rijen -->
+                                @foreach (var (label, row) in _colorPalette)
+                                {
+                                    <div class="mb-2">
+                                        <small class="text-muted d-block mb-1" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.06em">@label</small>
+                                        <div style="display:flex;gap:6px;flex-wrap:nowrap;">
+                                            @foreach (var hex in row)
+                                            {
+                                                var isSelected = string.Equals(_editingWorkout.Color, hex, StringComparison.OrdinalIgnoreCase);
+                                                <button type="button"
+                                                        style="width:32px;height:32px;border-radius:7px;background:@hex;border:@(isSelected ? "3px solid #1a1a1a" : "2px solid transparent");cursor:pointer;flex-shrink:0;position:relative;transition:transform .1s;box-shadow:@(isSelected ? "0 0 0 1px white inset" : "0 1px 3px rgba(0,0,0,.2)")"
+                                                        @onclick="() => SelectColor(hex)"
+                                                        title="@hex">
+                                                    @if (isSelected)
+                                                    {
+                                                        <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:white;font-size:14px;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.8)">✓</span>
+                                                    }
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+
+                                <hr class="my-2" />
+
+                                <!-- Geselecteerde kleur + hex invoer -->
+                                <div class="d-flex align-items-center gap-3">
+                                    <div style="width:48px;height:48px;border-radius:10px;background:@_editingWorkout.Color;box-shadow:0 2px 8px rgba(0,0,0,.25);flex-shrink:0"></div>
+                                    <div>
+                                        <div class="fw-semibold" style="font-size:.85rem">Geselecteerde kleur</div>
+                                        <div class="input-group input-group-sm mt-1" style="width:160px">
+                                            <span class="input-group-text font-monospace">#</span>
+                                            <input type="text"
+                                                   class="form-control form-control-sm font-monospace text-uppercase"
+                                                   value="@_hexInputValue"
+                                                   @oninput="OnHexInput"
+                                                   maxlength="6"
+                                                   placeholder="5B6636"
+                                                   style="letter-spacing:.05em" />
+                                        </div>
+                                    </div>
+                                    <div class="ms-auto text-end">
+                                        <small class="text-muted d-block" style="font-size:.7rem">Agenda (week)</small>
+                                        <div style="width:36px;height:36px;border-radius:6px;background:@_editingWorkout.Color;margin-left:auto"></div>
+                                    </div>
+                                    <div class="text-end">
+                                        <small class="text-muted d-block" style="font-size:.7rem">Lessenlijst</small>
+                                        <div style="width:36px;height:36px;border-radius:6px;background:@_editingWorkout.Color;display:flex;align-items:center;justify-content:center;color:white;font-size:9px;font-weight:700">9/15</div>
+                                    </div>
+                                </div>
+
+                            </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">Standaard Capaciteit *</label>
-                            <InputNumber @bind-Value="_editingWorkout.DefaultCapacity" class="form-control" />
-                            <ValidationMessage For="@(() => _editingWorkout.DefaultCapacity)" />
-                        </div>
-
-                        <div class="modal-footer">
+                        <div class="modal-footer px-0 pb-0">
                             <button type="button" class="btn btn-secondary" @onclick="CloseModal">Annuleren</button>
                             <button type="submit" class="btn btn-primary" disabled="@_isSaving">
-                                @(_isSaving ? "Opslaan..." : "Opslaan")
+                                @if (_isSaving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                Opslaan
                             </button>
                         </div>
                     </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showDeleteConfirm && _deleteTarget != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title text-danger">
+                        <i class="bi bi-trash me-2"></i>Workout verwijderen
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseDeleteConfirm"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Weet je zeker dat je <strong>@_deleteTarget.Name</strong> wilt verwijderen?</p>
+                    @if (_deleteTarget.TotalLessons > 0)
+                    {
+                        <div class="alert alert-danger py-2 small mb-0">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                            Dit verwijdert ook <strong>@_deleteTarget.TotalLessons les(sen)</strong> en alle bijbehorende reserveringen permanent.
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer border-0">
+                    <button class="btn btn-secondary btn-sm" @onclick="CloseDeleteConfirm" disabled="@_isDeleting">Annuleren</button>
+                    <button class="btn btn-danger btn-sm" @onclick="ExecuteDelete" disabled="@_isDeleting">
+                        @if (_isDeleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        Verwijderen
+                    </button>
                 </div>
             </div>
         </div>
@@ -123,20 +256,28 @@
     private List<WorkoutDto> _workouts = new();
     private bool _isLoading = true;
     private bool _isSaving = false;
+    private bool _isDeleting = false;
     private bool _showModal = false;
+    private bool _showDeleteConfirm = false;
     private WorkoutDto _editingWorkout = new();
+    private WorkoutDto? _deleteTarget = null;
+    private string _hexInputValue = "5B6636";
 
-    /// <summary>
-    /// Loads all workouts when component initializes
-    /// </summary>
+    // Kleuren gegroepeerd per categorie (label + lijst hex waarden)
+    private static readonly List<(string Label, List<string> Colors)> _colorPalette = new()
+    {
+        ("Groen & Olijf", new() { "#1B5E20", "#2E7D32", "#388E3C", "#4CAF50", "#66BB6A", "#5B6636", "#6B7B3C", "#8BC34A", "#CDDC39", "#AED581" }),
+        ("Blauw & Teal",  new() { "#0D47A1", "#1565C0", "#1976D2", "#2196F3", "#42A5F5", "#006064", "#00796B", "#009688", "#00BCD4", "#4DD0E1" }),
+        ("Rood & Oranje", new() { "#B71C1C", "#C62828", "#E53935", "#F44336", "#EF5350", "#BF360C", "#E64A19", "#FF5722", "#E07850", "#FF9800" }),
+        ("Paars & Roze",  new() { "#4A148C", "#6A1B9A", "#7B1FA2", "#9C27B0", "#AB47BC", "#880E4F", "#AD1457", "#C2185B", "#E91E63", "#EC407A" }),
+        ("Goud & Neutraal",new(){ "#F57F17", "#F9A825", "#FBC02D", "#FFEB3B", "#FFF176", "#4E342E", "#6D4C41", "#795548", "#546E7A", "#37474F" }),
+    };
+
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
     }
 
-    /// <summary>
-    /// Loads workouts from the database
-    /// </summary>
     private async Task LoadData()
     {
         _isLoading = true;
@@ -155,18 +296,13 @@
         }
     }
 
-    /// <summary>
-    /// Opens modal for creating a new workout
-    /// </summary>
     private void OpenCreateModal()
     {
-        _editingWorkout = new WorkoutDto { DefaultCapacity = 15 };
+        _editingWorkout = new WorkoutDto { DefaultCapacity = 15, Color = "#5B6636" };
+        _hexInputValue = "5B6636";
         _showModal = true;
     }
 
-    /// <summary>
-    /// Opens modal for editing an existing workout
-    /// </summary>
     private void OpenEditModal(WorkoutDto workout)
     {
         _editingWorkout = new WorkoutDto
@@ -174,23 +310,33 @@
             Id = workout.Id,
             Name = workout.Name,
             Description = workout.Description,
-            DefaultCapacity = workout.DefaultCapacity
+            DefaultCapacity = workout.DefaultCapacity,
+            Color = workout.Color
         };
+        _hexInputValue = workout.Color.TrimStart('#');
         _showModal = true;
     }
 
-    /// <summary>
-    /// Closes the modal and resets state
-    /// </summary>
+    private void SelectColor(string hex)
+    {
+        _editingWorkout.Color = hex;
+        _hexInputValue = hex.TrimStart('#');
+    }
+
+    private void OnHexInput(ChangeEventArgs e)
+    {
+        var raw = (e.Value?.ToString() ?? "").Trim().TrimStart('#').ToUpper();
+        _hexInputValue = raw;
+        if (raw.Length == 6 && raw.All(ch => Uri.IsHexDigit(ch)))
+            _editingWorkout.Color = "#" + raw;
+    }
+
     private void CloseModal()
     {
         _showModal = false;
         _editingWorkout = new();
     }
 
-    /// <summary>
-    /// Saves workout (create or update) to database
-    /// </summary>
     private async Task SaveWorkout()
     {
         _isSaving = true;
@@ -222,16 +368,28 @@
         }
     }
 
-    /// <summary>
-    /// Deletes a workout after validation
-    /// </summary>
-    private async Task DeleteWorkout(int workoutId)
+    private void ConfirmDelete(WorkoutDto workout)
     {
-        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Weet je zeker dat je deze workout wilt verwijderen?"))
-            return;
+        _deleteTarget = workout;
+        _showDeleteConfirm = true;
+    }
 
-        var (success, message) = await WorkoutService.DeleteWorkoutAsync(workoutId);
-        
+    private void CloseDeleteConfirm()
+    {
+        _showDeleteConfirm = false;
+        _deleteTarget = null;
+    }
+
+    private async Task ExecuteDelete()
+    {
+        if (_deleteTarget == null) return;
+        var id = _deleteTarget.Id;
+        _isDeleting = true;
+        var (success, message) = await WorkoutService.DeleteWorkoutAsync(id);
+        _isDeleting = false;
+        CloseDeleteConfirm();
+        StateHasChanged();
+
         if (success)
         {
             ToastService.ShowSuccess(message);

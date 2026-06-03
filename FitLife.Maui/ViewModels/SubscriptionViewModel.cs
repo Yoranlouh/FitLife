@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FitLife.Maui.Services;
+using Microsoft.Maui.Storage;
 
 namespace FitLife.Maui.ViewModels;
 
@@ -11,8 +12,9 @@ namespace FitLife.Maui.ViewModels;
 /// </summary>
 public partial class SubscriptionViewModel : BaseViewModel
 {
-    private readonly ISubscriptionService _subscriptionService;
+    private readonly ISubscriptionService   _subscriptionService;
     private readonly IAuthenticationService _authService;
+    private readonly INotificationService   _notificationService;
 
     // Current subscription information
     [ObservableProperty]
@@ -38,10 +40,13 @@ public partial class SubscriptionViewModel : BaseViewModel
     // Available subscription plans loaded from API
     public ObservableCollection<SubscriptionOption> AvailableSubscriptions { get; } = new();
 
-    public SubscriptionViewModel(ISubscriptionService subscriptionService, IAuthenticationService authService)
+    public SubscriptionViewModel(ISubscriptionService subscriptionService,
+                                 IAuthenticationService authService,
+                                 INotificationService notificationService)
     {
         _subscriptionService = subscriptionService;
-        _authService = authService;
+        _authService         = authService;
+        _notificationService = notificationService;
         Title = "Abonnement Beheren";
     }
 
@@ -112,7 +117,28 @@ public partial class SubscriptionViewModel : BaseViewModel
                 HasPendingChange = false;
                 PendingChangeMessage = string.Empty;
             }
+
+            CheckExpiryNotification();
         }
+    }
+
+    private void CheckExpiryNotification()
+    {
+        if (ExpiryDate == null) return;
+
+        var daysLeft = (ExpiryDate.Value.Date - DateTime.Today).Days;
+        if (daysLeft < 0 || daysLeft > 7) return;
+
+        // Maximaal één keer per dag notificeren
+        var lastNotified = Preferences.Get("sub_expiry_notified", "");
+        var todayStr     = DateTime.Today.ToString("yyyy-MM-dd");
+        if (lastNotified == todayStr) return;
+
+        Preferences.Set("sub_expiry_notified", todayStr);
+        _notificationService.Add(
+            "Abonnement verloopt bijna",
+            $"Je {CurrentSubscription} abonnement verloopt op {ExpiryDate.Value:d MMMM yyyy}. Verleng op tijd om te blijven sporten.",
+            NotificationType.SubscriptionExpiring);
     }
 
     /// <summary>
@@ -198,7 +224,8 @@ public partial class SubscriptionViewModel : BaseViewModel
 
             if (result.Success)
             {
-                await Application.Current.MainPage.DisplayAlert("Gelukt!", result.Message, "OK");
+                var message = $"{result.Message}\n\nHet eventuele resterende saldo van je huidige abonnement wordt automatisch verrekend bij de eerstvolgende automatische incasso.";
+                await Application.Current.MainPage.DisplayAlert("Gelukt!", message, "OK");
 
                 // Reload subscription status to show the pending change
                 await LoadSubscriptionStatusAsync();

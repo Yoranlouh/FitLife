@@ -5,125 +5,290 @@
              x:Class="FitLife.Maui.Views.ManageLessonPage"
              x:DataType="vm:ManageLessonViewModel"
              Shell.NavBarIsVisible="False"
-             BackgroundColor="White"
+             BackgroundColor="{StaticResource LightGray}"
              Title="{Binding Title}">
 
     <Grid RowDefinitions="Auto, *">
+
+        <!-- Header -->
         <Grid Grid.Row="0"
               Style="{StaticResource HeaderGrid}"
-              ColumnDefinitions="Auto, *"
               Padding="10,8">
-            <ImageButton Source="back_icon.png"
-                         WidthRequest="20" HeightRequest="20"
-                         VerticalOptions="Center"
-                         Clicked="OnBackToHomeClicked" />
-            <Label Grid.Column="1"
-                   Text="{Binding Title}"
+            <Button Text="&lt;"
+                    TextColor="{StaticResource White}"
+                    BackgroundColor="Transparent"
+                    FontSize="24"
+                    FontAttributes="Bold"
+                    Padding="0"
+                    VerticalOptions="Center"
+                    WidthRequest="44"
+                    HorizontalOptions="Start"
+                    Clicked="OnBackClicked" />
+            <Label Text="{Binding Title}"
                    Style="{StaticResource HeaderTitle}"
-                   FontSize="18" />
+                   FontSize="18"
+                   HorizontalOptions="Center" />
         </Grid>
+
         <ScrollView Grid.Row="1">
-            <VerticalStackLayout Padding="20" Spacing="16">
+            <VerticalStackLayout Padding="16,20,16,40" Spacing="20">
 
-                <!-- Workout type -->
-                <Label Text="Workout Type" FontAttributes="Bold" FontSize="14" TextColor="#333" />
-                <Picker Title="Selecteer workout..."
-                        ItemsSource="{Binding Workouts}"
-                        ItemDisplayBinding="{Binding Name}"
-                        SelectedItem="{Binding SelectedWorkout}"
-                        BackgroundColor="White" />
+                <!-- Laden-indicator tekst -->
+                <Label Text="Gegevens laden..."
+                       FontSize="14"
+                       TextColor="{StaticResource Gray500}"
+                       HorizontalOptions="Center"
+                       IsVisible="{Binding IsBusy}" />
 
-                <!-- Datum -->
-                <Label Text="Datum" FontAttributes="Bold" FontSize="14" TextColor="#333" />
-                <DatePicker Date="{Binding StartDate}"
-                            Format="dd-MM-yyyy"
-                            BackgroundColor="White" />
-
-                <!-- Begintijd -->
-                <Label Text="Begintijd" FontAttributes="Bold" FontSize="14" TextColor="#333" />
-                <TimePicker Time="{Binding StartTime}"
-                            Format="HH:mm"
-                            BackgroundColor="White" />
-
-                <!-- Eindtijd -->
-                <Label Text="Eindtijd" FontAttributes="Bold" FontSize="14" TextColor="#333" />
-                <TimePicker Time="{Binding EndTime}"
-                            Format="HH:mm"
-                            BackgroundColor="White" />
-
-                <!-- Max deelnemers -->
-                <Label Text="Max. deelnemers" FontAttributes="Bold" FontSize="14" TextColor="#333" />
-                <Entry Keyboard="Numeric"
-                       Text="{Binding MaxParticipants}"
-                       Placeholder="bijv. 15"
-                       BackgroundColor="White" />
-
-                <!-- Locatie/Zaal -->
-                <Label Text="Locatie / Zaal" FontAttributes="Bold" FontSize="14" TextColor="#333" />
-                <Picker Title="Selecteer locatie..."
-                        ItemsSource="{Binding Locations}"
-                        ItemDisplayBinding="{Binding Name}"
-                        SelectedItem="{Binding SelectedLocation}"
-                        BackgroundColor="White" />
-
-                <!-- Instructeur (alleen voor admin) -->
-                <VerticalStackLayout IsVisible="{Binding IsAdmin}" Spacing="8">
-                    <Label Text="Instructeur" FontAttributes="Bold" FontSize="14" TextColor="#333" />
-                    <Picker Title="Selecteer instructeur..."
-                            ItemsSource="{Binding Instructors}"
-                            ItemDisplayBinding="{Binding Name}"
-                            SelectedItem="{Binding SelectedInstructor}"
-                            BackgroundColor="White" />
+                <!-- ── Workout ── -->
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="WORKOUT TYPE"
+                           FontSize="11" FontAttributes="Bold"
+                           CharacterSpacing="1.5"
+                           TextColor="{StaticResource Gray500}"
+                           Margin="2,0,0,0" />
+                    <Border BackgroundColor="White" StrokeThickness="0">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="12"/></Border.StrokeShape>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding SelectWorkoutCommand}" />
+                        </Border.GestureRecognizers>
+                        <Grid ColumnDefinitions="*, Auto" Padding="16,15">
+                            <Label Grid.Column="0"
+                                   Text="{Binding SelectedWorkoutName}"
+                                   FontSize="15"
+                                   VerticalOptions="Center">
+                                <Label.Triggers>
+                                    <DataTrigger TargetType="Label"
+                                                 Binding="{Binding SelectedWorkout}"
+                                                 Value="{x:Null}">
+                                        <Setter Property="TextColor" Value="{StaticResource Gray400}" />
+                                    </DataTrigger>
+                                </Label.Triggers>
+                            </Label>
+                            <Label Grid.Column="1"
+                                   Text="›"
+                                   FontSize="20"
+                                   TextColor="{StaticResource Gray400}"
+                                   VerticalOptions="Center" />
+                        </Grid>
+                    </Border>
                 </VerticalStackLayout>
 
-                <!-- Instructeur weergave (trainer ziet zichzelf) -->
-                <VerticalStackLayout IsVisible="{Binding IsAdmin, Converter={StaticResource InvertedBoolConverter}}" Spacing="4">
-                    <Label Text="Instructeur" FontAttributes="Bold" FontSize="14" TextColor="#333" />
-                    <Label Text="{Binding SelectedInstructor.Name, FallbackValue='Jij (als trainer)'}"
-                           FontSize="14"
-                           TextColor="#5B6636" />
+                <!-- ── Datum ── -->
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="DATUM"
+                           FontSize="11" FontAttributes="Bold"
+                           CharacterSpacing="1.5"
+                           TextColor="{StaticResource Gray500}"
+                           Margin="2,0,0,0" />
+                    <Border BackgroundColor="White" StrokeThickness="0" Padding="16,6">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="12"/></Border.StrokeShape>
+                        <DatePicker Date="{Binding StartDate}"
+                                    Format="dd-MM-yyyy"
+                                    TextColor="{StaticResource Tertiary}"
+                                    FontSize="15"
+                                    BackgroundColor="Transparent" />
+                    </Border>
                 </VerticalStackLayout>
 
-                <!-- Statusbericht -->
-                <Label Text="{Binding StatusMessage}"
-                       IsVisible="{Binding StatusMessage, Converter={StaticResource StringNotEmptyConverter}}"
-                       TextColor="#D32F2F"
-                       FontSize="13"
-                       HorizontalTextAlignment="Center" />
+                <!-- ── Begin- en eindtijd ── -->
+                <Grid ColumnDefinitions="*, 16, *">
+                    <VerticalStackLayout Grid.Column="0" Spacing="6">
+                        <Label Text="BEGINTIJD"
+                               FontSize="11" FontAttributes="Bold"
+                               CharacterSpacing="1.5"
+                               TextColor="{StaticResource Gray500}"
+                               Margin="2,0,0,0" />
+                        <Border BackgroundColor="White" StrokeThickness="0" Padding="16,6">
+                            <Border.StrokeShape><RoundRectangle CornerRadius="12"/></Border.StrokeShape>
+                            <TimePicker Time="{Binding StartTime}"
+                                        Format="HH:mm"
+                                        TextColor="{StaticResource Tertiary}"
+                                        FontSize="15"
+                                        BackgroundColor="Transparent" />
+                        </Border>
+                    </VerticalStackLayout>
 
-                <!-- Opslaan knop -->
-                <Button Text="{Binding SaveButtonText}"
-                        Command="{Binding SaveLessonCommand}"
-                        BackgroundColor="#5B6636"
-                        TextColor="White"
-                        FontAttributes="Bold"
-                        CornerRadius="10"
-                        HeightRequest="50"
-                        Margin="0,8,0,0" />
+                    <VerticalStackLayout Grid.Column="2" Spacing="6">
+                        <Label Text="EINDTIJD"
+                               FontSize="11" FontAttributes="Bold"
+                               CharacterSpacing="1.5"
+                               TextColor="{StaticResource Gray500}"
+                               Margin="2,0,0,0" />
+                        <Border BackgroundColor="White" StrokeThickness="0" Padding="16,6">
+                            <Border.StrokeShape><RoundRectangle CornerRadius="12"/></Border.StrokeShape>
+                            <TimePicker Time="{Binding EndTime}"
+                                        Format="HH:mm"
+                                        TextColor="{StaticResource Tertiary}"
+                                        FontSize="15"
+                                        BackgroundColor="Transparent" />
+                        </Border>
+                    </VerticalStackLayout>
+                </Grid>
 
-                <!-- Lid toevoegen sectie (alleen bij bewerkingsmodus) -->
-                <VerticalStackLayout IsVisible="{Binding IsEditMode}" Spacing="10" Margin="0,16,0,0">
-                    <BoxView HeightRequest="1" Color="#E0E0E0" />
-                    <Label Text="Lid Toevoegen aan Les"
-                           FontAttributes="Bold"
+                <!-- ── Max deelnemers ── -->
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="MAX. DEELNEMERS"
+                           FontSize="11" FontAttributes="Bold"
+                           CharacterSpacing="1.5"
+                           TextColor="{StaticResource Gray500}"
+                           Margin="2,0,0,0" />
+                    <Border BackgroundColor="White" StrokeThickness="0" Padding="16,4">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="12"/></Border.StrokeShape>
+                        <Entry Keyboard="Numeric"
+                               Text="{Binding MaxParticipants}"
+                               Placeholder="bijv. 15"
+                               TextColor="{StaticResource Tertiary}"
+                               FontSize="15"
+                               PlaceholderColor="{StaticResource Gray400}"
+                               BackgroundColor="Transparent" />
+                    </Border>
+                </VerticalStackLayout>
+
+                <!-- ── Locatie ── -->
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="LOCATIE / ZAAL"
+                           FontSize="11" FontAttributes="Bold"
+                           CharacterSpacing="1.5"
+                           TextColor="{StaticResource Gray500}"
+                           Margin="2,0,0,0" />
+                    <Border BackgroundColor="White" StrokeThickness="0">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="12"/></Border.StrokeShape>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding SelectLocationCommand}" />
+                        </Border.GestureRecognizers>
+                        <Grid ColumnDefinitions="*, Auto" Padding="16,15">
+                            <Label Grid.Column="0"
+                                   Text="{Binding SelectedLocationName}"
+                                   FontSize="15"
+                                   VerticalOptions="Center">
+                                <Label.Triggers>
+                                    <DataTrigger TargetType="Label"
+                                                 Binding="{Binding SelectedLocation}"
+                                                 Value="{x:Null}">
+                                        <Setter Property="TextColor" Value="{StaticResource Gray400}" />
+                                    </DataTrigger>
+                                </Label.Triggers>
+                            </Label>
+                            <Label Grid.Column="1"
+                                   Text="›"
+                                   FontSize="20"
+                                   TextColor="{StaticResource Gray400}"
+                                   VerticalOptions="Center" />
+                        </Grid>
+                    </Border>
+                </VerticalStackLayout>
+
+                <!-- ── Instructeur ── -->
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="INSTRUCTEUR"
+                           FontSize="11" FontAttributes="Bold"
+                           CharacterSpacing="1.5"
+                           TextColor="{StaticResource Gray500}"
+                           Margin="2,0,0,0" />
+
+                    <!-- Admin: kies instructeur via popup -->
+                    <Border BackgroundColor="White" StrokeThickness="0"
+                            IsVisible="{Binding IsAdmin}">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="12"/></Border.StrokeShape>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding SelectInstructorCommand}" />
+                        </Border.GestureRecognizers>
+                        <Grid ColumnDefinitions="*, Auto" Padding="16,15">
+                            <Label Grid.Column="0"
+                                   Text="{Binding SelectedInstructorName}"
+                                   FontSize="15"
+                                   VerticalOptions="Center">
+                                <Label.Triggers>
+                                    <DataTrigger TargetType="Label"
+                                                 Binding="{Binding SelectedInstructor}"
+                                                 Value="{x:Null}">
+                                        <Setter Property="TextColor" Value="{StaticResource Gray400}" />
+                                    </DataTrigger>
+                                </Label.Triggers>
+                            </Label>
+                            <Label Grid.Column="1"
+                                   Text="›"
+                                   FontSize="20"
+                                   TextColor="{StaticResource Gray400}"
+                                   VerticalOptions="Center" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Trainer: zichzelf (alleen-lezen) -->
+                    <Border BackgroundColor="White" StrokeThickness="0"
+                            IsVisible="{Binding IsAdmin, Converter={StaticResource InvertedBoolConverter}}">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="12"/></Border.StrokeShape>
+                        <Grid ColumnDefinitions="*, Auto" Padding="16,15">
+                            <Label Grid.Column="0"
+                                   Text="{Binding SelectedInstructorName}"
+                                   FontSize="15"
+                                   TextColor="{StaticResource Primary}"
+                                   FontAttributes="Bold"
+                                   VerticalOptions="Center" />
+                            <Label Grid.Column="1"
+                                   Text="🔒"
+                                   FontSize="14"
+                                   TextColor="{StaticResource Gray400}"
+                                   VerticalOptions="Center" />
+                        </Grid>
+                    </Border>
+                </VerticalStackLayout>
+
+                <!-- ── Statusbericht ── -->
+                <Border BackgroundColor="#FFF3CD" StrokeThickness="0" Padding="14,10"
+                        IsVisible="{Binding StatusMessage, Converter={StaticResource StringNotEmptyConverter}}">
+                    <Border.StrokeShape><RoundRectangle CornerRadius="8"/></Border.StrokeShape>
+                    <Label Text="{Binding StatusMessage}"
+                           TextColor="#856404"
+                           FontSize="13" />
+                </Border>
+
+                <!-- ── Opslaan ── -->
+                <Border BackgroundColor="{StaticResource Primary}" StrokeThickness="0">
+                    <Border.StrokeShape><RoundRectangle CornerRadius="12"/></Border.StrokeShape>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding SaveLessonCommand}" />
+                    </Border.GestureRecognizers>
+                    <Label Text="{Binding SaveButtonText}"
+                           TextColor="White"
                            FontSize="16"
-                           TextColor="#333" />
-                    <Label Text="Voer het gebruikers-ID in van het lid dat je wilt toevoegen:"
-                           FontSize="13"
-                           TextColor="Gray" />
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                        <Entry Grid.Column="0"
-                               Placeholder="Gebruikers-ID"
-                               Keyboard="Numeric"
-                               Text="{Binding AddMemberInput}"
-                               BackgroundColor="White" />
-                        <Button Grid.Column="1"
-                                Text="Toevoegen"
-                                Command="{Binding AddMemberCommand}"
-                                BackgroundColor="#5B6636"
-                                TextColor="White"
-                                CornerRadius="8"
-                                Padding="12,0" />
+                           FontAttributes="Bold"
+                           HorizontalOptions="Center"
+                           Padding="0,16"
+                           InputTransparent="True" />
+                </Border>
+
+                <!-- ── Lid toevoegen (bewerkingsmodus) ── -->
+                <VerticalStackLayout IsVisible="{Binding IsEditMode}" Spacing="12" Margin="0,8,0,0">
+                    <BoxView HeightRequest="1" Color="{StaticResource Gray200}" />
+                    <Label Text="LID TOEVOEGEN AAN LES"
+                           FontSize="11" FontAttributes="Bold"
+                           CharacterSpacing="1.5"
+                           TextColor="{StaticResource Gray500}"
+                           Margin="2,0,0,0" />
+                    <Grid ColumnDefinitions="*, Auto" ColumnSpacing="10">
+                        <Border Grid.Column="0" BackgroundColor="White" StrokeThickness="0" Padding="14,4">
+                            <Border.StrokeShape><RoundRectangle CornerRadius="12"/></Border.StrokeShape>
+                            <Entry Placeholder="Gebruikers-ID"
+                                   Keyboard="Numeric"
+                                   Text="{Binding AddMemberInput}"
+                                   TextColor="{StaticResource Tertiary}"
+                                   PlaceholderColor="{StaticResource Gray400}"
+                                   BackgroundColor="Transparent" />
+                        </Border>
+                        <Border Grid.Column="1" BackgroundColor="{StaticResource Primary}"
+                                StrokeThickness="0" Padding="16,14">
+                            <Border.StrokeShape><RoundRectangle CornerRadius="12"/></Border.StrokeShape>
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding AddMemberCommand}" />
+                            </Border.GestureRecognizers>
+                            <Label Text="Toevoegen"
+                                   TextColor="White"
+                                   FontSize="14"
+                                   FontAttributes="Bold"
+                                   InputTransparent="True" />
+                        </Border>
                     </Grid>
                 </VerticalStackLayout>
 
@@ -131,14 +296,16 @@
         </ScrollView>
 
         <!-- Loading overlay -->
-        <BoxView IsVisible="{Binding IsBusy}"
+        <BoxView Grid.Row="1"
+                 IsVisible="{Binding IsBusy}"
                  InputTransparent="False"
                  Color="Black"
-                 Opacity="0.25" />
-        <ActivityIndicator IsRunning="{Binding IsBusy}"
+                 Opacity="0.2" />
+        <ActivityIndicator Grid.Row="1"
+                           IsRunning="{Binding IsBusy}"
                            IsVisible="{Binding IsBusy}"
                            HorizontalOptions="Center"
                            VerticalOptions="Center"
-                           Color="#5B6636" />
+                           Color="{StaticResource Primary}" />
     </Grid>
 </ContentPage>
