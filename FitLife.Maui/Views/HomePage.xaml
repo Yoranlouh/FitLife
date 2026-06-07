@@ -170,7 +170,7 @@
                         </Border.GestureRecognizers>
                         <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="14">
                             <Image Source="icon_bookmark.svg" WidthRequest="46" HeightRequest="46" HorizontalOptions="Center" />
-                            <Label Text="Lesrooster"
+                            <Label Text="Mijn Lessen"
                                    FontSize="13" TextColor="{StaticResource Black}"
                                    HorizontalOptions="Center" HorizontalTextAlignment="Center" />
                         </VerticalStackLayout>

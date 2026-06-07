@@ -3,6 +3,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SharedLibrary.DTOs.Responses;
 using System.Globalization;
+using CommunityToolkit.Maui;
+using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Views;
 using FitLife.Maui.Services;
 
@@ -244,7 +246,7 @@ public partial class WeekViewModel : BaseViewModel
             }
         }
         var popup = new Views.LegendPopup(_allWorkouts);
-        await Shell.Current.CurrentPage.ShowPopupAsync(popup);
+        await Shell.Current.Navigation.ShowPopupAsync(popup, PopupOptions.Empty, CancellationToken.None);
     }
 }
 

@@ -3,7 +3,7 @@ using SharedLibrary.DTOs.Responses;
 
 namespace FitLife.Maui.Views;
 
-public partial class MultipleLessonsPopup : Popup
+public partial class MultipleLessonsPopup : Popup<LessonResponse>
 {
     public MultipleLessonsPopup(IEnumerable<LessonResponse> lessons)
     {
@@ -12,11 +12,11 @@ public partial class MultipleLessonsPopup : Popup
         LessonsListView.ItemsSource = lessons;
     }
 
-    private void OnLessonTapped(object? sender, TappedEventArgs e)
+    private async void OnLessonTapped(object? sender, TappedEventArgs e)
     {
         if (e.Parameter is LessonResponse lesson)
         {
-            Close(lesson);
+            await CloseAsync(lesson);
         }
     }
 }

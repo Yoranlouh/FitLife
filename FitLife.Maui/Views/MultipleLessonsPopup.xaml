@@ -5,6 +5,7 @@
            xmlns:models="clr-namespace:SharedLibrary.DTOs.Responses;assembly=SharedLibrary"
            xmlns:converters="clr-namespace:FitLife.Maui.Converters"
            x:Class="FitLife.Maui.Views.MultipleLessonsPopup"
+           x:TypeArguments="models:LessonResponse"
            Color="Transparent">
 
     <toolkit:Popup.Resources>

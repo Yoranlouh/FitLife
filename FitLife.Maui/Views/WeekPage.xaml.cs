@@ -3,6 +3,8 @@ using FitLife.Maui.ViewModels;
 using SharedLibrary.DTOs.Responses;
 using System.Globalization;
 using Microsoft.Maui.Controls.Shapes;
+using CommunityToolkit.Maui;
+using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Views;
 
 namespace FitLife.Maui.Views;
@@ -284,9 +286,9 @@ public partial class WeekPage : ContentPage
                         else
                         {
                             var popup = new MultipleLessonsPopup(lessonsInSlot);
-                            var result = await Shell.Current.CurrentPage.ShowPopupAsync(popup);
+                            var popupResult = await Navigation.ShowPopupAsync<LessonResponse>(popup, PopupOptions.Empty, CancellationToken.None);
 
-                            if (result is LessonResponse selectedLesson)
+                            if (!popupResult.WasDismissedByTappingOutsideOfPopup && popupResult.Result is LessonResponse selectedLesson)
                             {
                                 await viewModel.GoToDetailsCommand.ExecuteAsync(selectedLesson);
                             }
