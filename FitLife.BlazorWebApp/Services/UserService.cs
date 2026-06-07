@@ -53,7 +53,7 @@ public class UserService : IUserService
             sql += " AND u.role = @roleFilter";
         }
 
-        sql += " ORDER BY u.display_name";
+        sql += " ORDER BY u.created_at DESC";
 
         await using var command = new MySqlCommand(sql, connection);
         

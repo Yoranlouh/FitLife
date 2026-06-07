@@ -35,6 +35,12 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
     [NotifyPropertyChangedFor(nameof(ShowReserveButton))]
     private bool _isTooFarInFuture;
 
+    // True when the lesson has already started or is in the past
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowReserveButton))]
+    [NotifyPropertyChangedFor(nameof(ShowExpiredMessage))]
+    private bool _isLessonStartedOrPast;
+
     // True when the lesson starts within 1 hour (cancellation window has closed)
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowCancellationDeadlineWarning))]
@@ -44,8 +50,11 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
     [ObservableProperty]
     private string _reservationOpenDateText = "";
 
-    // The "Reserve" button is only shown when not already reserved AND booking is possible
-    public bool ShowReserveButton => !IsReserved && !IsTooFarInFuture;
+    // The "Reserve" button is only shown when not already reserved, booking window is open, and lesson hasn't started
+    public bool ShowReserveButton => !IsReserved && !IsTooFarInFuture && !IsLessonStartedOrPast;
+
+    // The "Aanmelden niet meer mogelijk" message is shown when the lesson is past/ongoing and user is not registered
+    public bool ShowExpiredMessage => !IsReserved && IsLessonStartedOrPast;
 
     // A warning banner is shown when the cancellation window has passed
     public bool ShowCancellationDeadlineWarning => IsReserved && IsCancellationDeadlinePassed;
@@ -113,6 +122,8 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
             var now = DateTime.Now;
             // Booking opens 7 days before the lesson
             IsTooFarInFuture             = lesson.StartTime > now.AddDays(7);
+            // Lesson has already started or is in the past — booking is no longer allowed
+            IsLessonStartedOrPast        = lesson.StartTime <= now;
             // Cancellation must be done at least 1 hour before start
             IsCancellationDeadlinePassed = lesson.StartTime <= now.AddHours(1);
 
@@ -207,8 +218,8 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
                 // Notify MyLessonsViewModel so it can add this lesson to the upcoming list
                 WeakReferenceMessenger.Default.Send(new LessonReservedMessage(Lesson));
 
-                // Persist a notification so the user sees it in the notifications page
                 _notificationService.Add(
+                    userId.Value,
                     "Aangemeld voor les",
                     $"Je bent ingeschreven voor {Lesson.WorkoutName} op {Lesson.StartTime:d MMMM 'om' HH:mm}.",
                     NotificationType.LessonReserved);
@@ -304,12 +315,25 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
     private async Task JoinWaitlist()
     {
         if (Lesson == null) return;
+
+        var userId = _authenticationService.CurrentUserId;
+        if (userId is null or <= 0)
+        {
+            await Shell.Current.DisplayAlert("Niet ingelogd", "Log opnieuw in.", "OK");
+            return;
+        }
+
         IsOnWaitlist = true;
 
-        _notificationService.Add(
-            "Op de wachtlijst",
-            $"Je staat op de wachtlijst voor {Lesson.WorkoutName} op {Lesson.StartTime:d MMMM 'om' HH:mm}. We laten je weten als er een plek vrijkomt.",
-            NotificationType.Waitlist);
+        // Only members receive a waitlist notification.
+        if (_authenticationService.IsMember)
+        {
+            _notificationService.Add(
+                userId.Value,
+                "Op de wachtlijst",
+                $"Je staat op de wachtlijst voor {Lesson.WorkoutName} op {Lesson.StartTime:d MMMM 'om' HH:mm}. We laten je weten als er een plek vrijkomt.",
+                NotificationType.Waitlist);
+        }
 
         await Shell.Current.DisplayAlert("Wachtlijst", "Je staat nu op de wachtlijst.", "OK");
     }

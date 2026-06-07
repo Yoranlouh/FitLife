@@ -80,7 +80,7 @@
                       RowDefinitions="Auto,Auto"
                       IsVisible="{Binding IsMember}">
 
-                    <!-- Rooster & Events -->
+                    <!-- Rooster -->
                     <Border Grid.Row="0" Grid.Column="0"
                             Stroke="{StaticResource MediumGray}" StrokeThickness="0.5"
                             BackgroundColor="White" HeightRequest="200">
@@ -146,7 +146,7 @@
                       RowDefinitions="Auto,Auto,Auto"
                       IsVisible="{Binding IsInstructor}">
 
-                    <!-- Mijn Lessen Geven -->
+                    <!-- Trainer Rooster -->
                     <Border Grid.Row="0" Grid.Column="0"
                             Stroke="{StaticResource MediumGray}" StrokeThickness="0.5"
                             BackgroundColor="White" HeightRequest="200">
@@ -155,7 +155,7 @@
                         </Border.GestureRecognizers>
                         <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="14">
                             <Image Source="icon_clipboard.svg" WidthRequest="46" HeightRequest="46" HorizontalOptions="Center" />
-                            <Label Text="Mijn Lessen Geven"
+                            <Label Text="Trainer Rooster"
                                    FontSize="13" TextColor="{StaticResource Black}"
                                    HorizontalOptions="Center" HorizontalTextAlignment="Center" />
                         </VerticalStackLayout>
@@ -170,7 +170,7 @@
                         </Border.GestureRecognizers>
                         <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="14">
                             <Image Source="icon_bookmark.svg" WidthRequest="46" HeightRequest="46" HorizontalOptions="Center" />
-                            <Label Text="Lessen Deelnemen"
+                            <Label Text="Lesrooster"
                                    FontSize="13" TextColor="{StaticResource Black}"
                                    HorizontalOptions="Center" HorizontalTextAlignment="Center" />
                         </VerticalStackLayout>

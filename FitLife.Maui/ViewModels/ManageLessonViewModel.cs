@@ -116,7 +116,7 @@ public partial class ManageLessonViewModel : BaseViewModel
                                      ?? Instructors.FirstOrDefault();
             }
 
-            if (Workouts.Count == 0 && Locations.Count == 0)
+            if (Workouts.Count == 0 || Locations.Count == 0 || Instructors.Count == 0)
                 StatusMessage = "⚠️ Kon gegevens niet laden. Controleer de API-verbinding.";
             else
                 DataLoaded = true;

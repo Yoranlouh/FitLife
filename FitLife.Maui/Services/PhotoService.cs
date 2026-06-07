@@ -27,7 +27,7 @@ public class PhotoService : IPhotoService
     {
         // Get the current page to anchor the action sheet dialog
         var page = Application.Current?.Windows[0].Page
-                   ?? Application.Current?.MainPage;
+                   ;
         if (page is null) return null;
 
         var action = await page.DisplayActionSheet(
@@ -59,7 +59,7 @@ public class PhotoService : IPhotoService
         if (!MediaPicker.IsCaptureSupported)
         {
             var page = Application.Current?.Windows[0].Page
-                       ?? Application.Current?.MainPage;
+                       ;
             if (page is not null)
                 await page.DisplayAlert("Camera", "Camera is niet beschikbaar op dit apparaat.", "OK");
             return null;

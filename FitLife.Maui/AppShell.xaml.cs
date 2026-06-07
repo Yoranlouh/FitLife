@@ -184,21 +184,26 @@ public partial class AppShell : Shell
 
         await authService.LogoutAsync();
 
-        // Navigate to the login page by replacing the entire MainPage
-        // (Shell.GoToAsync cannot navigate outside the Shell hierarchy)
+        // Wipe in-memory notifications so the next account never sees this user's data.
         var appServices = Application.Current?.Handler?.MauiContext?.Services;
+        appServices?.GetService<INotificationService>()?.Clear();
+
+        // Navigate to the login page by replacing the root page.
+        // Shell.GoToAsync cannot navigate outside the Shell hierarchy, so we
+        // update the window's page directly (Windows[0].Page replaces the
+        // deprecated Application.MainPage property).
         if (appServices != null)
         {
             var loginPage = appServices.GetService<Views.LoginPage>();
-            if (loginPage != null && Application.Current != null)
+            if (loginPage != null && Application.Current?.Windows.Count > 0)
             {
-                Application.Current.MainPage = loginPage;
+                Application.Current.Windows[0].Page = loginPage;
                 return;
             }
         }
 
         // Fallback if DI resolution fails
-        if (Application.Current != null)
-            Application.Current.MainPage = new Views.SplashPage();
+        if (Application.Current?.Windows.Count > 0)
+            Application.Current.Windows[0].Page = new Views.SplashPage();
     }
 }

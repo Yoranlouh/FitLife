@@ -1,8 +1,9 @@
+using FitLife.Maui.Helpers;
 using FitLife.Maui.ViewModels;
 using SharedLibrary.DTOs.Responses;
 using System.Globalization;
 using Microsoft.Maui.Controls.Shapes;
-using CommunityToolkit.Maui.Views; 
+using CommunityToolkit.Maui.Views;
 
 namespace FitLife.Maui.Views;
 
@@ -24,31 +25,28 @@ public partial class WeekPage : ContentPage
         _viewModel.Lessons.CollectionChanged += OnLessonsCollectionChanged;
 	}
 
-    private CancellationTokenSource? _updateCts;
+    // True when a grid redraw is already queued on the main thread.
+    // Prevents queuing multiple redraws for a single batch of collection changes
+    // (Clear + N Adds all fire CollectionChanged synchronously in one main-thread call).
+    private bool _gridUpdatePending;
 
     private void OnLessonsCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
     {
         if (_isUpdating || !_isGridInitialized) return;
+        if (_gridUpdatePending) return;
 
-        // Annuleer de vorige geplande update
-        _updateCts?.Cancel();
-        _updateCts = new CancellationTokenSource();
-        var token = _updateCts.Token;
+        _gridUpdatePending = true;
 
-        // Wacht even om te zien of er meer updates komen (debouncing)
-        Task.Delay(50, token).ContinueWith(t =>
+        // BeginInvokeOnMainThread always posts to the message queue — even when already on the
+        // main thread — so the grid update runs AFTER all synchronous collection changes
+        // (Clear + all Adds) have completed. This eliminates the CancellationToken race
+        // condition that the previous Task.Delay(50ms) approach had.
+        MainThread.BeginInvokeOnMainThread(() =>
         {
-            if (t.IsCompletedSuccessfully && !token.IsCancellationRequested)
-            {
-                MainThread.BeginInvokeOnMainThread(() =>
-                {
-                    if (!_isUpdating && _isGridInitialized)
-                    {
-                        UpdateLessonGrid();
-                    }
-                });
-            }
-        }, TaskScheduler.Default);
+            _gridUpdatePending = false;
+            if (!_isUpdating && _isGridInitialized)
+                UpdateLessonGrid();
+        });
     }
 
     private async void OnBackClicked(object sender, EventArgs e)
@@ -63,42 +61,45 @@ public partial class WeekPage : ContentPage
         {
             _viewModel.Lessons.CollectionChanged -= OnLessonsCollectionChanged;
         }
+        // Reset de pending-flag zodat de volgende OnAppearing niet vastloopt:
+        // als de pagina verdwijnt terwijl een update in de queue staat, blijft
+        // de flag anders 'true' en worden alle CollectionChanged events genegeerd.
+        _gridUpdatePending = false;
     }
 
     protected override void OnAppearing()
     {
         base.OnAppearing();
 
+        // Re-registreer de handler elke keer dat de pagina verschijnt.
+        // De WeekPage-instantie leeft in de Shell flyout en wordt hergebruikt:
+        // OnDisappearing unregistreert de handler, maar zonder re-registratie
+        // hier zien we nooit meer updates na de eerste keer navigeren.
+        if (_viewModel != null)
+        {
+            _viewModel.Lessons.CollectionChanged -= OnLessonsCollectionChanged;
+            _viewModel.Lessons.CollectionChanged += OnLessonsCollectionChanged;
+        }
+
         if (!_isGridInitialized)
         {
-            // Initialiseer grid asynchroon om UI freeze te voorkomen
-            Dispatcher.Dispatch(() =>
-            {
-                InitializeGrid();
-                _isGridInitialized = true;
-
-                if (BindingContext is WeekViewModel viewModel)
-                {
-                    viewModel.LoadLessonsCommand.Execute(null);
-                }
-            });
+            InitializeGrid();
+            _isGridInitialized = true;
         }
-        else
+
+        if (BindingContext is WeekViewModel viewModel)
         {
-            if (BindingContext is WeekViewModel viewModel)
-            {
-                viewModel.LoadLessonsCommand.Execute(null);
-            }
+            viewModel.LoadLessonsCommand.Execute(null);
         }
     }
 
     private void InitializeGrid()
     {
+        if (LessonGrid == null) return;
+
+        LessonGrid.BatchBegin();
         try
         {
-            System.Diagnostics.Debug.WriteLine("InitializeGrid - Starting");
-
-            // Voeg alleen tijdlabels toe (veel sneller, geen 84 borders!)
             for (int i = 0; i < TotalRows; i++)
             {
                 var label = new Label
@@ -113,24 +114,30 @@ public partial class WeekPage : ContentPage
                 Grid.SetColumn(label, 0);
                 LessonGrid.Children.Add(label);
             }
-
-            System.Diagnostics.Debug.WriteLine($"InitializeGrid - Completed. Total children: {LessonGrid.Children.Count}");
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"InitializeGrid ERROR: {ex.Message}\n{ex.StackTrace}");
+        }
+        finally
+        {
+            LessonGrid.BatchCommit();
         }
     }
 
     private void UpdateLessonGrid()
     {
         if (_isUpdating) return;
+        if (LessonGrid == null) return;
         if (BindingContext is not WeekViewModel viewModel) return;
 
+        // BatchBegin BEFORE the try so BatchCommit in finally always has a matching begin.
+        // Placing BatchBegin inside try risked the finally calling BatchCommit without a
+        // preceding BatchBegin if an exception occurred on the very first line.
+        LessonGrid.BatchBegin();
         try
         {
             _isUpdating = true;
-            System.Diagnostics.Debug.WriteLine($"UpdateLessonGrid - Starting. Lessons count: {viewModel.Lessons.Count}");
 
             // Verwijder alleen de bestaande lessen
             var toRemove = LessonGrid.Children.Where(c => c is Border b && b.StyleId == "LessonBlock").ToList();
@@ -138,11 +145,9 @@ public partial class WeekPage : ContentPage
             {
                 LessonGrid.Children.Remove(child);
             }
-            System.Diagnostics.Debug.WriteLine($"UpdateLessonGrid - Removed {toRemove.Count} old lesson blocks");
 
             if (viewModel.Lessons.Count == 0)
             {
-                System.Diagnostics.Debug.WriteLine("UpdateLessonGrid - No lessons to display");
                 return;
             }
 
@@ -232,16 +237,14 @@ public partial class WeekPage : ContentPage
                         VerticalTextAlignment = TextAlignment.Center
                     };
 
-                    // Toon poppetje icon rechtsonder
-                    var personIcon = new Label
+                    // Toon zwart poppetje icon rechtsonder
+                    var personIcon = new Image
                     {
-                        Text = "👤",
-                        TextColor = Colors.White,
-                        FontSize = 12,
+                        Source = "icon_profile.svg",
+                        WidthRequest = 14,
+                        HeightRequest = 14,
                         HorizontalOptions = LayoutOptions.End,
                         VerticalOptions = LayoutOptions.End,
-                        TranslationX = 2,
-                        TranslationY = 2,
                         Margin = new Thickness(0, 0, 2, 2)
                     };
                     cellGrid.Children.Add(personIcon);
@@ -268,19 +271,26 @@ public partial class WeekPage : ContentPage
                 var tapGesture = new TapGestureRecognizer();
                 tapGesture.Tapped += async (s, e) =>
                 {
-                    if (count == 1)
+                    try
                     {
-                        await viewModel.GoToDetailsCommand.ExecuteAsync(lessonsInSlot.First());
-                    }
-                    else
-                    {
-                        var popup = new MultipleLessonsPopup(lessonsInSlot);
-                        var result = await Shell.Current.CurrentPage.ShowPopupAsync(popup);
-
-                        if (result is LessonResponse selectedLesson)
+                        if (count == 1)
                         {
-                            await viewModel.GoToDetailsCommand.ExecuteAsync(selectedLesson);
+                            await viewModel.GoToDetailsCommand.ExecuteAsync(lessonsInSlot.First());
                         }
+                        else
+                        {
+                            var popup = new MultipleLessonsPopup(lessonsInSlot);
+                            var result = await Shell.Current.CurrentPage.ShowPopupAsync(popup);
+
+                            if (result is LessonResponse selectedLesson)
+                            {
+                                await viewModel.GoToDetailsCommand.ExecuteAsync(selectedLesson);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[WeekPage] Tap gesture error: {ex.Message}\n{ex.StackTrace}");
                     }
                 };
                 border.GestureRecognizers.Add(tapGesture);
@@ -290,7 +300,6 @@ public partial class WeekPage : ContentPage
                 LessonGrid.Children.Add(border);
             }
 
-            System.Diagnostics.Debug.WriteLine($"UpdateLessonGrid - Completed. Total children now: {LessonGrid.Children.Count}");
         }
         catch (Exception ex)
         {
@@ -298,6 +307,7 @@ public partial class WeekPage : ContentPage
         }
         finally
         {
+            LessonGrid.BatchCommit();
             _isUpdating = false;
         }
     }
@@ -350,36 +360,9 @@ public partial class WeekPage : ContentPage
         }
     }
 
+    // Delegates to the central WorkoutColorHelper so all views use one source for color resolution.
     private static Color GetWorkoutColor(string? workoutColor)
-    {
-        if (string.IsNullOrEmpty(workoutColor))
-            return GetResourceColor("Primary");
-
-        if (workoutColor.StartsWith('#'))
-        {
-            try { return Color.FromArgb(workoutColor); } catch { }
-        }
-
-        return workoutColor.ToLower() switch
-        {
-            var n when n.Contains("crossfit") => GetResourceColor("WorkoutCrossfit"),
-            var n when n.Contains("spinning") => GetResourceColor("WorkoutSpinning"),
-            var n when n.Contains("sweat club") => GetResourceColor("WorkoutSweatClub"),
-            var n when n.Contains("open gym") => GetResourceColor("WorkoutOpenGym"),
-            var n when n.Contains("hyrox") => GetResourceColor("WorkoutHyrox"),
-            var n when n.Contains("gymnastics") => GetResourceColor("WorkoutGymnastics"),
-            _ => GetResourceColor("Primary")
-        };
-    }
-
-    private static Color GetResourceColor(string key)
-    {
-        // Use null-conditional operator to prevent crashes during app initialization
-        if (Application.Current?.Resources.TryGetValue(key, out var color) == true)
-            return (Color)color;
-
-        return Colors.Gray;
-    }
+        => WorkoutColorHelper.Resolve(workoutColor);
 
     protected override bool OnBackButtonPressed()
     {

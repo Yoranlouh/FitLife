@@ -76,13 +76,13 @@
                                         </Label.Text>
                                     </Label>
                                     
-                                    <Border BackgroundColor="{StaticResource Gray100}" 
-                                            Padding="8,2" 
+                                    <Border BackgroundColor="{Binding WorkoutColor, Converter={StaticResource WorkoutColorConverter}}"
+                                            Padding="8,2"
                                             StrokeThickness="0"
                                             StrokeShape="RoundRectangle 5">
-                                        <Label Text="{Binding WorkoutName}" 
-                                               FontSize="10" 
-                                               TextColor="{StaticResource Gray600}"/>
+                                        <Label Text="{Binding WorkoutName}"
+                                               FontSize="10"
+                                               TextColor="White"/>
                                     </Border>
                                 </HorizontalStackLayout>
                                 

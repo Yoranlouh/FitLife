@@ -19,10 +19,6 @@ public partial class App : Application
 	/// </summary>
 	protected override Window CreateWindow(IActivationState? activationState)
 	{
-		// Start with SplashPage (not in Shell yet)
-		// This creates a clean authentication flow before entering the app Shell
-		MainPage = new SplashPage();
-
-		return new Window(MainPage);
+		return new Window(new SplashPage());
 	}
 }

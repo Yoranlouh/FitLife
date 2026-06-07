@@ -127,11 +127,16 @@ app.MapGet("/workouts", async (IConfiguration configuration) =>
     await using var connection = new MySqlConnection(connectionString);
     await connection.OpenAsync();
 
-    const string sql = "SELECT id, name FROM workouts ORDER BY name";
+    const string sql = "SELECT id, name, COALESCE(color, '#5B6636') AS color FROM workouts ORDER BY name";
     await using var command = new MySqlCommand(sql, connection);
     await using var reader = await command.ExecuteReaderAsync();
     while (await reader.ReadAsync())
-        items.Add(new DropdownItemDto { Id = reader.GetInt32("id"), Name = reader.GetString("name") });
+        items.Add(new DropdownItemDto
+        {
+            Id    = reader.GetInt32("id"),
+            Name  = reader.GetString("name"),
+            Color = reader.GetString("color")
+        });
 
     return Results.Ok(items);
 });
@@ -206,12 +211,22 @@ app.MapGet("/lessons/instructor/{instructorId:int}", async (int instructorId, IC
             u.display_name AS instructor_name,
             l.location_id,
             loc.name AS location_name,
-            (SELECT COUNT(*) FROM reservations r WHERE r.lesson_id = l.id AND r.is_cancelled = 0) AS current_participants,
-            (SELECT COUNT(*) FROM waitlist_entries wle WHERE wle.lesson_id = l.id) AS waitlist_count
+            COALESCE(r_counts.cnt, 0) AS current_participants,
+            COALESCE(w_counts.cnt, 0) AS waitlist_count
         FROM lessons l
         INNER JOIN workouts w ON w.id = l.workout_id
         LEFT JOIN users u ON u.id = l.instructor_id
         INNER JOIN locations loc ON loc.id = l.location_id
+        LEFT JOIN (
+            SELECT lesson_id, COUNT(*) AS cnt
+            FROM reservations WHERE is_cancelled = 0
+            GROUP BY lesson_id
+        ) r_counts ON r_counts.lesson_id = l.id
+        LEFT JOIN (
+            SELECT lesson_id, COUNT(*) AS cnt
+            FROM waitlist_entries
+            GROUP BY lesson_id
+        ) w_counts ON w_counts.lesson_id = l.id
         WHERE l.instructor_id = @instructorId
         ORDER BY l.start_time;
         """;
@@ -434,10 +449,10 @@ app.MapPost("/lessons/{lessonId:int}/add-member", async (int lessonId, IConfigur
     }
 });
 
-// GET /lessons — Returns the full lesson catalogue with randomised participant counts
-// to make the schedule look realistic during development/demo.
-// In production the random counts should be replaced with real DB data.
-app.MapGet("/lessons", async (IConfiguration configuration) =>
+// GET /lessons?userId={id}&from={iso}&to={iso} — Returns lessons filtered by date range.
+// from/to are optional ISO-8601 strings; omit for no date filter (e.g. list view).
+// Participant counts use pre-aggregated JOINs instead of correlated subqueries for performance.
+app.MapGet("/lessons", async (IConfiguration configuration, int? userId, DateTime? from, DateTime? to) =>
 {
     var connectionString = configuration.GetConnectionString("DefaultConnection");
 
@@ -450,8 +465,15 @@ app.MapGet("/lessons", async (IConfiguration configuration) =>
 
     await using var connection = new MySqlConnection(connectionString);
     await connection.OpenAsync();
-    try { if (Convert.ToInt32(await new MySqlCommand("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='workouts' AND COLUMN_NAME='color'", connection).ExecuteScalarAsync()) == 0) { await new MySqlCommand("ALTER TABLE workouts ADD COLUMN color VARCHAR(7) NULL DEFAULT NULL;", connection).ExecuteNonQueryAsync(); } } catch { }
+    try {
+        if (Convert.ToInt32(await new MySqlCommand("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='workouts' AND COLUMN_NAME='color'", connection).ExecuteScalarAsync()) == 0)
+            await new MySqlCommand("ALTER TABLE workouts ADD COLUMN color VARCHAR(7) NULL DEFAULT NULL;", connection).ExecuteNonQueryAsync();
+        if (Convert.ToInt32(await new MySqlCommand("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='lessons' AND COLUMN_NAME='is_archived'", connection).ExecuteScalarAsync()) == 0)
+            await new MySqlCommand("ALTER TABLE lessons ADD COLUMN is_archived TINYINT(1) NOT NULL DEFAULT 0;", connection).ExecuteNonQueryAsync();
+    } catch { }
 
+    // Aggregate joins replace correlated subqueries — single pass over reservations/waitlist tables.
+    // is_booked uses a correlated EXISTS which MySQL resolves cheaply via the reservation index.
     const string sql = """
         SELECT
             l.id,
@@ -465,51 +487,45 @@ app.MapGet("/lessons", async (IConfiguration configuration) =>
             u.display_name AS instructor_name,
             l.location_id,
             loc.name AS location_name,
-            (SELECT COUNT(*) FROM reservations r WHERE r.lesson_id = l.id AND r.is_cancelled = 0) AS current_participants,
-            (SELECT COUNT(*) FROM waitlist_entries wle WHERE wle.lesson_id = l.id) AS waitlist_count
+            COALESCE(r_counts.cnt, 0) AS current_participants,
+            COALESCE(w_counts.cnt, 0) AS waitlist_count,
+            CASE WHEN @userId > 0 AND EXISTS (
+                SELECT 1 FROM reservations rb
+                WHERE rb.lesson_id = l.id AND rb.member_id = @userId AND rb.is_cancelled = 0
+            ) THEN 1 ELSE 0 END AS is_booked
         FROM lessons l
         INNER JOIN workouts w ON w.id = l.workout_id
         LEFT JOIN users u ON u.id = l.instructor_id
         INNER JOIN locations loc ON loc.id = l.location_id
+        LEFT JOIN (
+            SELECT lesson_id, COUNT(*) AS cnt
+            FROM reservations WHERE is_cancelled = 0
+            GROUP BY lesson_id
+        ) r_counts ON r_counts.lesson_id = l.id
+        LEFT JOIN (
+            SELECT lesson_id, COUNT(*) AS cnt
+            FROM waitlist_entries
+            GROUP BY lesson_id
+        ) w_counts ON w_counts.lesson_id = l.id
+        WHERE (@from IS NULL OR l.start_time >= @from)
+          AND (@to IS NULL OR l.start_time < @to)
+          AND COALESCE(l.is_archived, 0) = 0
         ORDER BY l.start_time;
         """;
 
     await using var command = new MySqlCommand(sql, connection);
+    command.Parameters.AddWithValue("@userId", userId.HasValue && userId.Value > 0 ? userId.Value : 0);
+    command.Parameters.AddWithValue("@from", from.HasValue ? (object)from.Value : DBNull.Value);
+    command.Parameters.AddWithValue("@to",   to.HasValue   ? (object)to.Value   : DBNull.Value);
     await using var reader = await command.ExecuteReaderAsync();
-
-    var random = new Random();
 
     while (await reader.ReadAsync())
     {
         var lessonId = reader.GetInt32("id");
         var maxParticipants = reader.GetInt32("max_participants");
-        
-        // Gebruik echte data uit DB OF genereer willekeurige data zoals gevraagd
-        // We overschrijven de database counts met willekeurige waarden voor de 'look'
-        int currentCount;
-        int waitlistCount = 0;
-
-        int rnd = random.Next(100);
-        if (rnd < 20) // 20% kans op vol + wachtlijst
-        {
-            currentCount = maxParticipants;
-            waitlistCount = random.Next(1, 6);
-        }
-        else if (rnd < 50) // 30% kans op exact vol
-        {
-            currentCount = maxParticipants;
-        }
-        else if (rnd < 80) // 30% kans op ongeveer de helft
-        {
-            currentCount = maxParticipants / 2 + random.Next(-2, 3);
-            if (currentCount < 0) currentCount = 0;
-            if (currentCount > maxParticipants) currentCount = maxParticipants;
-        }
-        else // 20% kans op (vrijwel) leeg
-        {
-            currentCount = random.Next(0, 3);
-            if (currentCount > maxParticipants) currentCount = maxParticipants;
-        }
+        bool isBooked = reader.GetInt32("is_booked") == 1;
+        int currentCount = reader.GetInt32("current_participants");
+        int waitlistCount = reader.GetInt32("waitlist_count");
 
         lessons.Add(new LessonResponse
         {
@@ -526,7 +542,7 @@ app.MapGet("/lessons", async (IConfiguration configuration) =>
             LocationName = reader.GetString("location_name"),
             CurrentParticipantCount = currentCount,
             WaitlistCount = waitlistCount,
-            IsBooked = random.Next(100) < 15 // 15% kans dat de gebruiker is aangemeld
+            IsBooked = isBooked
         });
     }
 
@@ -584,11 +600,8 @@ app.MapGet("/lessons/{lessonId:int}/participants", async (int lessonId, IConfigu
 
 // GET /lessons/{lessonId}/waitlist — Waitlist query placeholder.
 // Returns an empty list until the waitlist_entries table is fully implemented.
-app.MapGet("/lessons/{lessonId:int}/waitlist", async (int lessonId, IConfiguration configuration) =>
-{
-    var waitlist = new List<ParticipantResponse>();
-    return Results.Ok(waitlist);
-});
+app.MapGet("/lessons/{lessonId:int}/waitlist", (int lessonId) =>
+    Results.Ok(new List<ParticipantResponse>()));
 
 // POST /auth/login — Verifies email + password against the database and returns
 // the full user profile (id, name, role, credits, subscription) on success.
@@ -1648,6 +1661,7 @@ public class ChangeBillingCycleRequestDto
 
 // Strongly-typed DTO for the three dropdown endpoints (workouts / locations / instructors).
 // Must be a named class — anonymous types are serialised as empty objects {} by System.Text.Json.
+// Color is only populated by /workouts; null for /locations and /instructors.
 public class DropdownItemDto
 {
     [JsonPropertyName("id")]
@@ -1655,6 +1669,9 @@ public class DropdownItemDto
 
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("color")]
+    public string? Color { get; set; }
 }
 
 public class UserLessonDto

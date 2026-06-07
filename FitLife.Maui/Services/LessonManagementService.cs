@@ -13,6 +13,10 @@ public class SimpleItemDto
 
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
+
+    // Only populated for workouts; null for locations and instructors.
+    [JsonPropertyName("color")]
+    public string? Color { get; set; }
 }
 
 // Request body for creating or updating a lesson

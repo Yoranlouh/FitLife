@@ -135,7 +135,10 @@ public partial class SubscriptionViewModel : BaseViewModel
         if (lastNotified == todayStr) return;
 
         Preferences.Set("sub_expiry_notified", todayStr);
+        var userId = _authService.CurrentUserId;
+        if (userId is null or <= 0) return;
         _notificationService.Add(
+            userId.Value,
             "Abonnement verloopt bijna",
             $"Je {CurrentSubscription} abonnement verloopt op {ExpiryDate.Value:d MMMM yyyy}. Verleng op tijd om te blijven sporten.",
             NotificationType.SubscriptionExpiring);
@@ -186,14 +189,14 @@ public partial class SubscriptionViewModel : BaseViewModel
     {
         if (!_authService.IsAuthenticated || _authService.CurrentUserId == null)
         {
-            await Application.Current.MainPage.DisplayAlert("Fout", "Je moet ingelogd zijn om je abonnement te wijzigen.", "OK");
+            await Shell.Current.DisplayAlert("Fout", "Je moet ingelogd zijn om je abonnement te wijzigen.", "OK");
             return false;
         }
 
         // Don't allow changing to the same subscription
         if (newSubscriptionType == CurrentSubscription && !HasPendingChange)
         {
-            await Application.Current.MainPage.DisplayAlert("Info", "Je hebt al dit abonnement.", "OK");
+            await Shell.Current.DisplayAlert("Info", "Je hebt al dit abonnement.", "OK");
             return false;
         }
 
@@ -203,7 +206,7 @@ public partial class SubscriptionViewModel : BaseViewModel
             ? AvailableSubscriptions.FirstOrDefault(s => s.Name == newSubscriptionType)?.YearlyPrice ?? 0
             : AvailableSubscriptions.FirstOrDefault(s => s.Name == newSubscriptionType)?.MonthlyPrice ?? 0;
 
-        var confirm = await Application.Current.MainPage.DisplayAlert(
+        var confirm = await Shell.Current.DisplayAlert(
             "Abonnement wijzigen",
             $"Weet je zeker dat je wilt overstappen naar {newSubscriptionType} ({billingCycle}, €{price:F0})?\n\nDe wijziging wordt toegepast op {ExpiryDate:dd-MM-yyyy}.",
             "Ja, wijzigen",
@@ -225,7 +228,7 @@ public partial class SubscriptionViewModel : BaseViewModel
             if (result.Success)
             {
                 var message = $"{result.Message}\n\nHet eventuele resterende saldo van je huidige abonnement wordt automatisch verrekend bij de eerstvolgende automatische incasso.";
-                await Application.Current.MainPage.DisplayAlert("Gelukt!", message, "OK");
+                await Shell.Current.DisplayAlert("Gelukt!", message, "OK");
 
                 // Reload subscription status to show the pending change
                 await LoadSubscriptionStatusAsync();
@@ -233,14 +236,14 @@ public partial class SubscriptionViewModel : BaseViewModel
             }
             else
             {
-                await Application.Current.MainPage.DisplayAlert("Fout", result.Message, "OK");
+                await Shell.Current.DisplayAlert("Fout", result.Message, "OK");
                 return false;
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[SubscriptionViewModel] Error changing subscription: {ex.Message}");
-            await Application.Current.MainPage.DisplayAlert("Fout", "Er is een fout opgetreden. Probeer het later opnieuw.", "OK");
+            await Shell.Current.DisplayAlert("Fout", "Er is een fout opgetreden. Probeer het later opnieuw.", "OK");
             return false;
         }
         finally
@@ -257,18 +260,18 @@ public partial class SubscriptionViewModel : BaseViewModel
     {
         if (!_authService.IsAuthenticated || _authService.CurrentUserId == null)
         {
-            await Application.Current.MainPage.DisplayAlert("Fout", "Je moet ingelogd zijn om je abonnement te annuleren.", "OK");
+            await Shell.Current.DisplayAlert("Fout", "Je moet ingelogd zijn om je abonnement te annuleren.", "OK");
             return;
         }
 
         if (string.IsNullOrEmpty(CurrentSubscription) || CurrentSubscription == "Geen abonnement")
         {
-            await Application.Current.MainPage.DisplayAlert("Info", "Je hebt geen actief abonnement.", "OK");
+            await Shell.Current.DisplayAlert("Info", "Je hebt geen actief abonnement.", "OK");
             return;
         }
 
         // Confirm cancellation
-        var confirm = await Application.Current.MainPage.DisplayAlert(
+        var confirm = await Shell.Current.DisplayAlert(
             "Abonnement stopzetten",
             $"Weet je zeker dat je je {CurrentSubscription} abonnement wilt stopzetten?\n\nJe abonnement blijft actief tot {ExpiryDate:dd-MM-yyyy}. Na deze datum wordt het niet verlengd.",
             "Ja, stopzetten",
@@ -285,20 +288,20 @@ public partial class SubscriptionViewModel : BaseViewModel
 
             if (result.Success)
             {
-                await Application.Current.MainPage.DisplayAlert("Gelukt!", result.Message, "OK");
+                await Shell.Current.DisplayAlert("Gelukt!", result.Message, "OK");
 
                 // Reload subscription status
                 await LoadSubscriptionStatusAsync();
             }
             else
             {
-                await Application.Current.MainPage.DisplayAlert("Fout", result.Message, "OK");
+                await Shell.Current.DisplayAlert("Fout", result.Message, "OK");
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[SubscriptionViewModel] Error cancelling subscription: {ex.Message}");
-            await Application.Current.MainPage.DisplayAlert("Fout", "Er is een fout opgetreden. Probeer het later opnieuw.", "OK");
+            await Shell.Current.DisplayAlert("Fout", "Er is een fout opgetreden. Probeer het later opnieuw.", "OK");
         }
         finally
         {
@@ -314,13 +317,13 @@ public partial class SubscriptionViewModel : BaseViewModel
     {
         if (!_authService.IsAuthenticated || _authService.CurrentUserId == null)
         {
-            await Application.Current.MainPage.DisplayAlert("Fout", "Je moet ingelogd zijn om je factureringsperiode te wijzigen.", "OK");
+            await Shell.Current.DisplayAlert("Fout", "Je moet ingelogd zijn om je factureringsperiode te wijzigen.", "OK");
             return;
         }
 
         if (string.IsNullOrEmpty(CurrentSubscription) || CurrentSubscription == "Geen abonnement")
         {
-            await Application.Current.MainPage.DisplayAlert("Info", "Je hebt geen actief abonnement.", "OK");
+            await Shell.Current.DisplayAlert("Info", "Je hebt geen actief abonnement.", "OK");
             return;
         }
 
@@ -328,7 +331,7 @@ public partial class SubscriptionViewModel : BaseViewModel
         var oldBillingCycle = IsYearly ? "maandelijks" : "jaarlijks";
 
         // Confirm billing cycle change
-        var confirm = await Application.Current.MainPage.DisplayAlert(
+        var confirm = await Shell.Current.DisplayAlert(
             "Factureringsperiode wijzigen",
             $"Weet je zeker dat je wilt overstappen van {oldBillingCycle} naar {newBillingCycle} betalen?\n\nJe blijft je huidige {CurrentSubscription} abonnement behouden.\n\nDe wijziging wordt toegepast op {ExpiryDate:dd-MM-yyyy}.",
             "Ja, wijzigen",
@@ -348,20 +351,20 @@ public partial class SubscriptionViewModel : BaseViewModel
 
             if (result.Success)
             {
-                await Application.Current.MainPage.DisplayAlert("Gelukt!", result.Message, "OK");
+                await Shell.Current.DisplayAlert("Gelukt!", result.Message, "OK");
 
                 // Reload subscription status
                 await LoadSubscriptionStatusAsync();
             }
             else
             {
-                await Application.Current.MainPage.DisplayAlert("Fout", result.Message, "OK");
+                await Shell.Current.DisplayAlert("Fout", result.Message, "OK");
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[SubscriptionViewModel] Error changing billing cycle: {ex.Message}");
-            await Application.Current.MainPage.DisplayAlert("Fout", "Er is een fout opgetreden. Probeer het later opnieuw.", "OK");
+            await Shell.Current.DisplayAlert("Fout", "Er is een fout opgetreden. Probeer het later opnieuw.", "OK");
         }
         finally
         {

@@ -36,9 +36,9 @@ public partial class SplashPage : ContentPage
                 var loginViewModel = services.GetService<ViewModels.LoginViewModel>();
                 var loginPage = services.GetService<LoginPage>();
 
-                if (loginPage != null)
+                if (loginPage != null && Application.Current?.Windows.Count > 0)
                 {
-                    Application.Current.MainPage = loginPage;
+                    Application.Current.Windows[0].Page = loginPage;
                 }
             }
         }

@@ -15,6 +15,8 @@ namespace FitLife.Maui.ViewModels;
 public partial class WeekViewModel : BaseViewModel
 {
     private readonly ILessonService _lessonService;
+    private readonly IAuthenticationService _authenticationService;
+    private readonly ILessonManagementService _managementService;
 
     // All lessons for the currently visible week
     [ObservableProperty]
@@ -36,6 +38,10 @@ public partial class WeekViewModel : BaseViewModel
     [ObservableProperty]
     private DateTime _selectedDate = DateTime.Today;
 
+    // Shown below the grid when no lessons exist for this week or when an error occurred
+    [ObservableProperty]
+    private string _emptyMessage = string.Empty;
+
     // Lessons filtered to only the selected day — displayed in the lesson list below the calendar
     [ObservableProperty]
     private ObservableCollection<LessonResponse> _selectedDayLessons = new();
@@ -46,9 +52,22 @@ public partial class WeekViewModel : BaseViewModel
     // Full lesson collection from the API (kept in memory to avoid re-fetching when switching days)
     private IEnumerable<LessonResponse> _allLessons = [];
 
-    public WeekViewModel(ILessonService lessonService)
+    // All workouts from the workouts table — loaded once and reused for the legend.
+    // Populated independently of which week is shown so the legend is always complete.
+    private List<WorkoutLegendItem> _allWorkouts = [];
+
+    // Incremented every time LoadLessons starts. If a newer load has started by the time
+    // an older one's await returns, the stale result is discarded so the grid never shows
+    // data for the wrong week (e.g. when pressing ◀/▶ during a slow API call).
+    private int _loadVersion;
+
+    public WeekViewModel(ILessonService lessonService,
+                         IAuthenticationService authenticationService,
+                         ILessonManagementService managementService)
     {
-        _lessonService = lessonService;
+        _lessonService     = lessonService;
+        _authenticationService = authenticationService;
+        _managementService = managementService;
         Title = "Weekoverzicht";
         UpdateWeekInfo();  // initialise day headers and week label for today's week
     }
@@ -61,9 +80,10 @@ public partial class WeekViewModel : BaseViewModel
         var diff     = (7 + ((int)CurrentDate.DayOfWeek - (int)DayOfWeek.Monday)) % 7;
         _startOfWeek = CurrentDate.Date.AddDays(-diff);
 
-        // ISO week number (first week with ≥4 days in the new year)
-        var weekNumber = CultureInfo.CurrentCulture.Calendar.GetWeekOfYear(
-            _startOfWeek, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
+        // ISOWeek is locale-agnostic (no dependency on the device's calendar system).
+        // CultureInfo.CurrentCulture.Calendar.GetWeekOfYear crashes on non-Gregorian
+        // calendars (Hebrew, Hijri, etc.) when CalendarWeekRule.FirstFourDayWeek is used.
+        var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(_startOfWeek);
         WeekRangeText = $"Week {weekNumber}, {_startOfWeek:MMMM yyyy}";
 
         // Rebuild the day-strip headers (Mon through Sun)
@@ -121,55 +141,79 @@ public partial class WeekViewModel : BaseViewModel
 
     // Moves the week view back by 7 days and reloads lessons from the API.
     [RelayCommand]
-    private void PreviousWeek()
+    private async Task PreviousWeek()
     {
         CurrentDate = CurrentDate.AddDays(-7);
         UpdateWeekInfo();
-        _ = LoadLessons();
+        await LoadLessons();
     }
 
     // Moves the week view forward by 7 days and reloads lessons from the API.
     [RelayCommand]
-    private void NextWeek()
+    private async Task NextWeek()
     {
         CurrentDate = CurrentDate.AddDays(7);
         UpdateWeekInfo();
-        _ = LoadLessons();
+        await LoadLessons();
     }
 
-    // Fetches all lessons from the API, filters them to the current week window,
-    // and populates the Lessons collection. Then re-filters for the selected day.
+    // Fetches only the current week's lessons from the API (server-side date filter).
+    // Workouts are loaded in parallel so they don't block the lesson fetch.
+    // Uses a version counter so stale results from cancelled navigations are discarded.
     [RelayCommand]
     private async Task LoadLessons()
     {
-        if (IsBusy) return;
-
+        var version = ++_loadVersion;
         IsBusy = true;
+        EmptyMessage = string.Empty;
         try
         {
-            var lessons = await _lessonService.GetLessonsAsync();
-            _allLessons = lessons.ToList();
+            var endOfWeek = _startOfWeek.AddDays(7);
 
-            // Only show lessons within the Mon–Sun window of the current week
-            var endOfWeek       = _startOfWeek.AddDays(7);
-            var filteredLessons = _allLessons
-                .Where(l => l.StartTime >= _startOfWeek && l.StartTime < endOfWeek)
-                .OrderBy(l => l.StartTime)
-                .ToList();
+            // Kick off both requests in parallel; skip workouts if already cached.
+            Task<IEnumerable<SimpleItemDto>> workoutsTask = _allWorkouts.Count == 0
+                ? _managementService.GetWorkoutsAsync()
+                : Task.FromResult(Enumerable.Empty<SimpleItemDto>());
+
+            var lessonsTask = _lessonService.GetLessonsAsync(
+                _authenticationService.CurrentUserId,
+                from: _startOfWeek,
+                to: endOfWeek);
+
+            await Task.WhenAll(workoutsTask, lessonsTask);
+
+            // A newer navigation happened while we were awaiting — discard stale results
+            if (version != _loadVersion) return;
+
+            if (_allWorkouts.Count == 0)
+            {
+                _allWorkouts = workoutsTask.Result
+                    .Select(w => new WorkoutLegendItem(w.Name, w.Color ?? "#5B6636"))
+                    .OrderBy(i => i.Name)
+                    .ToList();
+            }
+
+            _allLessons = lessonsTask.Result.OrderBy(l => l.StartTime).ToList();
 
             Lessons.Clear();
-            foreach (var lesson in filteredLessons)
+            foreach (var lesson in _allLessons)
                 Lessons.Add(lesson);
+
+            if (!_allLessons.Any())
+                EmptyMessage = "Geen lessen gepland voor deze week.";
 
             FilterLessonsForSelectedDay();
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading lessons: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[WeekViewModel] Fout bij laden lessen: {ex.Message}");
+            if (version == _loadVersion)
+                EmptyMessage = "Lessen konden niet worden geladen. Controleer de verbinding.";
         }
         finally
         {
-            IsBusy = false;
+            if (version == _loadVersion)
+                IsBusy = false;
         }
     }
 
@@ -190,17 +234,12 @@ public partial class WeekViewModel : BaseViewModel
         });
     }
 
-    // Opens a popup showing the colour legend (one entry per workout type in the current week).
+    // Opens the colour legend popup. Always shows all workouts from the database,
+    // independent of the currently displayed week or the logged-in user's role.
     [RelayCommand]
     private async Task ShowLegend()
     {
-        var items = Lessons
-            .GroupBy(l => l.WorkoutName)
-            .Select(g => new WorkoutLegendItem(g.Key, g.First().WorkoutColor))
-            .OrderBy(i => i.Name)
-            .ToList();
-
-        var popup = new Views.LegendPopup(items);
+        var popup = new Views.LegendPopup(_allWorkouts);
         await Shell.Current.CurrentPage.ShowPopupAsync(popup);
     }
 }

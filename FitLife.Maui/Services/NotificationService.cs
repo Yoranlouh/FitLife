@@ -31,12 +31,14 @@ public class NotificationService : INotificationService
     // Called once per login from LoginViewModel.
     public async Task LoadAsync(int userId)
     {
+        // Clear immediately — before any await — so that even if the API call fails
+        // the previous account's notifications are never visible to the new user.
+        _items.Clear();
         try
         {
             var dtos = await _httpClient.GetFromJsonAsync<List<NotificationApiDto>>(
                 $"users/{userId}/notifications");
 
-            _items.Clear();
             if (dtos != null)
                 foreach (var dto in dtos)
                     _items.Add(new AppNotification
@@ -55,23 +57,44 @@ public class NotificationService : INotificationService
         }
     }
 
-    // Inserts a new notification at the top of the list (newest first),
-    // then asynchronously saves it to the database via POST /users/{id}/notifications.
-    public void Add(string title, string message, NotificationType type)
-    {
-        var n = new AppNotification
-        {
-            Title     = title,
-            Message   = message,
-            Type      = type,
-            IsRead    = false,
-            CreatedAt = DateTime.Now
-        };
-        _items.Insert(0, n);  // prepend so the newest item appears at the top
+    // Wipes the in-memory list. Call this on logout so the next user starts with a clean slate.
+    public void Clear() => _items.Clear();
 
-        var userId = _authenticationService.CurrentUserId;
-        if (userId.HasValue)
-            _ = SaveToApiAsync(userId.Value, n);  // fire-and-forget — don't block the caller
+    // Inserts a new notification at the top of the list (newest first) and
+    // asynchronously saves it for the specified userId via POST /users/{id}/notifications.
+    // The userId must be the ID of the user who performed the action (not just whoever
+    // is currently logged in), so notifications are always scoped to the right account.
+    public void Add(int userId, string title, string message, NotificationType type)
+    {
+        // Only add to the in-memory list when this notification belongs to the
+        // currently logged-in user (trainers logging in after a member session
+        // should not see the previous user's notifications).
+        if (_authenticationService.CurrentUserId == userId)
+        {
+            var n = new AppNotification
+            {
+                Title     = title,
+                Message   = message,
+                Type      = type,
+                IsRead    = false,
+                CreatedAt = DateTime.Now
+            };
+            _items.Insert(0, n);  // prepend so the newest item appears at the top
+            _ = SaveToApiAsync(userId, n);  // fire-and-forget — don't block the caller
+        }
+        else
+        {
+            // The notification targets a different user — persist it in the DB only.
+            var n = new AppNotification
+            {
+                Title     = title,
+                Message   = message,
+                Type      = type,
+                IsRead    = false,
+                CreatedAt = DateTime.Now
+            };
+            _ = SaveToApiAsync(userId, n);
+        }
     }
 
     // Marks every in-memory notification as read, then persists the change

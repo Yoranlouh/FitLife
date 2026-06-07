@@ -13,6 +13,7 @@ public partial class ProfileViewModel : BaseViewModel
     private readonly IAuthenticationService  _authService;
     private readonly ISubscriptionService?   _subscriptionService;
     private readonly IPhotoService           _photoService;
+    private readonly INotificationService    _notificationService;
 
     // Name parts split from the full display name (e.g. "Jan" and "de Vries")
     [ObservableProperty]
@@ -59,10 +60,12 @@ public partial class ProfileViewModel : BaseViewModel
 
     public ProfileViewModel(IAuthenticationService authService,
                             IPhotoService          photoService,
+                            INotificationService   notificationService,
                             ISubscriptionService?  subscriptionService = null)
     {
         _authService         = authService;
         _photoService        = photoService;
+        _notificationService = notificationService;
         _subscriptionService = subscriptionService;
         Title = "Mijn Profiel";
         System.Diagnostics.Debug.WriteLine($"[ProfileViewModel] Constructor called. AuthService instance: {authService.GetHashCode()}");
@@ -193,13 +196,13 @@ public partial class ProfileViewModel : BaseViewModel
                 _authService.UpdatePhotoUrl(newUrl);
                 ProfilePictureUrl = newUrl;
 
-                await Application.Current!.MainPage!.DisplayAlert("Gelukt", "Profielfoto bijgewerkt.", "OK");
+                await Shell.Current.DisplayAlert("Gelukt", "Profielfoto bijgewerkt.", "OK");
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[ProfileViewModel] Photo upload error: {ex.Message}");
-            await Application.Current!.MainPage!.DisplayAlert("Fout", "Foto uploaden mislukt. Controleer je verbinding.", "OK");
+            await Shell.Current.DisplayAlert("Fout", "Foto uploaden mislukt. Controleer je verbinding.", "OK");
         }
         finally
         {
@@ -213,9 +216,10 @@ public partial class ProfileViewModel : BaseViewModel
     {
         System.Diagnostics.Debug.WriteLine("[ProfileViewModel] Logout called");
         await _authService.LogoutAsync();
+        _notificationService.Clear();
 
-        // Navigate outside the Shell by replacing MainPage directly
-        if (Application.Current != null)
+        // Navigate outside the Shell by replacing the window root page directly
+        if (Application.Current?.Windows.Count > 0)
         {
             var services  = Application.Current.Handler?.MauiContext?.Services;
             if (services != null)
@@ -223,14 +227,14 @@ public partial class ProfileViewModel : BaseViewModel
                 var loginPage = services.GetService<Views.LoginPage>();
                 if (loginPage != null)
                 {
-                    Application.Current.MainPage = loginPage;
+                    Application.Current.Windows[0].Page = loginPage;
                     return;
                 }
             }
 
             // Fallback when DI resolution fails
             System.Diagnostics.Debug.WriteLine("[ProfileViewModel] LoginPage not found in DI, attempting fallback");
-            Application.Current.MainPage = new Views.SplashPage();
+            Application.Current.Windows[0].Page = new Views.SplashPage();
         }
     }
 }

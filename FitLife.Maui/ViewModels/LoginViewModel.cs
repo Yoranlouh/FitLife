@@ -67,10 +67,10 @@ public partial class LoginViewModel : BaseViewModel
                     await _notificationService.LoadAsync(result.UserId.Value);
 
                 // Replace the root page with AppShell — the Shell builds role-based tabs/flyout
-                if (Application.Current != null)
+                if (Application.Current?.Windows.Count > 0)
                 {
                     var shell = IPlatformApplication.Current?.Services.GetRequiredService<AppShell>();
-                    Application.Current.MainPage = shell ?? new AppShell(
+                    Application.Current.Windows[0].Page = shell ?? new AppShell(
                         IPlatformApplication.Current!.Services.GetRequiredService<IAuthenticationService>(),
                         IPlatformApplication.Current.Services);
                 }

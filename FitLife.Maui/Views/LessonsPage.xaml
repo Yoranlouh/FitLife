@@ -213,7 +213,7 @@
                                            VerticalOptions="Center"
                                            InputTransparent="True" />
 
-                                    <Border BackgroundColor="{StaticResource Secondary}"
+                                    <Border BackgroundColor="{Binding WorkoutColor, Converter={StaticResource WorkoutColorConverter}}"
                                             StrokeThickness="0"
                                             Padding="6,2"
                                             VerticalOptions="Center"
@@ -222,7 +222,7 @@
                                             <RoundRectangle CornerRadius="6" />
                                         </Border.StrokeShape>
                                         <Label Text="{Binding WorkoutName}"
-                                               TextColor="{StaticResource Tertiary}"
+                                               TextColor="{StaticResource White}"
                                                FontSize="12"
                                                CharacterSpacing="1"
                                                InputTransparent="True" />

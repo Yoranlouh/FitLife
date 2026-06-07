@@ -134,6 +134,27 @@
 
                     <!-- Lesson items will be added dynamically here -->
                 </Grid>
+
+                <!-- Loading indicator: centered over the grid while IsBusy is true -->
+                <ActivityIndicator Grid.Row="1"
+                                   Grid.ColumnSpan="2"
+                                   IsRunning="{Binding IsBusy}"
+                                   IsVisible="{Binding IsBusy}"
+                                   Color="{StaticResource Primary}"
+                                   VerticalOptions="Center"
+                                   HorizontalOptions="Center" />
+
+                <!-- Empty / error state: shown when the week has no lessons or loading failed -->
+                <Label Grid.Row="1"
+                       Grid.ColumnSpan="2"
+                       Text="{Binding EmptyMessage}"
+                       IsVisible="{Binding EmptyMessage, Converter={StaticResource StringNotEmptyConverter}}"
+                       TextColor="{StaticResource Gray500}"
+                       FontSize="14"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center"
+                       HorizontalTextAlignment="Center"
+                       Margin="20" />
             </Grid>
         </ScrollView>
     </Grid>

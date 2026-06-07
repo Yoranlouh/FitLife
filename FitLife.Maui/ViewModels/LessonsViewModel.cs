@@ -14,6 +14,7 @@ namespace FitLife.Maui.ViewModels;
 public partial class LessonsViewModel : BaseViewModel
 {
     private readonly ILessonService _lessonService;
+    private readonly IAuthenticationService _authenticationService;
 
     // The lessons visible in the list (filtered to the selected day)
     [ObservableProperty]
@@ -48,10 +49,11 @@ public partial class LessonsViewModel : BaseViewModel
     // All lessons for the current week, kept in memory to avoid re-fetching on day change
     private IEnumerable<LessonResponse> _allLessons = [];
 
-    public LessonsViewModel(ILessonService lessonService)
+    public LessonsViewModel(ILessonService lessonService, IAuthenticationService authenticationService)
     {
-        Title          = "Lesaanbod";
-        _lessonService = lessonService;
+        Title                   = "Lesaanbod";
+        _lessonService          = lessonService;
+        _authenticationService  = authenticationService;
         UpdateWeekInfo();  // build the initial day strip for today's week
     }
 
@@ -185,7 +187,7 @@ public partial class LessonsViewModel : BaseViewModel
         try
         {
             IsBusy = true;
-            var lessons = await _lessonService.GetLessonsAsync();
+            var lessons = await _lessonService.GetLessonsAsync(_authenticationService.CurrentUserId);
             System.Diagnostics.Debug.WriteLine($"[DEBUG_LOG] LessonsViewModel: Received {lessons?.Count() ?? 0} lessons from service");
 
             if (lessons == null)

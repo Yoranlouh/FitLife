@@ -53,7 +53,7 @@ public class LessonService : ILessonService
         sql += archivedOnly ? " AND l.is_archived = 1" : " AND l.is_archived = 0";
         if (fromDate.HasValue) sql += " AND l.start_time >= @fromDate";
         if (toDate.HasValue)   sql += " AND l.start_time <= @toDate";
-        sql += " ORDER BY l.start_time ASC";
+        sql += archivedOnly ? " ORDER BY l.start_time DESC" : " ORDER BY l.start_time ASC";
 
         await using var command = new MySqlCommand(sql, connection);
         if (fromDate.HasValue) command.Parameters.AddWithValue("@fromDate", fromDate.Value);

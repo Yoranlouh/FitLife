@@ -73,10 +73,15 @@ public interface INotificationService
     // Must be called after login so the list reflects persisted history.
     Task LoadAsync(int userId);
 
-    // Adds a notification to the in-memory list AND saves it to the database.
+    // Adds a notification to the in-memory list AND saves it to the database
+    // for the given userId. Only call this for the user who actually performed the action.
     // The database write is fire-and-forget so it never blocks the UI.
-    void Add(string title, string message, NotificationType type);
+    void Add(int userId, string title, string message, NotificationType type);
 
     // Marks all in-memory notifications as read and persists the state to the database.
     void MarkAllRead();
+
+    // Clears the in-memory list immediately. Must be called on logout so that the
+    // next account that logs in on this device never sees a previous user's notifications.
+    void Clear();
 }
