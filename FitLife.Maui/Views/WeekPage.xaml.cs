@@ -67,7 +67,7 @@ public partial class WeekPage : ContentPage
         _gridUpdatePending = false;
     }
 
-    protected override void OnAppearing()
+    protected override async void OnAppearing()
     {
         base.OnAppearing();
 
@@ -89,7 +89,11 @@ public partial class WeekPage : ContentPage
 
         if (BindingContext is WeekViewModel viewModel)
         {
-            viewModel.LoadLessonsCommand.Execute(null);
+            // Await the load so we can directly update the grid afterwards.
+            // CollectionChanged also triggers UpdateLessonGrid via BeginInvokeOnMainThread,
+            // but awaiting here guarantees the grid is drawn even if that path is delayed.
+            await viewModel.LoadLessonsCommand.ExecuteAsync(null);
+            UpdateLessonGrid();
         }
     }
 

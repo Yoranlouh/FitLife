@@ -50,7 +50,7 @@
 
                 <!-- Main Content -->
         <ScrollView Grid.Row="3">
-            <Grid ColumnDefinitions="50, *" RowDefinitions="Auto, *">
+            <Grid ColumnDefinitions="50, *" RowDefinitions="Auto, Auto">
                 
                 <!-- Top-left corner: Info button -->
                 <Border Grid.Row="0" Grid.Column="0" 

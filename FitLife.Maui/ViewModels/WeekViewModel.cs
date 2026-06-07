@@ -158,9 +158,12 @@ public partial class WeekViewModel : BaseViewModel
     }
 
     // Fetches only the current week's lessons from the API (server-side date filter).
-    // Workouts are loaded in parallel so they don't block the lesson fetch.
+    // Workouts are NOT loaded here — they are loaded lazily on first legend open so
+    // a slow workouts endpoint can never block the calendar from appearing.
     // Uses a version counter so stale results from cancelled navigations are discarded.
-    [RelayCommand]
+    // AllowConcurrentExecutions = true so re-navigating while a slow lessons call is
+    // still in flight triggers a fresh load rather than silently doing nothing.
+    [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task LoadLessons()
     {
         var version = ++_loadVersion;
@@ -170,30 +173,15 @@ public partial class WeekViewModel : BaseViewModel
         {
             var endOfWeek = _startOfWeek.AddDays(7);
 
-            // Kick off both requests in parallel; skip workouts if already cached.
-            Task<IEnumerable<SimpleItemDto>> workoutsTask = _allWorkouts.Count == 0
-                ? _managementService.GetWorkoutsAsync()
-                : Task.FromResult(Enumerable.Empty<SimpleItemDto>());
-
-            var lessonsTask = _lessonService.GetLessonsAsync(
+            var lessons = await _lessonService.GetLessonsAsync(
                 _authenticationService.CurrentUserId,
                 from: _startOfWeek,
                 to: endOfWeek);
 
-            await Task.WhenAll(workoutsTask, lessonsTask);
-
             // A newer navigation happened while we were awaiting — discard stale results
             if (version != _loadVersion) return;
 
-            if (_allWorkouts.Count == 0)
-            {
-                _allWorkouts = workoutsTask.Result
-                    .Select(w => new WorkoutLegendItem(w.Name, w.Color ?? "#5B6636"))
-                    .OrderBy(i => i.Name)
-                    .ToList();
-            }
-
-            _allLessons = lessonsTask.Result.OrderBy(l => l.StartTime).ToList();
+            _allLessons = lessons.OrderBy(l => l.StartTime).ToList();
 
             Lessons.Clear();
             foreach (var lesson in _allLessons)
@@ -234,11 +222,27 @@ public partial class WeekViewModel : BaseViewModel
         });
     }
 
-    // Opens the colour legend popup. Always shows all workouts from the database,
-    // independent of the currently displayed week or the logged-in user's role.
+    // Opens the colour legend popup. Workouts are fetched lazily here (not during
+    // LoadLessons) so a slow workouts endpoint never delays the calendar grid.
+    // After the first successful fetch the result is cached in _allWorkouts.
     [RelayCommand]
     private async Task ShowLegend()
     {
+        if (_allWorkouts.Count == 0)
+        {
+            try
+            {
+                var workouts = await _managementService.GetWorkoutsAsync();
+                _allWorkouts = workouts
+                    .Select(w => new WorkoutLegendItem(w.Name, w.Color ?? "#5B6636"))
+                    .OrderBy(i => i.Name)
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[WeekViewModel] Workouts fout: {ex.Message}");
+            }
+        }
         var popup = new Views.LegendPopup(_allWorkouts);
         await Shell.Current.CurrentPage.ShowPopupAsync(popup);
     }
