@@ -38,24 +38,24 @@ public static class MauiProgram
             builder.Services.AddHttpClient<ILessonService, LessonService>(client =>
             {
                 string baseUrl = DeviceInfo.Platform == DevicePlatform.Android
-                    ? "http://10.0.2.2:8080/"
-                    : "http://localhost:8080/";
+                    ? "http://10.0.2.2:5000/"
+                    : "http://localhost:5000/";
                 client.BaseAddress = new Uri(baseUrl);
             });
 
             builder.Services.AddHttpClient<IParticipantService, ParticipantService>(client =>
             {
                 string baseUrl = DeviceInfo.Platform == DevicePlatform.Android
-                    ? "http://10.0.2.2:8080/"
-                    : "http://localhost:8080/";
+                    ? "http://10.0.2.2:5000/"
+                    : "http://localhost:5000/";
                 client.BaseAddress = new Uri(baseUrl);
             });
 
             builder.Services.AddHttpClient<ISubscriptionService, SubscriptionService>(client =>
             {
                 string baseUrl = DeviceInfo.Platform == DevicePlatform.Android
-                    ? "http://10.0.2.2:8080/"
-                    : "http://localhost:8080/";
+                    ? "http://10.0.2.2:5000/"
+                    : "http://localhost:5000/";
                 client.BaseAddress = new Uri(baseUrl);
             });
 
@@ -65,8 +65,8 @@ public static class MauiProgram
             builder.Services.AddHttpClient("NotificationClient", client =>
             {
                 string baseUrl = DeviceInfo.Platform == DevicePlatform.Android
-                    ? "http://10.0.2.2:8080/"
-                    : "http://localhost:8080/";
+                    ? "http://10.0.2.2:5000/"
+                    : "http://localhost:5000/";
                 client.BaseAddress = new Uri(baseUrl);
             });
             builder.Services.AddSingleton<INotificationService>(sp =>
@@ -79,16 +79,16 @@ public static class MauiProgram
             builder.Services.AddHttpClient<IReservationService, ReservationService>(client =>
             {
                 string baseUrl = DeviceInfo.Platform == DevicePlatform.Android
-                    ? "http://10.0.2.2:8080/"
-                    : "http://localhost:8080/";
+                    ? "http://10.0.2.2:5000/"
+                    : "http://localhost:5000/";
                 client.BaseAddress = new Uri(baseUrl);
             });
 
             builder.Services.AddHttpClient<ILessonManagementService, LessonManagementService>(client =>
             {
                 string baseUrl = DeviceInfo.Platform == DevicePlatform.Android
-                    ? "http://10.0.2.2:8080/"
-                    : "http://localhost:8080/";
+                    ? "http://10.0.2.2:5000/"
+                    : "http://localhost:5000/";
                 client.BaseAddress = new Uri(baseUrl);
             });
 
@@ -100,8 +100,8 @@ public static class MauiProgram
                 var httpClient        = httpClientFactory.CreateClient(nameof(AuthenticationService));
 
                 string baseUrl = DeviceInfo.Platform == DevicePlatform.Android
-                    ? "http://10.0.2.2:8080/"
-                    : "http://localhost:8080/";
+                    ? "http://10.0.2.2:5000/"
+                    : "http://localhost:5000/";
                 httpClient.BaseAddress = new Uri(baseUrl);
 
                 return new AuthenticationService(httpClient);
@@ -111,8 +111,8 @@ public static class MauiProgram
             builder.Services.AddHttpClient<IPhotoService, PhotoService>(client =>
             {
                 string baseUrl = DeviceInfo.Platform == DevicePlatform.Android
-                    ? "http://10.0.2.2:8080/"
-                    : "http://localhost:8080/";
+                    ? "http://10.0.2.2:5000/"
+                    : "http://localhost:5000/";
                 client.BaseAddress = new Uri(baseUrl);
             });
 

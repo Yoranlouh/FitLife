@@ -26,7 +26,7 @@ public partial class HomePage : ContentPage
 
     private async void OnViewLessonsClicked(object sender, EventArgs e)
     {
-        await Shell.Current.GoToAsync("//LessonsPage");
+        await Shell.Current.GoToAsync("//WeekPage");
     }
 
     private async void OnReservationsClicked(object sender, EventArgs e)

@@ -1,22 +1,20 @@
 using FitLife.Maui.Helpers;
 using FitLife.Maui.ViewModels;
 using SharedLibrary.DTOs.Responses;
-using System.Globalization;
 using Microsoft.Maui.Controls.Shapes;
 using CommunityToolkit.Maui;
 using CommunityToolkit.Maui.Extensions;
-using CommunityToolkit.Maui.Views;
 
 namespace FitLife.Maui.Views;
 
-public partial class WeekPage : ContentPage
+public partial class WeekPage
 {
     private const int StartHour = 8;  // 08:00
     private const int EndHour = 20;   // 20:00
     private const int TotalRows = EndHour - StartHour; // 12 rijen
 
-    private bool _isUpdating = false;
-    private bool _isGridInitialized = false;
+    private bool _isUpdating;
+    private bool _isGridInitialized;
     private WeekViewModel? _viewModel;
 
 	public WeekPage(WeekViewModel viewModel)
@@ -39,15 +37,17 @@ public partial class WeekPage : ContentPage
 
         _gridUpdatePending = true;
 
-        // BeginInvokeOnMainThread always posts to the message queue — even when already on the
-        // main thread — so the grid update runs AFTER all synchronous collection changes
-        // (Clear + all Adds) have completed. This eliminates the CancellationToken race
-        // condition that the previous Task.Delay(50ms) approach had.
+        // BeginInvokeOnMainThread posts to the message queue AFTER all synchronous
+        // collection changes (Clear + all Adds) have completed, so UpdateLessonGrid
+        // always sees the final collection state.
         MainThread.BeginInvokeOnMainThread(() =>
         {
             _gridUpdatePending = false;
             if (!_isUpdating && _isGridInitialized)
+            {
+                System.Diagnostics.Debug.WriteLine($"[WeekPage] Grid bijwerken — {(_viewModel?.Lessons.Count ?? 0)} lessen");
                 UpdateLessonGrid();
+            }
         });
     }
 
@@ -69,41 +69,31 @@ public partial class WeekPage : ContentPage
         _gridUpdatePending = false;
     }
 
-    protected override async void OnAppearing()
+    protected override void OnAppearing()
     {
         base.OnAppearing();
 
-        // Re-registreer de handler elke keer dat de pagina verschijnt.
-        // De WeekPage-instantie leeft in de Shell flyout en wordt hergebruikt:
-        // OnDisappearing unregistreert de handler, maar zonder re-registratie
-        // hier zien we nooit meer updates na de eerste keer navigeren.
+        // Re-register handler zodat grid-updates werken na terugnavigeren.
         if (_viewModel != null)
         {
             _viewModel.Lessons.CollectionChanged -= OnLessonsCollectionChanged;
             _viewModel.Lessons.CollectionChanged += OnLessonsCollectionChanged;
         }
 
-        if (!_isGridInitialized)
+        // Dispatcher.Dispatch stelt grid-init en data-load uit naar NADAT de
+        // navigatieanimatie klaar is. Synchroon werk in OnAppearing zelf blokkeert
+        // de animatie en veroorzaakt een zichtbare freeze op Android/Windows.
+        Dispatcher.Dispatch(() =>
         {
-            InitializeGrid();
-            _isGridInitialized = true;
-        }
-
-        if (BindingContext is WeekViewModel viewModel)
-        {
-            // Await the load, then build the grid AFTER the navigation transition settles.
-            // Building synchronously here (as the previous refactor did) runs the entire
-            // ~84-cell grid construction on the UI thread DURING the page transition, which
-            // Android reports as ANR ("Isn't responding"). Dispatcher.Dispatch posts the build
-            // to the next message-loop iteration so the transition completes first — this is
-            // the safeguard the original working version had and the refactor accidentally removed.
-            await viewModel.LoadLessonsCommand.ExecuteAsync(null);
-            Dispatcher.Dispatch(() =>
+            if (!_isGridInitialized)
             {
-                if (!_isUpdating && _isGridInitialized)
-                    UpdateLessonGrid();
-            });
-        }
+                InitializeGrid();
+                _isGridInitialized = true;
+            }
+
+            if (BindingContext is WeekViewModel viewModel)
+                _ = viewModel.LoadLessonsCommand.ExecuteAsync(null);
+        });
     }
 
     private void InitializeGrid()
@@ -144,9 +134,7 @@ public partial class WeekPage : ContentPage
         if (LessonGrid == null) return;
         if (BindingContext is not WeekViewModel viewModel) return;
 
-        // BatchBegin BEFORE the try so BatchCommit in finally always has a matching begin.
-        // Placing BatchBegin inside try risked the finally calling BatchCommit without a
-        // preceding BatchBegin if an exception occurred on the very first line.
+        System.Diagnostics.Debug.WriteLine($"[WeekPage] UpdateLessonGrid start — {viewModel.Lessons.Count} lessen");
         LessonGrid.BatchBegin();
         try
         {
@@ -170,7 +158,7 @@ public partial class WeekPage : ContentPage
 
             // Groepeer lessen per dag en uur om overlapping te detecteren
             var lessonsBySlot = viewModel.Lessons
-                .GroupBy(l => new { Day = (l.StartTime.Date - startOfWeek).Days, Hour = l.StartTime.Hour })
+                .GroupBy(l => new { Day = (l.StartTime.Date - startOfWeek).Days, l.StartTime.Hour })
                 .ToDictionary(g => g.Key, g => g.ToList());
 
             System.Diagnostics.Debug.WriteLine($"UpdateLessonGrid - Grouped into {lessonsBySlot.Count} slots");
@@ -282,7 +270,7 @@ public partial class WeekPage : ContentPage
                 circleContainer.Children.Add(circle);
 
                 var tapGesture = new TapGestureRecognizer();
-                tapGesture.Tapped += async (s, e) =>
+                tapGesture.Tapped += async (_, _) =>
                 {
                     try
                     {
@@ -295,7 +283,7 @@ public partial class WeekPage : ContentPage
                             var popup = new MultipleLessonsPopup(lessonsInSlot);
                             var popupResult = await Navigation.ShowPopupAsync<LessonResponse>(popup, PopupOptions.Empty, CancellationToken.None);
 
-                            if (!popupResult.WasDismissedByTappingOutsideOfPopup && popupResult.Result is LessonResponse selectedLesson)
+                            if (!popupResult.WasDismissedByTappingOutsideOfPopup && popupResult.Result is { } selectedLesson)
                             {
                                 await viewModel.GoToDetailsCommand.ExecuteAsync(selectedLesson);
                             }
@@ -316,12 +304,13 @@ public partial class WeekPage : ContentPage
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error in UpdateLessonGrid: {ex.Message}\n{ex.StackTrace}");
+            System.Diagnostics.Debug.WriteLine($"[WeekPage] UpdateLessonGrid fout: {ex.Message}\n{ex.StackTrace}");
         }
         finally
         {
             LessonGrid.BatchCommit();
             _isUpdating = false;
+            System.Diagnostics.Debug.WriteLine("[WeekPage] UpdateLessonGrid klaar");
         }
     }
 

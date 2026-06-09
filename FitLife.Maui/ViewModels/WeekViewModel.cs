@@ -5,7 +5,6 @@ using SharedLibrary.DTOs.Responses;
 using System.Globalization;
 using CommunityToolkit.Maui;
 using CommunityToolkit.Maui.Extensions;
-using CommunityToolkit.Maui.Views;
 using FitLife.Maui.Services;
 
 namespace FitLife.Maui.ViewModels;
@@ -14,7 +13,8 @@ namespace FitLife.Maui.ViewModels;
 // Shows all lessons for the current week in a horizontal day-strip calendar.
 // The user can tap a day header to filter the lesson list to that day,
 // or swipe to the previous/next week.
-public partial class WeekViewModel : BaseViewModel
+public partial class
+    WeekViewModel : BaseViewModel
 {
     private readonly ILessonService _lessonService;
     private readonly IAuthenticationService _authenticationService;
@@ -85,7 +85,7 @@ public partial class WeekViewModel : BaseViewModel
         // ISOWeek is locale-agnostic (no dependency on the device's calendar system).
         // CultureInfo.CurrentCulture.Calendar.GetWeekOfYear crashes on non-Gregorian
         // calendars (Hebrew, Hijri, etc.) when CalendarWeekRule.FirstFourDayWeek is used.
-        var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(_startOfWeek);
+        var weekNumber = ISOWeek.GetWeekOfYear(_startOfWeek);
         WeekRangeText = $"Week {weekNumber}, {_startOfWeek:MMMM yyyy}";
 
         // Rebuild the day-strip headers (Mon through Sun)
@@ -107,17 +107,17 @@ public partial class WeekViewModel : BaseViewModel
     // Updates the visual selection state and re-filters the lesson list.
     partial void OnSelectedDateChanged(DateTime value)
     {
-        UpdateWeekDaySelection();
+        UpdateWeekDaySelection(value);
         FilterLessonsForSelectedDay();
     }
 
     // Updates each DayHeaderViewModel's IsSelected flag to reflect the new selection.
     // Only mutates the flag when it differs to avoid redundant UI updates.
-    private void UpdateWeekDaySelection()
+    private void UpdateWeekDaySelection(DateTime selectedDate)
     {
         foreach (var day in WeekDays)
         {
-            var shouldBeSelected = day.Date.Date == SelectedDate.Date;
+            var shouldBeSelected = day.Date.Date == selectedDate.Date;
             if (day.IsSelected != shouldBeSelected)
                 day.IsSelected = shouldBeSelected;
         }
@@ -159,12 +159,15 @@ public partial class WeekViewModel : BaseViewModel
         await LoadLessons();
     }
 
-    // Fetches only the current week's lessons from the API (server-side date filter).
-    // Workouts are NOT loaded here — they are loaded lazily on first legend open so
-    // a slow workouts endpoint can never block the calendar from appearing.
+    // Fetches all lessons from the API (client-side week filter applied after).
+    // Server-side date filtering was removed because DateTime timezone differences between
+    // the MAUI client and the API can cause the filter to return zero results for the
+    // current week, while client-side filtering against _startOfWeek always uses the
+    // same timezone as the lessons collection that was just fetched.
+    // Workouts are NOT loaded here — loaded lazily on first legend open.
     // Uses a version counter so stale results from cancelled navigations are discarded.
-    // AllowConcurrentExecutions = true so re-navigating while a slow lessons call is
-    // still in flight triggers a fresh load rather than silently doing nothing.
+    // AllowConcurrentExecutions = true so re-navigating while a slow call is in flight
+    // triggers a fresh load rather than silently doing nothing.
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task LoadLessons()
     {
@@ -176,17 +179,12 @@ public partial class WeekViewModel : BaseViewModel
             var endOfWeek = _startOfWeek.AddDays(7);
 
             var lessons = await _lessonService.GetLessonsAsync(
-                _authenticationService.CurrentUserId,
-                from: _startOfWeek,
-                to: endOfWeek);
+                _authenticationService.CurrentUserId);
 
             // A newer navigation happened while we were awaiting — discard stale results
             if (version != _loadVersion) return;
 
-            // Filter to the visible week client-side as well. The API is supposed to apply
-            // the from/to range, but we must not depend on that: if the date filter is ever
-            // ignored (e.g. a stale API build) the endpoint returns the entire catalogue,
-            // and feeding hundreds of lessons into the manual grid build freezes the UI thread.
+            // Filter the full catalogue to the Mon–Sun window of the visible week.
             _allLessons = lessons
                 .Where(l => l.StartTime.Date >= _startOfWeek.Date && l.StartTime.Date < endOfWeek.Date)
                 .OrderBy(l => l.StartTime)

@@ -2,7 +2,6 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
-             xmlns:models="clr-namespace:SharedLibrary.DTOs.Responses;assembly=SharedLibrary"
              x:Class="FitLife.Maui.Views.WeekPage"
              Shell.NavBarIsVisible="False"
              x:DataType="vm:WeekViewModel">
@@ -61,24 +60,26 @@
                     <Border.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding ShowLegendCommand}" />
                     </Border.GestureRecognizers>
-                    <Frame WidthRequest="28" 
-                           HeightRequest="28" 
-                           CornerRadius="14" 
-                           BorderColor="{StaticResource Black}" 
-                           BackgroundColor="Transparent"
-                           Padding="0"
-                           HasShadow="False"
-                           HorizontalOptions="Center" 
-                           VerticalOptions="Center"
-                           InputTransparent="True">
-                        <Label Text="i" 
-                               FontSize="16" 
+                    <Border WidthRequest="28"
+                            HeightRequest="28"
+                            Stroke="{StaticResource Black}"
+                            StrokeThickness="1"
+                            BackgroundColor="Transparent"
+                            Padding="0"
+                            HorizontalOptions="Center"
+                            VerticalOptions="Center"
+                            InputTransparent="True">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="14" />
+                        </Border.StrokeShape>
+                        <Label Text="i"
+                               FontSize="16"
                                FontAttributes="Italic"
                                TextColor="{StaticResource Black}"
-                               HorizontalOptions="Center" 
+                               HorizontalOptions="Center"
                                VerticalOptions="Center"
                                InputTransparent="True"/>
-                    </Frame>
+                    </Border>
                 </Border>
 
                 <!-- Day Headers -->
