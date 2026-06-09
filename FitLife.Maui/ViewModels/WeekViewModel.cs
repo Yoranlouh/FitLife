@@ -183,7 +183,14 @@ public partial class WeekViewModel : BaseViewModel
             // A newer navigation happened while we were awaiting — discard stale results
             if (version != _loadVersion) return;
 
-            _allLessons = lessons.OrderBy(l => l.StartTime).ToList();
+            // Filter to the visible week client-side as well. The API is supposed to apply
+            // the from/to range, but we must not depend on that: if the date filter is ever
+            // ignored (e.g. a stale API build) the endpoint returns the entire catalogue,
+            // and feeding hundreds of lessons into the manual grid build freezes the UI thread.
+            _allLessons = lessons
+                .Where(l => l.StartTime.Date >= _startOfWeek.Date && l.StartTime.Date < endOfWeek.Date)
+                .OrderBy(l => l.StartTime)
+                .ToList();
 
             Lessons.Clear();
             foreach (var lesson in _allLessons)

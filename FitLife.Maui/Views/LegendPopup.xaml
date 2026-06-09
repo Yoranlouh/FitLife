@@ -3,8 +3,7 @@
                xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
                xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
                xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
-               x:Class="FitLife.Maui.Views.LegendPopup"
-               Color="Transparent">
+               x:Class="FitLife.Maui.Views.LegendPopup">
 
     <Border BackgroundColor="White"
             StrokeShape="RoundRectangle 16"

@@ -1385,6 +1385,31 @@ app.MapPost("/subscriptions/change-billing", async (IConfiguration configuration
     }
 });
 
+// DELETE /upload/photo/{userId} — Removes the user's profile photo file and clears photo_url in the DB.
+app.MapDelete("/upload/photo/{userId:int}", async (int userId, IConfiguration configuration) =>
+{
+    try
+    {
+        foreach (var old in Directory.GetFiles(uploadsDir, $"user_{userId}_*"))
+            File.Delete(old);
+
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        await using var connection = new MySqlConnection(connectionString);
+        await connection.OpenAsync();
+        await using var cmd = new MySqlCommand(
+            "UPDATE users SET photo_url = NULL WHERE id = @id", connection);
+        cmd.Parameters.AddWithValue("@id", userId);
+        await cmd.ExecuteNonQueryAsync();
+
+        return Results.Ok(new { success = true });
+    }
+    catch (Exception ex)
+    {
+        System.Diagnostics.Debug.WriteLine($"[API] Photo delete error for user {userId}: {ex.Message}");
+        return Results.Problem("Er is een fout opgetreden bij het verwijderen van de foto.");
+    }
+});
+
 // POST /upload/photo/{userId} — Accepts a multipart/form-data upload (max 5 MB, jpg/png/webp),
 // saves it to the /uploads directory, and updates the user's photo_url in the database.
 // Returns { "photoUrl": "http://..." } so the client can display the new image immediately.

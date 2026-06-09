@@ -89,7 +89,7 @@
                         </Border.GestureRecognizers>
                         <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="14">
                             <Image Source="icon_calendar.svg" WidthRequest="46" HeightRequest="46" HorizontalOptions="Center" />
-                            <Label Text="Rooster &amp; Events"
+                            <Label Text="Rooster"
                                    FontSize="13" TextColor="{StaticResource Black}"
                                    HorizontalOptions="Center" HorizontalTextAlignment="Center" />
                         </VerticalStackLayout>

@@ -91,11 +91,18 @@ public partial class WeekPage : ContentPage
 
         if (BindingContext is WeekViewModel viewModel)
         {
-            // Await the load so we can directly update the grid afterwards.
-            // CollectionChanged also triggers UpdateLessonGrid via BeginInvokeOnMainThread,
-            // but awaiting here guarantees the grid is drawn even if that path is delayed.
+            // Await the load, then build the grid AFTER the navigation transition settles.
+            // Building synchronously here (as the previous refactor did) runs the entire
+            // ~84-cell grid construction on the UI thread DURING the page transition, which
+            // Android reports as ANR ("Isn't responding"). Dispatcher.Dispatch posts the build
+            // to the next message-loop iteration so the transition completes first — this is
+            // the safeguard the original working version had and the refactor accidentally removed.
             await viewModel.LoadLessonsCommand.ExecuteAsync(null);
-            UpdateLessonGrid();
+            Dispatcher.Dispatch(() =>
+            {
+                if (!_isUpdating && _isGridInitialized)
+                    UpdateLessonGrid();
+            });
         }
     }
 
@@ -318,52 +325,27 @@ public partial class WeekPage : ContentPage
         }
     }
 
+    // Splits a slot cell into proportional colour stripes for overlapping lessons.
+    // Uses BoxViews in a star-sized Grid instead of Polygon shapes: MAUI Shape elements
+    // with Aspect=Stretch.Fill and no fixed size enter a measure/arrange loop when placed
+    // in a star-width cell inside a ScrollView, which freezes the UI thread and prevents
+    // the grid from ever rendering. BoxViews have a determinate size and lay out cheaply.
     private void AddDiagonalBackground(Grid grid, List<Color> colors)
     {
-        if (colors.Count == 2)
+        if (colors.Count < 2) return;
+
+        var stripeGrid = new Grid { ColumnSpacing = 0 };
+        for (int i = 0; i < colors.Count; i++)
+            stripeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Star });
+
+        for (int i = 0; i < colors.Count; i++)
         {
-            // Top-left driehoek
-            grid.Children.Add(new Polygon
-            {
-                Points = new PointCollection { new Point(0, 0), new Point(100, 0), new Point(0, 100) },
-                Fill = colors[0],
-                Aspect = Microsoft.Maui.Controls.Stretch.Fill
-            });
-            // Bottom-right driehoek
-            grid.Children.Add(new Polygon
-            {
-                Points = new PointCollection { new Point(100, 100), new Point(100, 0), new Point(0, 100) },
-                Fill = colors[1],
-                Aspect = Microsoft.Maui.Controls.Stretch.Fill
-            });
+            var box = new BoxView { Color = colors[i] };
+            Grid.SetColumn(box, i);
+            stripeGrid.Children.Add(box);
         }
-        else if (colors.Count >= 3)
-        {
-            // Top-left
-            grid.Children.Add(new Polygon
-            {
-                Points = new PointCollection { new Point(0, 0), new Point(60, 0), new Point(0, 60) },
-                Fill = colors[0],
-                Aspect = Microsoft.Maui.Controls.Stretch.Fill
-            });
-            // Midden strook
-            grid.Children.Add(new Polygon
-            {
-                Points = new PointCollection { 
-                    new Point(60, 0), new Point(100, 0), new Point(100, 40), 
-                    new Point(40, 100), new Point(0, 100), new Point(0, 60) 
-                },
-                Fill = colors[1],
-                Aspect = Microsoft.Maui.Controls.Stretch.Fill
-            });
-            // Bottom-right
-            grid.Children.Add(new Polygon
-            {
-                Points = new PointCollection { new Point(100, 40), new Point(100, 100), new Point(40, 100) },
-                Fill = colors[2],
-                Aspect = Microsoft.Maui.Controls.Stretch.Fill
-            });
-        }
+
+        grid.Children.Add(stripeGrid);
     }
 
     // Delegates to the central WorkoutColorHelper so all views use one source for color resolution.

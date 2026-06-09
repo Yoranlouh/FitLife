@@ -8,6 +8,10 @@ public interface IPhotoService
     // Opens the OS photo picker/camera, then uploads the result to the API.
     // Returns the new public URL of the uploaded image, or null if cancelled/failed.
     Task<string?> PickAndUploadAsync(int userId);
+
+    // Deletes the user's profile photo from disk and clears it in the database.
+    // Returns true on success.
+    Task<bool> DeletePhotoAsync(int userId);
 }
 
 // Implementation that lets the user choose a photo source, then streams
@@ -94,6 +98,13 @@ public class PhotoService : IPhotoService
         // The API responds with { "photoUrl": "http://..." }
         var json = await response.Content.ReadFromJsonAsync<PhotoUploadResult>();
         return json?.PhotoUrl;
+    }
+
+    // Calls DELETE /upload/photo/{userId} on the API.
+    public async Task<bool> DeletePhotoAsync(int userId)
+    {
+        var response = await _http.DeleteAsync($"upload/photo/{userId}");
+        return response.IsSuccessStatusCode;
     }
 
     // Anonymous record to deserialise the API's upload response body

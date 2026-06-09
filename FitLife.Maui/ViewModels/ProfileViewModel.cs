@@ -210,6 +210,44 @@ public partial class ProfileViewModel : BaseViewModel
         }
     }
 
+    // Removes the current profile photo and reverts to the default avatar icon.
+    [RelayCommand]
+    private async Task DeletePhoto()
+    {
+        if (_authService.CurrentUserId is not int userId) return;
+        if (string.IsNullOrEmpty(ProfilePictureUrl)) return;
+
+        bool confirmed = await Shell.Current.DisplayAlert(
+            "Foto verwijderen",
+            "Weet je zeker dat je je profielfoto wilt verwijderen?",
+            "Verwijderen", "Annuleren");
+        if (!confirmed) return;
+
+        IsUploadingPhoto = true;
+        try
+        {
+            var ok = await _photoService.DeletePhotoAsync(userId);
+            if (ok)
+            {
+                _authService.UpdatePhotoUrl(null);
+                ProfilePictureUrl = null;
+            }
+            else
+            {
+                await Shell.Current.DisplayAlert("Fout", "Foto verwijderen mislukt. Controleer je verbinding.", "OK");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ProfileViewModel] Photo delete error: {ex.Message}");
+            await Shell.Current.DisplayAlert("Fout", "Foto verwijderen mislukt. Controleer je verbinding.", "OK");
+        }
+        finally
+        {
+            IsUploadingPhoto = false;
+        }
+    }
+
     // Clears the authentication session and replaces the app's root page with the login page.
     [RelayCommand]
     private async Task Logout()
