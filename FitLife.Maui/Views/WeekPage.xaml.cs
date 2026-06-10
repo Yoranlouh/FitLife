@@ -25,24 +25,25 @@ public partial class WeekPage
         _viewModel.Lessons.CollectionChanged += OnLessonsCollectionChanged;
 	}
 
-    // True when a grid redraw is already queued on the main thread.
-    // Prevents queuing multiple redraws for a single batch of collection changes
-    // (Clear + N Adds all fire CollectionChanged synchronously in one main-thread call).
-    private bool _gridUpdatePending;
+    // Debounce-token voor grid-herbouw. Eén lessen-load veroorzaakt 1 Clear + N Adds.
+    // Die changes komen NIET als één atomair main-thread-blok binnen (bewezen via logcat:
+    // tussen elke Add draait de herbouw al), dus een simpele "pending"-vlag coalesceert niet
+    // en elke Add triggert een volledige UpdateLessonGrid → de load wordt O(N²) en de
+    // UI-thread bevriest (ANR). Elke change verhoogt de generatie en plant een uitgestelde
+    // herbouw; alleen de laatst geplande herbouw van een burst draait, dus de grid wordt
+    // precies één keer per load opgebouwd — dezelfde granulariteit als een CollectionView.
+    private int _gridUpdateGeneration;
 
     private void OnLessonsCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
     {
         if (_isUpdating || !_isGridInitialized) return;
-        if (_gridUpdatePending) return;
 
-        _gridUpdatePending = true;
-
-        // BeginInvokeOnMainThread posts to the message queue AFTER all synchronous
-        // collection changes (Clear + all Adds) have completed, so UpdateLessonGrid
-        // always sees the final collection state.
-        MainThread.BeginInvokeOnMainThread(() =>
+        // DispatchDelayed is veilig vanaf elke thread; de actie draait op de main thread.
+        var generation = ++_gridUpdateGeneration;
+        Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(80), () =>
         {
-            _gridUpdatePending = false;
+            // Een nieuwere change in dezelfde burst heeft deze herbouw verdrongen.
+            if (generation != _gridUpdateGeneration) return;
             if (!_isUpdating && _isGridInitialized)
             {
                 System.Diagnostics.Debug.WriteLine($"[WeekPage] Grid bijwerken — {(_viewModel?.Lessons.Count ?? 0)} lessen");
@@ -63,10 +64,9 @@ public partial class WeekPage
         {
             _viewModel.Lessons.CollectionChanged -= OnLessonsCollectionChanged;
         }
-        // Reset de pending-flag zodat de volgende OnAppearing niet vastloopt:
-        // als de pagina verdwijnt terwijl een update in de queue staat, blijft
-        // de flag anders 'true' en worden alle CollectionChanged events genegeerd.
-        _gridUpdatePending = false;
+        // Annuleer een eventueel uitgestelde (gedebouncede) herbouw zodat die niet
+        // alsnog afvuurt nadat de pagina is verdwenen.
+        _gridUpdateGeneration++;
     }
 
     protected override void OnAppearing()
