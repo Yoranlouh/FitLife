@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FitLife Studiequiz</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0f2f5;--card:#fff;--text:#1a1a2e;--sub:#555;--border:#e0e0e0;
+  --primary:#4f46e5;--primary-light:#eef2ff;--green:#16a34a;--red:#dc2626;
+  --orange:#ea580c;--purple:#7c3aed;--yellow:#ca8a04;--dark:#1e293b;
+  --badge-basic:#3b82f6;--badge-func:#16a34a;--badge-tech:#ea580c;
+  --badge-arch:#7c3aed;--badge-prak:#db2777;--badge-oral:#1e293b;
+  --shadow:0 2px 8px rgba(0,0,0,.08);
+}
+.dark{
+  --bg:#0f172a;--card:#1e293b;--text:#e2e8f0;--sub:#94a3b8;--border:#334155;
+  --primary-light:#1e1b4b;--shadow:0 2px 8px rgba(0,0,0,.4);
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+header{background:var(--dark);color:#fff;padding:16px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+header h1{font-size:1.3rem;font-weight:700;flex:1}
+.stat-pill{background:rgba(255,255,255,.15);border-radius:20px;padding:4px 12px;font-size:.82rem;white-space:nowrap}
+.stat-pill span{font-weight:700;color:#a5f3fc}
+.btn{cursor:pointer;border:none;border-radius:8px;padding:7px 14px;font-size:.83rem;font-weight:600;transition:.15s}
+.btn-ghost{background:rgba(255,255,255,.1);color:#fff}.btn-ghost:hover{background:rgba(255,255,255,.2)}
+.btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{opacity:.9}
+.btn-success{background:var(--green);color:#fff}
+.btn-danger{background:var(--red);color:#fff}
+.btn-sm{padding:4px 10px;font-size:.78rem}
+
+.layout{display:flex;min-height:calc(100vh - 60px)}
+aside{width:260px;flex-shrink:0;background:var(--card);border-right:1px solid var(--border);padding:16px;overflow-y:auto;max-height:calc(100vh - 60px);position:sticky;top:60px}
+aside h3{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--sub);margin:16px 0 6px}
+aside h3:first-child{margin-top:0}
+.search-box{width:100%;border:1px solid var(--border);border-radius:8px;padding:8px 12px;background:var(--bg);color:var(--text);font-size:.85rem}
+.search-box:focus{outline:2px solid var(--primary)}
+.filter-btn{display:block;width:100%;text-align:left;border:1px solid var(--border);border-radius:6px;padding:6px 10px;margin-bottom:4px;background:var(--bg);color:var(--text);font-size:.82rem;cursor:pointer;transition:.12s}
+.filter-btn:hover{border-color:var(--primary);background:var(--primary-light)}
+.filter-btn.active{border-color:var(--primary);background:var(--primary-light);font-weight:600;color:var(--primary)}
+.filter-btn .count{float:right;font-size:.75rem;color:var(--sub)}
+.progress-bar{height:6px;background:var(--border);border-radius:3px;margin-top:16px;overflow:hidden}
+.progress-fill{height:100%;background:var(--green);border-radius:3px;transition:.3s}
+
+main{flex:1;padding:20px;overflow-y:auto}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.toolbar .spacer{flex:1}
+#question-count{font-size:.85rem;color:var(--sub)}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:12px;box-shadow:var(--shadow);transition:.2s}
+.card:hover{box-shadow:0 4px 16px rgba(0,0,0,.12)}
+.card-header{padding:14px 16px;display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+.card-body{padding:0 16px 14px;display:none}
+.card.open .card-body{display:block}
+.card.correct{border-left:4px solid var(--green)}
+.card.incorrect{border-left:4px solid var(--red)}
+.card.favorited .fav-btn{color:#f59e0b}
+
+.q-text{flex:1;font-size:.95rem;font-weight:500;line-height:1.5}
+.q-num{font-size:.75rem;color:var(--sub);min-width:28px}
+.badges{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.badge{font-size:.7rem;font-weight:700;padding:2px 7px;border-radius:10px;color:#fff;white-space:nowrap}
+.badge-basic{background:var(--badge-basic)}
+.badge-func{background:var(--badge-func)}
+.badge-tech{background:var(--badge-tech)}
+.badge-arch{background:var(--badge-arch)}
+.badge-prak{background:var(--badge-prak)}
+.badge-oral{background:var(--badge-oral)}
+.badge-topic{background:var(--border);color:var(--sub)}
+
+.answer-box{background:var(--primary-light);border:1px solid var(--primary);border-radius:8px;padding:12px;margin-top:4px;font-size:.88rem;line-height:1.6}
+.answer-box strong{color:var(--primary)}
+.explain{margin-top:8px;font-size:.82rem;color:var(--sub);line-height:1.6;border-top:1px solid var(--border);padding-top:8px}
+.card-footer{display:flex;gap:6px;margin-top:10px;align-items:center}
+.card-footer .spacer{flex:1}
+.fav-btn{background:none;border:none;cursor:pointer;font-size:1.1rem;padding:4px;color:var(--sub)}
+
+/* Oral exam overlay */
+#oral-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:none;justify-content:center;align-items:center}
+#oral-overlay.show{display:flex}
+.oral-card{background:var(--card);border-radius:16px;padding:28px;max-width:680px;width:95%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.oral-card h2{font-size:1.1rem;margin-bottom:4px;color:var(--sub);text-transform:uppercase;font-size:.75rem;letter-spacing:.08em}
+.oral-q{font-size:1.15rem;font-weight:600;margin:12px 0;line-height:1.5}
+.timer-bar{height:8px;background:var(--border);border-radius:4px;margin:12px 0;overflow:hidden}
+.timer-fill{height:100%;background:var(--orange);border-radius:4px;transition:width 1s linear}
+.oral-section{background:var(--bg);border-radius:8px;padding:12px;margin:10px 0;font-size:.88rem;line-height:1.6}
+.oral-section h4{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--sub);margin-bottom:6px}
+.followups li{margin-left:16px;margin-bottom:4px}
+.tips li{margin-left:16px;margin-bottom:4px;color:var(--sub)}
+.oral-footer{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--dark);color:#fff;padding:10px 16px;border-radius:8px;font-size:.85rem;z-index:300;opacity:0;transition:.3s;pointer-events:none}
+.toast.show{opacity:1}
+
+@media(max-width:700px){
+  aside{display:none}
+  .layout{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>🏋️ FitLife Studiequiz</h1>
+  <div class="stat-pill">Score: <span id="score-display">0/0</span></div>
+  <div class="stat-pill">Favoriet: <span id="fav-count">0</span></div>
+  <button class="btn btn-ghost" onclick="startOralExam()">🎤 Mondeling</button>
+  <button class="btn btn-ghost" onclick="showRetryMode()">🔄 Foute vragen</button>
+  <button class="btn btn-ghost" onclick="toggleTheme()" id="theme-btn">🌙 Dark</button>
+</header>
+
+<div class="layout">
+<aside>
+  <input class="search-box" type="search" placeholder="Zoeken…" id="search-input" oninput="applyFilters()">
+
+  <h3>Niveau</h3>
+  <button class="filter-btn active" data-filter="level" data-value="all" onclick="setFilter('level','all',this)">Alle niveaus <span class="count" id="cnt-all"></span></button>
+  <button class="filter-btn" data-filter="level" data-value="basic" onclick="setFilter('level','basic',this)">🔵 Basisbegrip <span class="count" id="cnt-basic"></span></button>
+  <button class="filter-btn" data-filter="level" data-value="func" onclick="setFilter('level','func',this)">🟢 Functioneel <span class="count" id="cnt-func"></span></button>
+  <button class="filter-btn" data-filter="level" data-value="tech" onclick="setFilter('level','tech',this)">🟠 Technisch <span class="count" id="cnt-tech"></span></button>
+  <button class="filter-btn" data-filter="level" data-value="arch" onclick="setFilter('level','arch',this)">🟣 Architectuur <span class="count" id="cnt-arch"></span></button>
+  <button class="filter-btn" data-filter="level" data-value="prak" onclick="setFilter('level','prak',this)">🩷 Praktijk <span class="count" id="cnt-prak"></span></button>
+  <button class="filter-btn" data-filter="level" data-value="oral" onclick="setFilter('level','oral',this)">🎤 Mondeling <span class="count" id="cnt-oral"></span></button>
+
+  <h3>Onderwerp</h3>
+  <button class="filter-btn active" data-filter="topic" data-value="all" onclick="setFilter('topic','all',this)">Alle onderwerpen</button>
+  <button class="filter-btn" data-filter="topic" data-value="Architectuur" onclick="setFilter('topic','Architectuur',this)">Architectuur</button>
+  <button class="filter-btn" data-filter="topic" data-value="Authenticatie" onclick="setFilter('topic','Authenticatie',this)">Authenticatie</button>
+  <button class="filter-btn" data-filter="topic" data-value="Credits" onclick="setFilter('topic','Credits',this)">Credits & Abonnementen</button>
+  <button class="filter-btn" data-filter="topic" data-value="Reserveringen" onclick="setFilter('topic','Reserveringen',this)">Reserveringen</button>
+  <button class="filter-btn" data-filter="topic" data-value="Spinning" onclick="setFilter('topic','Spinning',this)">Spinning Fietsen</button>
+  <button class="filter-btn" data-filter="topic" data-value="Capaciteit" onclick="setFilter('topic','Capaciteit',this)">Capaciteit</button>
+  <button class="filter-btn" data-filter="topic" data-value="UI" onclick="setFilter('topic','UI',this)">Vertaling & UI</button>
+  <button class="filter-btn" data-filter="topic" data-value="API" onclick="setFilter('topic','API',this)">API & Database</button>
+  <button class="filter-btn" data-filter="topic" data-value="Docker" onclick="setFilter('topic','Docker',this)">Docker & Deployment</button>
+  <button class="filter-btn" data-filter="topic" data-value="Blazor" onclick="setFilter('topic','Blazor',this)">Blazor Admin</button>
+  <button class="filter-btn" data-filter="topic" data-value="Testen" onclick="setFilter('topic','Testen',this)">Testen</button>
+  <button class="filter-btn" data-filter="topic" data-value="Praktijk" onclick="setFilter('topic','Praktijk',this)">Praktijkscenario</button>
+
+  <h3>Voortgang</h3>
+  <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+  <p style="font-size:.78rem;color:var(--sub);margin-top:6px" id="prog-label">0 van 0 beantwoord</p>
+</aside>
+
+<main>
+  <div class="toolbar">
+    <span id="question-count"></span>
+    <span class="spacer"></span>
+    <button class="btn btn-ghost btn-sm" onclick="expandAll()">Alles openen</button>
+    <button class="btn btn-ghost btn-sm" onclick="collapseAll()">Alles sluiten</button>
+    <button class="btn btn-ghost btn-sm" onclick="shuffleVisible()">🔀 Shuffle</button>
+    <button class="btn btn-ghost btn-sm" onclick="showFavs()">⭐ Favorieten</button>
+    <button class="btn btn-ghost btn-sm" onclick="resetAll()">↺ Reset</button>
+  </div>
+  <div id="cards-container"></div>
+</main>
+</div>
+
+<!-- Oral exam overlay -->
+<div id="oral-overlay">
+  <div class="oral-card">
+    <h2>🎤 Mondelinge Examenvraag</h2>
+    <div class="oral-q" id="oral-q-text"></div>
+    <div style="font-size:.8rem;color:var(--sub)">Denktijd: <span id="timer-secs">60</span>s</div>
+    <div class="timer-bar"><div class="timer-fill" id="timer-fill" style="width:100%"></div></div>
+    <div id="oral-answer-section" style="display:none">
+      <div class="oral-section">
+        <h4>📝 Voorbeeldantwoord</h4>
+        <div id="oral-answer"></div>
+      </div>
+      <div class="oral-section">
+        <h4>❓ Vervolgvragen</h4>
+        <ul class="followups" id="oral-followups"></ul>
+      </div>
+      <div class="oral-section">
+        <h4>💡 Tips</h4>
+        <ul class="tips" id="oral-tips"></ul>
+      </div>
+    </div>
+    <div class="oral-footer">
+      <button class="btn btn-primary" onclick="revealOralAnswer()" id="reveal-oral-btn">Toon antwoord</button>
+      <button class="btn btn-success" onclick="nextOralQuestion()">Volgende vraag →</button>
+      <button class="btn btn-ghost" onclick="closeOral()">✕ Sluiten</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────────────────
+const Q = [
+// ===== BASISBEGRIP =====
+{id:1,level:'basic',topic:'Architectuur',q:'Welke projecten vormen de FitLife-applicatie?',
+a:'FitLife bestaat uit 5 projecten: <strong>FitLife.API</strong> (ASP.NET Core Minimal API backend), <strong>FitLife.Maui</strong> (.NET MAUI mobiele app), <strong>FitLife.BlazorWebApp</strong> (Blazor Server admin panel), <strong>FitLife.SharedLibrary</strong> (gedeelde DTOs/modellen) en <strong>FitLife.Tests</strong> (tests).',
+explain:'De opsplitsing zorgt ervoor dat DTOs maar één keer gedefinieerd worden in SharedLibrary en hergebruikt worden door API, MAUI en Blazor.'},
+
+{id:2,level:'basic',topic:'Architectuur',q:'Welk UI-framework wordt gebruikt voor de mobiele app?',
+a:'.NET MAUI (Multi-platform App UI). MAUI is Microsofts cross-platform framework voor iOS, Android, Windows en macOS vanuit één codebase.',
+explain:'FitLife richt zich op Android (emulator op 10.0.2.2:5000). MAUI gebruikt XAML voor de UI en C# voor de logica.'},
+
+{id:3,level:'basic',topic:'Credits',q:'Hoeveel credits heeft elk abonnementstype?',
+a:'<strong>Rookie</strong> = 9 credits, <strong>Intermediate</strong> = 13 credits, <strong>Advanced</strong> = 999 credits (sentinel voor onbeperkt).',
+explain:'999 is een sentinel value: de code checkt credits > 0 om te reserveren, maar Advanced-leden raken dit nooit kwijt in de praktijk.'},
+
+{id:4,level:'basic',topic:'API',q:'Welk databasesysteem gebruikt FitLife en welke driver?',
+a:'<strong>MySQL</strong> (8.0+) als database, <strong>MySqlConnector</strong> als driver. Geen ORM zoals Entity Framework — alle SQL wordt handmatig geschreven.',
+explain:'MySqlConnector (niet MySql.Data) is volledig async-compatibel met .NET. Raw SQL geeft meer controle over queries en transacties.'},
+
+{id:5,level:'basic',topic:'Credits',q:'Hoe lang duurt een abonnementsperiode?',
+a:'<strong>28 dagen</strong> (vier weken), niet een kalendermaand. Dit geeft consistente periodes ongeacht de maandlengte (28/29/30/31 dagen).',
+explain:'28 dagen = precies 4 weken. Een kalendermaand zou elke maand een andere lengte hebben, wat de creditreset inconsistent maakt.'},
+
+{id:6,level:'basic',topic:'Docker',q:'Welke tool vervangt Swagger voor API-documentatie?',
+a:'<strong>Scalar</strong>. Beschikbaar op <code>/scalar</code> in de Development-omgeving. Genereert een interactieve API-browser op basis van het OpenAPI-schema.',
+explain:'Scalar is een modernere, mooiere interface dan de standaard Swagger UI, maar genereert dezelfde OpenAPI spec.'},
+
+{id:7,level:'basic',topic:'Spinning',q:'Hoe is de spinningzaal ingedeeld?',
+a:'<strong>4 rijen × 4 fietsen = 16 fietsen</strong> totaal. Fietsen zijn genummerd 1–16 in rij-volgorde (rij 1: 1–4, rij 2: 5–8, rij 3: 9–12, rij 4: 13–16).',
+explain:'De DisplayLabel-eigenschap berekent dit als (RowNumber - 1) * 4 + BikeNumber.'},
+
+{id:8,level:'basic',topic:'Architectuur',q:'Wat is het MVVM-patroon en hoe wordt het toegepast?',
+a:'Model-View-ViewModel. <strong>Views</strong> (XAML-pagina\'s) binden aan <strong>ViewModel</strong>-properties via data binding. <strong>ViewModels</strong> (CommunityToolkit.Mvvm) bevatten de bedrijfslogica. <strong>Models</strong> zijn de domeinentiteiten/DTOs.',
+explain:'CommunityToolkit.Mvvm gebruikt source generators: [ObservableProperty] genereert automatisch de property + INotifyPropertyChanged-aanroep. [RelayCommand] genereert een ICommand.'},
+
+{id:9,level:'basic',topic:'Docker',q:'Waarom gebruikt de Android-emulator 10.0.2.2 in plaats van localhost?',
+a:'In de Android-emulator verwijst <code>localhost</code> naar de emulator zelf, niet naar de hostmachine. <code>10.0.2.2</code> is het speciale alias voor de Windows-hostmachine.',
+explain:'In MauiProgram.cs staat: DeviceInfo.Platform == DevicePlatform.Android ? "http://10.0.2.2:5000/" : "http://localhost:5000/"'},
+
+{id:10,level:'basic',topic:'Capaciteit',q:'Wat zijn de standaardcapaciteiten van de locaties?',
+a:'Zaal 1, 2 en 3 = <strong>12 personen</strong>, Buitenruimte = <strong>20 personen</strong>, Spinning = <strong>16 personen</strong>.',
+explain:'Deze waarden staan in de locations-tabel. Ze kunnen overschreven worden via capacity_override op les-niveau.'},
+
+{id:11,level:'basic',topic:'UI',q:'Welke talen worden ondersteund in de Translator?',
+a:'<strong>Nederlands (NL)</strong> als standaard en <strong>Engels (EN)</strong>. De taal wordt ingesteld via SettingsViewModel en opgeslagen in Preferences.',
+explain:'Translator.T("Key") geeft de string in de actieve taal. Er zijn 400+ vertaalsleutels. Placeholders werken met string.Format: Translator.T("Key", arg1, arg2).'},
+
+{id:12,level:'basic',topic:'Authenticatie',q:'Hoe lang blijft een gebruiker ingelogd na het starten van de app?',
+a:'Zolang de app open blijft. IAuthenticationService is een <strong>Singleton</strong> die de LoginResponse in geheugen cachet. Bij het sluiten van de app gaat de sessie verloren.',
+explain:'Er is geen persistent token (JWT/cookie) in MAUI. Bij elke app-herstart moet de gebruiker opnieuw inloggen.'},
+
+{id:13,level:'basic',topic:'Blazor',q:'Wat is het verschil tussen de MAUI-app en de Blazor-webapplicatie?',
+a:'<strong>MAUI</strong> is de mobiele app voor eindgebruikers (leden en instructeurs). <strong>Blazor</strong> is het web-admin-panel voor beheerders: lessen beheren, leden beheren, rapportages, capaciteitsinstellingen.',
+explain:'Blazor Server draait de UI op de server en communiceert via SignalR. Blazor praat ook direct met MySQL (via eigen services), niet via de API.'},
+
+{id:14,level:'basic',topic:'API',q:'Waar staan alle API-endpoints gedefinieerd?',
+a:'Alle endpoints zijn inline in <strong>Program.cs</strong> met Minimal API syntax (app.MapGet, app.MapPost, app.MapPut, app.MapDelete). Er zijn geen aparte Controller-klassen.',
+explain:'Minimal API is een alternatief voor de traditionele Controller-architectuur. Alle logica zit in lambda\'s direct in Program.cs — handig voor kleinere projecten.'},
+
+{id:15,level:'basic',topic:'Testen',q:'Welk test-framework gebruikt FitLife.Tests?',
+a:'<strong>xUnit</strong>. Tests dekken 8 domeinen: reserveringen, credits, capaciteit, authenticatie, abonnementen, lessen, fietsen en notificaties.',
+explain:'FitLife.UITests bevat aanvullende UI-tests. Integratietests raken een echte (test) MySQL-database, geen mocks.'},
+
+// ===== FUNCTIONEEL BEGRIP =====
+{id:16,level:'func',topic:'Reserveringen',q:'Hoe verloopt de volledige reserveringsflow?',
+a:'1. Gebruiker tikt "Reserveer" op LessonDetailPage. 2. LessonDetailViewModel roept ReservationService.ReserveAsync() aan. 3. API checkt capaciteit (COALESCE). 4. API checkt dubbele inschrijving. 5. <strong>BEGIN TRANSACTION</strong>: krediet aftrekken + reservation INSERT. 6. <strong>COMMIT</strong>. 7. <strong>WeakReferenceMessenger</strong> stuurt LessonReservedMessage. 8. IsReserved = true, bikes laden als spinning.',
+explain:'De transactie garandeert dat credits en reservering altijd consistent zijn. Als een stap faalt, wordt alles teruggedraaid (ROLLBACK).'},
+
+{id:17,level:'func',topic:'Credits',q:'Wat gebeurt er met credits bij annulering?',
+a:'Hangt af van het <strong>credit_used</strong>-vlag: als credit_used = 1 (gebruiker had een credit verbruikt) → credit wordt teruggestort. Als credit_used = 0 (admin heeft les toegevoegd) → geen terugstorting.",',
+explain:'credit_used = 0 betekent: de admin voegde de gebruiker toe zonder creditkost. Er is geen credit om terug te storten.'},
+
+{id:18,level:'func',topic:'Reserveringen',q:'Hoe werkt het wachtlijstsysteem?',
+a:'Als een les vol is, kan een lid zich inschrijven op de <strong>wachtlijst</strong>. Bij annulering door een ingeschreven lid schuift automatisch de eerste persoon op de wachtlijst door naar een bevestigde reservering.',
+explain:'De wachtlijst is een aparte status in de reservations-tabel. De API beheert de doorschuiflogica bij annulering.'},
+
+{id:19,level:'func',topic:'Authenticatie',q:'Hoe werkt de rolgebaseerde navigatie in de app?',
+a:'Na login controleert <strong>AppShell</strong> de rol (lid/instructeur/admin). Op basis van de rol worden andere FlyoutItems en tabbladen getoond. AppShell is Transient geregistreerd zodat het elke login opnieuw wordt opgebouwd.',
+explain:'Een instructeur ziet bijv. "Mijn Lessen" en "Deelnemers" ipv "Abonnement". De AppShell.xaml.cs bevat de conditionele opbouw.'},
+
+{id:20,level:'func',topic:'Spinning',q:'Hoe werkt de fietsreservering voor spinninglessen?',
+a:'Na reservering van de les verschijnt een <strong>4×4 fietsengrid</strong>. Groen = jouw fiets, grijs = vrij, rood = bezet. Klik op een vrije fiets om te reserveren of van fiets te wisselen. Annulering van de les geeft ook de fiets automatisch vrij.',
+explain:'ShowBikeSection = IsSpinningLesson && IsReserved. De sectie is alleen zichtbaar voor spinninglessen waarbij je ingeschreven bent.'},
+
+{id:21,level:'func',topic:'Blazor',q:'Wat doet de LessonArchiveService?',
+a:'Een <strong>BackgroundService</strong> in Blazor die \'s nachts automatisch verlopen lessen markeert met <strong>is_archived = 1</strong>. Gearchiveerde lessen worden niet meer getoond in de MAUI-app.',
+explain:'BackgroundService is een .NET hosted service die op de achtergrond draait. Zo blijft de database schoon zonder handmatige ingrepen.'},
+
+{id:22,level:'func',topic:'UI',q:'Hoe werkt de kalenderweergave (WeekPage)?',
+a:'WeekPage toont een <strong>7-daagse grid</strong> met lessen per dag. Navigeren via pijlknoppen laadt de vorige/volgende week. Client-side datumfiltering in WeekViewModel filtert de geladen lessen op de geselecteerde week.',
+explain:'De lessen worden allemaal geladen en daarna gefilterd op de client (geen server-side datumparameter). Dit vermijdt tijdzoneproblemen.'},
+
+{id:23,level:'func',topic:'Credits',q:'Hoe werkt een abonnementswijziging?',
+a:'Een gebruiker kiest een nieuw abonnementstype. Dit wordt opgeslagen als <strong>pending wijziging</strong>. De wijziging gaat pas in bij de <strong>volgende 28-daagse verlenging</strong>. Tot dan blijft het huidige abonnement actief. SubscriptionViewModel toont zowel huidig als pending type.',
+explain:'Dit voorkomt dat een downgrade (bijv. Advanced → Rookie) direct credits afpakt aan de gebruiker.'},
+
+{id:24,level:'func',topic:'API',q:'Hoe werkt de profielfoto-upload?',
+a:'POST /users/{id}/photo accepteert <strong>multipart/form-data</strong>. De foto wordt opgeslagen in de <code>uploads/</code>-map op de server. De URL wordt teruggegeven en opgeslagen in de users-tabel. De Blazor-app dient de foto op via een statisch bestandenpad.',
+explain:'PhotoService in MAUI stuurt de afbeelding als stream naar de API. Bij verwijdering verwijdert de API het bestand van schijf én reset de DB-waarde.'},
+
+{id:25,level:'func',topic:'Architectuur',q:'Hoe communiceren ViewModels met elkaar na een reservering?',
+a:'Via <strong>WeakReferenceMessenger</strong> (CommunityToolkit.Mvvm). LessonDetailViewModel stuurt een LessonReservedMessage. HomeViewModel en MyLessonsViewModel luisteren naar dit bericht en vernieuwen hun lessenlijst. Zo is er geen directe koppeling nodig.',
+explain:'WeakReferenceMessenger gebruikt zwakke referenties, zodat ViewModels die niet meer actief zijn automatisch worden opgeruimd door de garbage collector.'},
+
+{id:26,level:'func',topic:'Reserveringen',q:'Wat is de annuleringsdeadline voor een les?',
+a:'Leden kunnen annuleren tot een <strong>ingestelde deadline voor de les</strong> (bijv. 2 uur voor aanvang). Buiten dit venster is annulering niet meer mogelijk via de app. De grens wordt getoond op LessonDetailPage als waarschuwing.',
+explain:'LessonDetailViewModel berekent of de deadline verstreken is en schakelt de annulerknop uit indien nodig.'},
+
+{id:27,level:'func',topic:'Authenticatie',q:'Wat ziet een instructeur anders dan een lid in de app?',
+a:'Instructeur ziet: <strong>Mijn Lessen</strong> (eigen lessenrooster), <strong>Deelnemers</strong> (deelnemersbeheer), aanwezigheidsregistratie. Een lid ziet: <strong>Lesrooster</strong>, <strong>Mijn Lessen</strong> (ingeschreven lessen), <strong>Abonnement</strong>, week-/dagweergave.',
+explain:'AppShell bouwt de navigatiestructuur op basis van de rol die in LoginResponse zit, die gecachet is in IAuthenticationService.'},
+
+{id:28,level:'func',topic:'Blazor',q:'Hoe werkt de aanwezigheidsregistratie?',
+a:'<strong>IAttendanceService</strong> (MockAttendanceService) is een placeholder. De echte implementatie zou RFID-kaartlezer of GPS-geofencing gebruiken. MockAttendanceService simuleert aanwezigheid voor ontwikkelingsdoeleinden.',
+explain:'MockAttendanceService is als Singleton geregistreerd zodat check-ins bewaard blijven tijdens een sessie. De interface maakt het makkelijk om later de echte implementatie te pluggen.'},
+
+{id:29,level:'func',topic:'UI',q:'Hoe werkt de notificatieservice?',
+a:'<strong>INotificationService</strong> is een Singleton die notificaties ophaalt van de API (GET /notifications). Notificaties worden opgeslagen in de notifications-tabel. De MAUI-app toont een badge op het notificatie-icoontje als er ongelezen notificaties zijn.',
+explain:'NotificationService heeft een named HttpClient (niet typed) omdat het als Singleton geregistreerd is en de IHttpClientFactory nodig heeft.'},
+
+{id:30,level:'func',topic:'API',q:'Wat doet de MockAttendanceService en waarom is het een singleton?',
+a:'MockAttendanceService implementeert IAttendanceService en simuleert check-ins voor lessen. Als <strong>Singleton</strong> geregistreerd zodat check-ins bewaard blijven tijdens de app-sessie — zo gedraagt het zich als een echte service die state bijhoudt.',
+explain:'Als het Transient was, zou elke navigatie een nieuwe instantie maken en alle check-ins vergeten zijn.'},
+
+// ===== TECHNISCH BEGRIP =====
+{id:31,level:'tech',topic:'Authenticatie',q:'Hoe werkt IAuthenticationService intern?',
+a:'Singleton-service met een privé <code>LoginResponse? _currentUser</code> property. Na login slaat <code>LoginAsync()</code> de response op. Andere services lezen <code>CurrentUserId</code>, <code>CurrentUser</code> etc. Bij uitloggen wordt de property op null gezet.',
+explain:'Singleton = één instantie voor de hele app-levensduur. Zo is de ingelogde gebruiker overal toegankelijk zonder props door te sturen.'},
+
+{id:32,level:'tech',topic:'Architectuur',q:'Wat is het verschil tussen Transient en Singleton DI in MAUI?',
+a:'<strong>Singleton</strong>: één instantie voor de hele app-levensduur. State blijft bewaard. Gebruikt voor: ProfileViewModel, HomeViewModel, InstructorLessonsViewModel. <strong>Transient</strong>: nieuwe instantie bij elke injectie/navigatie. Schone state. Gebruikt voor: LessonDetailViewModel, LessonsViewModel, WeekViewModel.',
+explain:'Singleton is gevaarlijk als de state verontreinigd kan raken. Transient is veiliger maar duurder. De keuze per ViewModel is bewust: lesdetails moeten altijd vers zijn (Transient), het profiel hoeft niet opnieuw geladen te worden (Singleton).'},
+
+{id:33,level:'tech',topic:'Capaciteit',q:'Hoe werkt de capaciteits-COALESCE-keten in SQL?',
+a:'<code>COALESCE(l.capacity_override, w.default_capacity, loc.capacity, 0)</code>. Prioriteit: 1. Lesspecifieke override (capacity_override op de les). 2. Standaardcapaciteit van de workout. 3. Capaciteit van de locatie. 4. Fallback 0.',
+explain:'Dit geeft maximale flexibiliteit: een locatie heeft een standaard, een workout kan die overschrijven, en een specifieke les kan alles overschrijven.'},
+
+{id:34,level:'tech',topic:'Architectuur',q:'Hoe werkt IQueryAttributable voor Shell-navigatie?',
+a:'Een ViewModel implementeert <code>IQueryAttributable</code> en de methode <code>ApplyQueryAttributes(IDictionary&lt;string,object&gt; query)</code>. Shell geeft het volledige LessonDto-object door als parameter. Het ViewModel cast het terug naar het juiste type.',
+explain:'Alternatief voor alleen een ID doorgeven en het object opnieuw ophalen van de API. Sneller maar het object moet serialiseerbaar zijn voor Shell\'s navigatiemechanisme.'},
+
+{id:35,level:'tech',topic:'API',q:'Hoe zijn MySQL-auto-migraties geïmplementeerd?',
+a:'In Program.cs bij opstart: de code opent een migratieconnectie en checkt met <code>SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_NAME=\'naam\'</code> of een tabel bestaat. Als niet → CREATE TABLE. Zo wordt de DB automatisch bijgewerkt.',
+explain:'Dit is een simpele runtime-migratie zonder EF Core of Flyway. Elke nieuwe tabel (bijv. bike_reservations) krijgt zijn eigen check-en-maak-blok.'},
+
+{id:36,level:'tech',topic:'Spinning',q:'Welke UNIQUE constraints heeft de bike_reservations-tabel?',
+a:'1. <code>UNIQUE KEY unique_lesson_bike (lesson_id, row_number, bike_number)</code> — voorkomt dat twee mensen dezelfde fiets boeken. 2. <code>UNIQUE KEY unique_lesson_user (lesson_id, user_id)</code> — één fiets per lid per les.',
+explain:'Twee constraints voor twee regels: geen dubbele bezetting van een zitplaats, en elk lid mag maar één fiets per les kiezen.'},
+
+{id:37,level:'tech',topic:'API',q:'Hoe verloopt een transactionele reservering in de API?',
+a:'<code>BEGIN TRANSACTION</code> → <code>SELECT count(*)</code> voor capaciteit → <code>SELECT</code> voor dubbele inschrijving → <code>UPDATE users SET credits = credits - 1</code> (als credit_used=1) → <code>INSERT INTO reservations</code> → <code>COMMIT</code>. Bij fout: <code>ROLLBACK</code>.',
+explain:'MySqlConnector ondersteunt async transacties via connection.BeginTransactionAsync(). De ROLLBACK in de catch-block zorgt dat credits en reserveringen nooit inconsistent worden.'},
+
+{id:38,level:'tech',topic:'UI',q:'Hoe gebruik je de Translator in XAML en in C#?',
+a:'XAML: <code>{h:Translate Spinning_SelectBikeTitle}</code> (h = de xmlns-prefix voor de Helpers-namespace). C#: <code>Translator.T("Key")</code> voor enkelvoudige strings, <code>Translator.T("Key", arg1, arg2)</code> voor strings met placeholders.',
+explain:'TranslateExtension is een custom MarkupExtension die XAML-gebruik mogelijk maakt. Intern roept het Translator.T() aan. Placeholders worden afgehandeld via string.Format.'},
+
+{id:39,level:'tech',topic:'Architectuur',q:'Wat doet [ObservableProperty] en [RelayCommand]?',
+a:'<strong>[ObservableProperty]</strong> op een privé veld (_myProp) genereert automatisch een publieke property MyProp met INotifyPropertyChanged. <strong>[RelayCommand]</strong> op een methode genereert een ICommand MyCommand. Source generators doen dit compile-time.',
+explain:'Zonder source generators zou je dit allemaal handmatig moeten schrijven: property met OnPropertyChanged(), aparte Command-klasse of RelayCommand-instantie. Source generators elimineren honderden regels boilerplate.'},
+
+{id:40,level:'tech',topic:'Spinning',q:'Waarom heeft de DataTemplate van de fietsengrid geen x:DataType?',
+a:'De Command-binding gebruikt <code>Source={x:Reference LessonDetailRoot}</code> om het SelectBikeCommand van de parent ViewModel aan te roepen, terwijl andere bindings aan het BikeItem-object binden. Compiled bindings (x:DataType) conflicteren met gemengde bindingsbronnen.',
+explain:'x:DataType activeert compiled bindings die type-veilig zijn. Maar als je een cross-source binding hebt (item-context + pagina-context), moeten compiled bindings uitgeschakeld worden.'},
+
+{id:41,level:'tech',topic:'Spinning',q:'Hoe berekent DisplayLabel het fietsnummer?',
+a:'<code>(RowNumber - 1) * 4 + BikeNumber</code>. Voorbeeld: rij 2, fiets 3 = (2-1)×4+3 = <strong>7</strong>. Rij 4, fiets 4 = (4-1)×4+4 = <strong>16</strong>. Dit geeft sequentiële nummering 1–16.',
+explain:'De knoppen tonen alleen het getal. De volledige "Rij X - Fiets Y" tekst verschijnt alleen in de geselecteerde fiets-badge.'},
+
+{id:42,level:'tech',topic:'API',q:'Hoe wordt MySQL-fout 1062 (duplicate key) afgehandeld?',
+a:'De API vangt <code>MySqlException</code> op met <code>Number == 1062</code>. In plaats van een 500-statuscode stuurt de API een 409 Conflict terug met een vriendelijke foutmelding: "Deze fiets is net door iemand anders gereserveerd."',
+explain:'1062 is de MySQL-errorcode voor duplicate key violation. Dit treedt op bij race conditions: twee gebruikers die tegelijk dezelfde fiets proberen te boeken.'},
+
+{id:43,level:'tech',topic:'Architectuur',q:'Wat is NotifyPropertyChangedFor en hoe gebruik je het?',
+a:'<code>[NotifyPropertyChangedFor(nameof(ShowBikeSection))]</code> boven een [ObservableProperty]-veld. Wanneer dat veld verandert, wordt ook PropertyChanged voor ShowBikeSection gefired. Zo worden computed properties bijgewerkt zonder handmatige aanroep.',
+explain:'ShowBikeSection = IsSpinningLesson && IsReserved. Beide velden hebben [NotifyPropertyChangedFor(nameof(ShowBikeSection))], zodat de UI altijd bijgewerkt wordt als een van beide verandert.'},
+
+{id:44,level:'tech',topic:'Authenticatie',q:'Hoe werkt CustomAuthenticationStateProvider in Blazor?',
+a:'Implementeert <code>AuthenticationStateProvider</code>. De methode <code>GetAuthenticationStateAsync()</code> leest de <code>.FitLife.Auth</code>-cookie via ISessionService. Als de cookie geldig is, worden de claims aangemaakt en een geauthenticeerde ClaimsPrincipal teruggegeven.',
+explain:'Blazor Server gebruikt AuthenticationState om [Authorize]-attributen en @if(context.User.IsInRole("admin")) te evalueren. De cookie is de sessie-identifier.'},
+
+{id:45,level:'tech',topic:'API',q:'Hoe werkt een named vs typed HttpClient in MAUI?',
+a:'<strong>Typed</strong> (AddHttpClient&lt;IService, Service&gt;): HttpClient is direct geïnjecteerd in de service. Handig voor één service per client. <strong>Named</strong> (AddHttpClient("naam")): handmatig aanmaken via IHttpClientFactory. Gebruikt voor NotificationService (Singleton die de factory nodig heeft).',
+explain:'Typed HttpClients zijn Transient. Omdat NotificationService Singleton is, kan het geen Transient typed client direct ontvangen — vandaar de named client + factory patroon.'},
+
+{id:46,level:'tech',topic:'API',q:'Hoe werkt de bike POST-endpoint: reserveren én wisselen in één?',
+a:'1. Check of gebruiker al een fiets heeft (SELECT FROM bike_reservations WHERE user_id=@id). 2. Als ja en doelfiets is vrij: UPDATE naar nieuwe fiets. 3. Als nee: INSERT nieuwe reservering. 4. Als doelfiets bezet: 409 Conflict.',
+explain:'Eén endpoint voor beide acties vermijdt twee API-calls en race conditions. De UNIQUE constraint op (lesson_id, user_id) garandeert dat er nooit meer dan één fiets per gebruiker per les is.'},
+
+{id:47,level:'tech',topic:'Architectuur',q:'Hoe werkt Shell.Current.GoToAsync met parameters?',
+a:'<code>Shell.Current.GoToAsync("LessonDetail", new Dictionary&lt;string,object&gt; {{ "lesson", lessonDto }})</code>. Het ontvangen ViewModel implementeert IQueryAttributable en cast de waarde: <code>(LessonDto)query["lesson"]</code>.',
+explain:'Shell serialiseert de parameters als query-string voor primitieven, maar objecten worden intern anders afgehandeld (als object-referenties). Werkt alleen voor navigatie binnen de app, niet naar externe routes.'},
+
+{id:48,level:'tech',topic:'Spinning',q:'Hoe wordt de fietskleur bepaald in BikeItem?',
+a:'Computed property BackgroundColor: <code>IsSelectedByCurrentUser → #C5E17A (groen)</code>. <code>IsAvailable → #F5F5F5 (lichtgrijs)</code>. <code>Bezet → #FFCDD2 (lichtrood)</code>. TextColor volgt hetzelfde patroon.',
+explain:'Colors zijn computed properties die geen INotifyPropertyChanged nodig hebben omdat de hele BikeItem opnieuw aangemaakt wordt bij LoadBikesAsync().'},
+
+{id:49,level:'tech',topic:'API',q:'Hoe worden fietsen vrijgegeven bij lesannulering?',
+a:'In de cancel-endpoint-transactie: na de bestaande annuleringslogica wordt <code>DELETE FROM bike_reservations WHERE lesson_id=@lessonId AND user_id=@userId</code> uitgevoerd. Voor niet-spinninglessen is dit een no-op (geen rijen verwijderd).',
+explain:'Door de fietsrelease in de transactie te zetten, zijn lesannulering en fietsrelease altijd atomair. Er kan nooit een les gecanceld worden zonder de fiets vrij te geven.'},
+
+{id:50,level:'tech',topic:'Architectuur',q:'Hoe werkt FindIndex voor tuple-vergelijking in de bike API?',
+a:'<code>bikes.FindIndex(b => b.row == row && b.bike == bike && b.userId == userId)</code>. FindIndex is veiliger dan FirstOrDefault bij value tuples omdat default((int,int,int)) gelijk is aan (0,0,0) wat een geldige waarde kan zijn.',
+explain:'Met FirstOrDefault kan een niet-gevonden tuple verward worden met een tuple met alle nulwaarden. FindIndex geeft -1 terug als niet gevonden, wat ondubbelzinnig is.'},
+
+// ===== ARCHITECTUURBEGRIP =====
+{id:51,level:'arch',topic:'API',q:'Waarom wordt er geen ORM zoals Entity Framework gebruikt?',
+a:'Bewuste keuze voor <strong>controle en eenvoud</strong>. Raw SQL met MySqlConnector geeft: exacte controle over queries, eenvoudige transacties, geen migrations-tooling, geen N+1-problemen door lazy loading, en makkelijker te debuggen SQL.',
+explain:'Nadeel: geen type-safe query building, meer handmatig SQL schrijven. Voor een schoolproject met beperkte scope is de directe aanpak overzichtelijker dan EF Core migrations en DbContext-configuratie.'},
+
+{id:52,level:'arch',topic:'Authenticatie',q:'Waarom is IAuthenticationService een Singleton en geen Transient?',
+a:'De ingelogde gebruiker moet <strong>overal en altijd</strong> beschikbaar zijn. Als het Transient was, zou elke ViewModel een nieuwe instantie krijgen met een lege sessie. Als Singleton bewaart het de LoginResponse voor de hele app-levensduur.',
+explain:'Nadeel van Singleton: als de gebruiker uitlogt en opnieuw inlogt, moet de state handmatig gereset worden. LoginViewModel roept AuthService.LogoutAsync() aan die de state wist.'},
+
+{id:53,level:'arch',topic:'UI',q:'Waarom client-side datumfiltering in WeekViewModel?',
+a:'Server-side datumparameters gaven <strong>tijdzoneproblemen</strong>: de server (UTC) en de mobiele app (lokale tijd) konden een dag uit elkaar liggen. Door alle lessen te laden en op de client te filteren, vermijdt je tijdzone-conversiefouten.',
+explain:'Dit is de WeekPage ANR fix uit commit "WeekPage ANR fix: debounce grid rebuild (O(N²) -> O(N))". De debounce voorkomt dat het grid tientallen keren herbouwd wordt bij snelle navigatie.'},
+
+{id:54,level:'arch',topic:'API',q:'Waarom alles in Program.cs in plaats van controllers?',
+a:'Minimal API in .NET 6+ maakt controllers optioneel. Voor een schoolproject: <strong>minder bestanden, minder abstractie</strong>. Alles is zichtbaar in één bestand. Nadeel: het bestand groeit groot. Controllers zijn beter voor grote projecten met veel endpoints.',
+explain:'In een productieapp zou je de endpoints opsplitsen in extension methods of aparte bestanden. Maar voor een schoolproject is één groot Program.cs overzichtelijker dan tientallen controller-klassen.'},
+
+{id:55,level:'arch',topic:'Architectuur',q:'Waarom bestaat SharedLibrary?',
+a:'<strong>DRY (Don\'t Repeat Yourself)</strong>: DTOs zoals LoginRequest, LoginResponse, LessonDto hoeven maar één keer geschreven te worden. API, MAUI en Blazor refereren allemaal naar SharedLibrary zodat serialisatie altijd consistent is.',
+explain:'Zonder SharedLibrary zou je dezelfde klassen drie keer moeten onderhouden. Een veldnaamwijziging zou op drie plaatsen gedaan moeten worden en is foutgevoelig.'},
+
+{id:56,level:'arch',topic:'Docker',q:'Hoe is de Docker Compose-opstelling ingericht?',
+a:'Drie services: <strong>API</strong> op poort 8080 (ASP.NET Core), <strong>MySQL 8.0+</strong> op poort 3306 met persistent volume, <strong>phpMyAdmin</strong> op poort 8082 voor DB-beheer. De API-container heeft een healthcheck op MySQL voor-dat hij start.',
+explain:'phpMyAdmin is een web-UI voor MySQL beheer — handig voor studenten die de database willen inspecteren zonder command-line tools.'},
+
+{id:57,level:'arch',topic:'Spinning',q:'Waarom is de fietsreservering een aparte tabel en geen kolom in reservations?',
+a:'<strong>Separation of concerns</strong>: niet elke les heeft fietsen. Een aparte tabel met FOREIGN KEY naar lessons houdt de reservations-tabel schoon. De bike_reservations-tabel heeft eigen UNIQUE constraints die alleen voor fietsen relevant zijn.',
+explain:'Alternatief: een bike_row + bike_number kolom in reservations. Maar dat geeft NULL-waarden voor alle niet-spinningles-reserveringen en maakt de UNIQUE constraint complexer.'},
+
+{id:58,level:'arch',topic:'Blazor',q:'Waarom gebruikt Blazor een .FitLife.Auth cookie in plaats van de MAUI-sessie?',
+a:'MAUI en Blazor zijn <strong>aparte applicaties</strong>. MAUI heeft geen browser-cookies. Blazor Server draait in de browser en kan wel HTTP cookies gebruiken. Een cookie is de standaard sessie-mechanisme voor webapps.',
+explain:'De cookie wordt ingesteld bij login in de Blazor-webapp en gelezen door CustomAuthenticationStateProvider bij elk verzoek. De cookienaam ".FitLife.Auth" is configureerbaar.'},
+
+{id:59,level:'arch',topic:'Credits',q:'Waarom 999 als sentinel voor onbeperkt in plaats van een aparte vlag?',
+a:'Eenvoud: <code>credits > 0</code> werkt voor alle types. Geen aparte <code>is_unlimited</code>-kolom of conditionele logica nodig. Advanced-leden kunnen praktisch onbeperkt reserveren. 999 credits zijn genoeg voor elke redelijke gebruiksperiode.',
+explain:'Nadeel: technisch niet écht onbeperkt. Bij extreem gebruik (999 reserveringen in 28 dagen) zou een Advanced-lid geblokkeerd kunnen worden. In de praktijk is dit niet realistisch voor een sportschool.'},
+
+{id:60,level:'arch',topic:'Architectuur',q:'Waarom Scalar in plaats van de standaard Swagger UI?',
+a:'Scalar biedt een modernere, gebruiksvriendelijkere interface dan de standaard Swashbuckle Swagger UI. Het genereert dezelfde OpenAPI-spec maar toont deze in een overzichtelijkere lay-out met betere typeweergave.',
+explain:'In de Development-omgeving is /scalar beschikbaar. In productie is de API-docs niet publiek toegankelijk.'},
+
+{id:61,level:'arch',topic:'Architectuur',q:'Hoe communiceert Blazor met MySQL (niet via de API)?',
+a:'Blazor Server heeft zijn eigen <strong>service-laag</strong> (LessonService, UserService etc.) die direct met MySQL praat via MySqlConnector. Er is geen HTTP-call naar de API. Dit is mogelijk omdat Blazor Server op dezelfde machine draait als de database.',
+explain:'Voordeel: minder latency voor admin-operaties. Nadeel: duplicatie van queries die ook in de API bestaan. In een grootschalig systeem zou je alles via de API laten gaan.'},
+
+{id:62,level:'arch',topic:'API',q:'Hoe is foutafhandeling geïmplementeerd in de API-endpoints?',
+a:'Try-catch rondom de SQL-logica. Bij bekende fouten (capaciteit vol, al ingeschreven, duplicate key) → HTTP 400/409 met beschrijvende JSON-boodschap. Bij onbekende exceptions → HTTP 500 met generieke foutmelding en Debug.WriteLine.',
+explain:'In productie zou je structured logging (ILogger) gebruiken ipv Debug.WriteLine. Maar voor een schoolproject is Debug output in de terminal voldoende.'},
+
+{id:63,level:'arch',topic:'Reserveringen',q:'Waarom is credit_used een aparte kolom in reservations?',
+a:'Bij annulering moet de API weten <strong>of</strong> er een credit teruggestort moet worden. Een vlag per reservering is nauwkeuriger dan kijken of het een admin-toevoeging was — het abonnementstype van de gebruiker kan veranderd zijn since de reservering.',
+explain:'credit_used = 0 = admin voegde de gebruiker toe (gratis). credit_used = 1 = gebruiker schreef zichzelf in (credit verbruikt). De annuleringslogica checkt alleen deze kolom.'},
+
+{id:64,level:'arch',topic:'Testen',q:'Waarom raken integratietests een echte database en geen mocks?',
+a:'<strong>Real behavior</strong>: mocks van een database hebben ander gedrag dan de echte MySQL (transacties, UNIQUE constraints, COALESCE). Tests die de echte DB raken, vangen problemen die mock-tests missen — zoals de eerdere situatie waar mocked tests slaagden maar productie-migraties faalden.',
+explain:'Nadeel: integratietests zijn langzamer en vereisen een testdatabase. Voordeel: je test het werkelijke gedrag, inclusief SQL-syntax, indices en constraints.'},
+
+{id:65,level:'arch',topic:'Architectuur',q:'Hoe zorgt AppShell Transient ervoor dat navigatie correct werkt na login?',
+a:'Bij elke login wordt AppShell opnieuw aangemaakt (Transient). Dit herlaadt de FlyoutItems en tabbladen op basis van de nieuwe gebruikersrol. Als AppShell Singleton was, zou een lid dat uitlogt en een instructeur inlogt de verkeerde navigatie zien.',
+explain:'App.xaml.cs stelt de nieuwe AppShell in als MainPage na login. Het Transient-patroon garandeert dat de shell altijd vers gebouwd wordt met de juiste rol.'},
+
+// ===== PRAKTIJKSCENARIO'S =====
+{id:66,level:'prak',topic:'Praktijk',q:'Twee gebruikers proberen tegelijk dezelfde fiets te reserveren. Wat gebeurt er?',
+a:'MySQL\'s <strong>UNIQUE KEY unique_lesson_bike</strong> zorgt voor veiligheid. De tweede INSERT gooit error 1062 (duplicate key). De API vangt dit op en stuurt HTTP 409 terug met "Deze fiets is net door iemand anders gereserveerd." De eerste gebruiker heeft de fiets.',
+explain:'Dit is een race condition die op DB-niveau veilig is. Applicatieniveau-checks zijn niet voldoende omdat twee requests parallel kunnen lopen.'},
+
+{id:67,level:'prak',topic:'Praktijk',q:'Een Rookie-lid heeft geen credits meer. Wat ziet hij?',
+a:'De reserveringsknop toont een foutmelding: geen credits beschikbaar. De API checkt credits voor INSERT. Bij de volgende 28-daagse verlenging worden credits gereset naar 9. De app toont de renewalDate als verwachte resetdatum.',
+explain:'AdvanceToNextRenewalDate() in ProfileViewModel berekent de volgende verlenging client-side, ook als de DB-waarde verouderd is.'},
+
+{id:68,level:'prak',topic:'Praktijk',q:'De API geeft MSB3026/MSB3027 filelock-foutmeldingen bij het bouwen. Wat doe je?',
+a:'Dit zijn <strong>geen compiler-fouten</strong> (C#-fouten beginnen met CS). Een FitLife.API-process (bijv. PID 24572) draait nog en houdt de .exe vergrendeld. Oplossing: stop het lopende process (Task Manager of Ctrl+C in terminal), bouw opnieuw.',
+explain:'Filter op "CS\\d{4}" in de build-output om echte C#-fouten te onderscheiden van MSBuild-file-locking-fouten. Als er 0 CS-fouten zijn, is de code correct.'},
+
+{id:69,level:'prak',topic:'Praktijk',q:'Hoe voeg je een nieuwe vertaalsleutel toe voor beide talen?',
+a:'Open <code>FitLife.Maui/Services/Translator.cs</code>. Voeg de sleutel toe aan de NL-dictionary (<code>_nl</code>) én de EN-dictionary (<code>_en</code>). Gebruik dan <code>Translator.T("NieuweSleutel")</code> in C# of <code>{h:Translate NieuweSleutel}</code> in XAML.',
+explain:'Als een sleutel ontbreekt in de actieve taal, valt Translator terug op de NL-waarde (of de sleutelnaam zelf). Ontbrekende EN-sleutels tonen dus de NL-tekst.'},
+
+{id:70,level:'prak',topic:'Praktijk',q:'Een les heeft een capacity_override van 8 ingesteld. De locatie heeft capaciteit 12. Welke capaciteit geldt?',
+a:'<strong>8</strong>. De capacity_override op de les heeft de hoogste prioriteit in de COALESCE-keten: COALESCE(8, workout_default, 12, 0) = 8.',
+explain:'Dit is handig als een les een kleinere groep vereist dan de locatiecapaciteit, bijv. voor beginnerslessen of speciale workouts.'},
+
+{id:71,level:'prak',topic:'Praktijk',q:'Hoe test je de API lokaal zonder de MAUI-app?',
+a:'Navigeer in de browser naar <code>http://localhost:5000/scalar</code> (in Development-modus). Scalar toont alle endpoints met hun parameters. Je kunt requests direct uitsturen vanuit de browser-UI.',
+explain:'Je kunt ook tools zoals Postman of curl gebruiken. De API luistert op poort 5000 voor HTTP (8080 in Docker).'},
+
+{id:72,level:'prak',topic:'Praktijk',q:'Een gebruiker wil van fiets wisselen in een spinningles. Hoe werkt dat?',
+a:'Klik op een andere vrije fiets. POST /lessons/{id}/bikes stuurt rowNumber en bikeNumber. De API detecteert dat de gebruiker al een fiets heeft en <strong>updatet</strong> de bestaande reservering naar de nieuwe fiets. De doelfiets moet vrij zijn.',
+explain:'De API doet dit in één atomaire operatie: DELETE oude + INSERT nieuwe, of UPDATE. Er is nooit een moment waarop de gebruiker geen fiets heeft.'},
+
+{id:73,level:'prak',topic:'Praktijk',q:'Hoe wordt de renewalDate correct getoond als de DB-waarde verouderd is?',
+a:'<code>AdvanceToNextRenewalDate()</code> in ProfileViewModel berekent hoeveel 28-daagse cycli verstreken zijn en telt die op bij de DB-waarde. Zo toont de app altijd de <strong>volgende toekomstige verlenging</strong>, ook zonder DB-update.',
+explain:'Dit is een client-side fix voor het geval de server de renewalDate niet automatisch bijwerkt. De echte creditreset moet wel server-side plaatsvinden.'},
+
+{id:74,level:'prak',topic:'Praktijk',q:'Hoe voeg je een nieuwe locatie toe aan het systeem?',
+a:'1. INSERT in de <code>locations</code>-tabel met de juiste capaciteit. 2. Koppel lessen aan de locatie via lesson_location_id. 3. Herstart de API (auto-migratie checkt geen locaties). De locatie is meteen beschikbaar in de admin-panel.',
+explain:'Locaties worden niet dynamisch aangemaakt via de MAUI-app. Het admin-panel in Blazor beheert locaties.'},
+
+{id:75,level:'prak',topic:'Praktijk',q:'Wat als een spinningles gearchiveerd wordt terwijl iemand een fiets heeft?',
+a:'De LessonArchiveService (BackgroundService) zet is_archived=1. De MAUI-app filtert gearchiveerde lessen uit. De fietsreservering in bike_reservations blijft staan voor historische data maar is niet meer zichtbaar in de UI.',
+explain:'Er is geen automatische cleanup van bike_reservations bij archivering. Dit is bewust: de historische data blijft beschikbaar voor rapportages.'},
+
+{id:76,level:'prak',topic:'Praktijk',q:'Hoe werkt de debounce fix voor de WeekPage grid (ANR-fix)?',
+a:'WeekPage.xaml.cs debounct de grid-rebuild met een korte vertraging. Bij snelle swipes (volgende/vorige week) wordt niet elke keer het grid herbouwd maar gewacht tot de gebruiker stopt met swipen. Zo vermijdt je O(N²) grid-rebuilds.',
+explain:'ANR = Application Not Responding (Android). Zonder debounce kon het grid tientallen keren per seconde herbouwd worden bij snelle navigatie, wat de UI blokkeerde.'},
+
+// ===== MONDELINGE EXAMENVRAGEN =====
+{id:77,level:'oral',topic:'Architectuur',q:'Leg de volledige reserveringsflow uit voor een spinningles, van klik tot database.',
+a:'1. Gebruiker tikt "Reserveer" → LessonDetailViewModel.ReserveAsync(). 2. ReservationService doet POST /lessons/{id}/reserve met userId. 3. API opent MySQL-transactie. 4. Check capaciteit (COALESCE). 5. Check dubbele inschrijving. 6. Deduct credit (credit_used=1), INSERT reservation. 7. COMMIT. 8. Response terug → IsReserved=true. 9. ShowBikeSection=true (IsSpinning && IsReserved). 10. LoadBikesAsync() → GET /lessons/{id}/bikes. 11. 4×4 grid getoond met beschikbaarheid. 12. Gebruiker kiest fiets → POST /lessons/{id}/bikes. 13. API INSERT bike_reservation met UNIQUE-constraint controle. 14. Grid herlaadt met gekozen fiets groen.',
+followups:['Wat als stap 5 faalt (al ingeschreven)?','Wat als stap 13 een 1062-fout gooit (fiets bezet)?','Hoe wordt de WeakReferenceMessenger ingezet na stap 8?'],
+tips:['Noem de transactie expliciet','Leg de COALESCE-keten uit','Koppel ShowBikeSection aan de computed property-logica']},
+
+{id:78,level:'oral',topic:'Authenticatie',q:'Beschrijf de authenticatiearchitectuur in zowel MAUI als Blazor, inclusief de bewuste ontwerpkeuzes.',
+a:'MAUI: IAuthenticationService (Singleton) cachet LoginResponse in geheugen. Geen JWT, geen persistentie. Bij herstart app = opnieuw inloggen. Voordeel: eenvoud. Nadeel: sessie verlies. Blazor: .FitLife.Auth cookie + ISessionService + CustomAuthenticationStateProvider. Cookie is standaard webmechanisme. CustomAuthenticationStateProvider implementeert AuthenticationStateProvider en geeft AuthenticationState terug op basis van cookie. Twee aparte systemen omdat MAUI en Blazor aparte applicaties zijn — MAUI heeft geen HTTP-cookies.',
+followups:['Wat zijn de beveiligingsrisico\'s van in-memory sessie?','Hoe zou je JWT implementeren als verbetering?','Waarom is AppShell Transient geregistreerd?'],
+tips:['Vergelijk MAUI vs Blazor expliciete','Noem de rol van Singleton vs Transient','Bespreek de bewuste keuze voor geen JWT']},
+
+{id:79,level:'oral',topic:'Credits',q:'Hoe werkt het 28-daagse creditsysteem technisch van begin tot eind?',
+a:'Credits zijn een INT-kolom in de users-tabel. Bij reservering: API verlaagt credits met 1 (in transactie), zet credit_used=1. Bij annulering: als credit_used=1, verhoog credits met 1. Verlenging: elke 28 dagen wordt credits gereset (Rookie→9, Intermediate→13, Advanced→999). renewalDate in DB. Client-side: AdvanceToNextRenewalDate() berekent de volgende verlenging als DB-waarde verouderd is (28-daagse cycli vooruit optellen). Advanced=999 sentinel.',
+followups:['Wat als een gebruiker 9 lessen heeft gereserveerd en zijn abonnement downgradet naar Rookie?','Waarom 28 dagen en niet een kalendermaand?','Hoe weet de app wanneer credits gereset moeten worden?'],
+tips:['Leg credit_used=0 vs 1 uit','Beschrijf de atomaire transactie','Leg de sentinel waarde uit']},
+
+{id:80,level:'oral',topic:'API',q:'Wat zijn de voordelen en nadelen van Minimal API vs Controllers in dit project?',
+a:'Voordelen Minimal API: minder bestanden, minder abstractie, alles zichtbaar in Program.cs, snellere setup, goed voor kleinere projecten. Nadelen: Program.cs wordt groot bij veel endpoints, moeilijker om te testen in isolatie, geen automatische model binding validatie via attributen, minder structuur voor teams. Controllers: betere structuur voor grote projecten, makkelijker te testen (inject controller), conventionele routing. Voor FitLife (schoolproject, beperkte scope) is Minimal API de juiste keuze.',
+followups:['Hoe zou je de endpoints beter organiseren als het project groeit?','Wat is het verschil in performance?','Hoe test je Minimal API endpoints?'],
+tips:['Geef concrete voor- en nadelen','Link het aan de projectschaal','Noem de alternatieve structuur (extension methods)']},
+
+{id:81,level:'oral',topic:'Architectuur',q:'Beschrijf de dataflow bij het laden van de WeekPage, inclusief de ANR-fix.',
+a:'1. WeekViewModel.OnAppearing() → GetLessonsAsync() (geen datumparameter). 2. API geeft alle actieve lessen terug. 3. WeekViewModel filtert client-side op de huidige week (7 dagen). 4. WeekPage.xaml.cs bouwt het grid: 7 kolommen × rijen per dag. 5. Debounce bij navigatie: bij pijlklikken wacht de code 150ms voordat het grid herbouwd wordt. 6. Als de gebruiker snel navigeert, worden tussenliggende rebuilds overgeslagen. Vermijdt O(N²) grid-rebuilds die de UI blokkeren (ANR).',
+followups:['Waarom geen server-side datumfilter?','Hoe werkt de debounce technisch?','Wat is de complexiteitsverbetering (O(N²) → O(N))?'],
+tips:['Leg tijdzoneproblemen server-side uit','Beschrijf de ANR (Application Not Responding)','Verklaar de debounce-techniek']},
+
+{id:82,level:'oral',topic:'Spinning',q:'Hoe is de spinningfiets-feature technisch geïmplementeerd? Beschrijf alle lagen.',
+a:'DB: bike_reservations tabel met UNIQUE op (lesson_id, row/bike) en (lesson_id, user_id). API: 3 endpoints (GET/POST/DELETE /lessons/{id}/bikes). POST handelt reserve+wissel in één endpoint af. API: MySQL 1062-fout afgevangen. MAUI Service: IBikeReservationService + BikeReservationService (typed HttpClient). BikeItem klasse met computed BackgroundColor/TextColor/DisplayLabel. ViewModel: ShowBikeSection computed, LoadBikesAsync, SelectBikeCommand. XAML: CollectionView met GridItemsLayout Span=4, geen x:DataType, cross-source command binding via x:Reference. DI: IBikeReservationService als typed HttpClient in MauiProgram.cs.',
+followups:['Waarom geen x:DataType in de DataTemplate?','Hoe zou je de grid uitbreiden naar 5 rijen?','Wat zijn de performance-implicaties van LoadBikesAsync na elke selectie?'],
+tips:['Volg de lagen: DB → API → Service → ViewModel → View','Leg UNIQUE constraint + MySQL 1062 uit','Bespreek de computed property patronen']},
+
+{id:83,level:'oral',topic:'Capaciteit',q:'Beschrijf het capaciteitsbeheersysteem end-to-end.',
+a:'Drie niveaus: 1. Locatiecapaciteit (loc.capacity in locations-tabel: Zaal=12, Buitenruimte=20, Spinning=16). 2. Workout-standaard (w.default_capacity). 3. Les-override (l.capacity_override). COALESCE(l.capacity_override, w.default_capacity, loc.capacity, 0) bepaalt de werkelijke capaciteit. UI: MAUI toont MaxParticipants (de COALESCE-waarde). Blazor-admin: OpenEditModal gebruikt het ruwe capacity_override (NULL als geen override). Bij reservering checkt de API de COALESCE-waarde. Instructeur kan via ManageLessonPage een override instellen.',
+followups:['Wat als ALLE drie NULL zijn?','Hoe stel je een capacity_override in via de admin?','Waarom sloeg de Blazor-admin vroeger de MaxParticipants (COALESCE) op in plaats van de override?'],
+tips:['Leg de COALESCE-prioriteitsvolgorde uit','Bespreek de bug-fix (raw vs coalesced waarde)','Link aan de drie locaties met hun capaciteiten']},
+
+{id:84,level:'oral',topic:'UI',q:'Hoe werkt de lokalisatie end-to-end in de FitLife MAUI-app?',
+a:'Translator.cs bevat twee dictionaries: _nl (standaard) en _en. Taal wordt opgeslagen in Preferences. Translator.T("Key") geeft string in actieve taal. Fallback: als key niet in actieve taal, terug naar NL. XAML: TranslateExtension ({h:Translate Key}) is een custom MarkupExtension die Translator.T aanroept at render-time. Placeholders: Translator.T("Key", arg1) gebruikt string.Format intern. Spinning keys: Spinning_SelectBikeTitle, Spinning_BikeLabel ("Rij {0} - Fiets {1}" NL / "Row {0} - Bike {1}" EN). 400+ sleutels totaal.',
+followups:['Hoe voeg je een derde taal toe?','Wat gebeurt er bij runtime als een XAML-binding een ontbrekende sleutel gebruikt?','Hoe werken de placeholders in TranslateExtension?'],
+tips:['Leg de fallback-mechanisme uit','Onderscheid XAML-gebruik van C#-gebruik','Noem concrete vertaalsleutels als voorbeeld']},
+
+{id:85,level:'oral',topic:'Architectuur',q:'Beschrijf de DI (Dependency Injection) architectuur in MAUI inclusief lifetimes.',
+a:'MauiProgram.cs registreert: Singleton services (AuthenticationService, NotificationService, AttendanceService) en Transient/Singleton ViewModels. Typed HttpClients (AddHttpClient<I,T>) voor de meeste services. Named HttpClient voor NotificationService (Singleton + IHttpClientFactory-patroon). ViewModels: Transient voor pagina\'s die verse data nodig hebben (LessonDetail, Lessons, Week). Singleton voor persistente state (Profile, Home, MyLessons). Pages krijgen dezelfde lifetime als hun ViewModel. AppShell Transient voor rol-gebaseerde navigatieherstart.',
+followups:['Waarom kan een Singleton-service geen Transient-service injecteren?','Wat is het verschil tussen AddSingleton en AddTransient voor Pages?','Hoe werkt de IHttpClientFactory in het NotificationService-patroon?'],
+tips:['Leg de Singleton/Transient-keuze per ViewModel uit','Verklaar het named HttpClient patroon','Noem het gevaar van Singleton met Transient-dependencies']},
+
+// ===== EXTRA TECHNISCHE VRAGEN =====
+{id:86,level:'tech',topic:'API',q:'Hoe werkt de GET /lessons/{lessonId}/bikes endpoint?',
+a:'De endpoint genereert een 4×4 grid van alle mogelijke fietsen. Voor elke combinatie (row 1-4, bike 1-4) checkt hij de bike_reservations-tabel. Teruggeef: array van 16 BikeItem-objecten met isAvailable (niet bezet) en isSelectedByCurrentUser (bezet door de opgegeven userId). FindIndex gebruikt voor veilige tuple-vergelijking.',
+explain:'GET vraagt userId als query parameter: ?userId=123. Zo weet de endpoint welke fiets "van jou" is.'},
+
+{id:87,level:'tech',topic:'Blazor',q:'Hoe werkt LessonService in Blazor anders dan in MAUI?',
+a:'Blazor\'s LessonService praat <strong>direct met MySQL</strong> via MySqlConnector, niet via de API. MAUI\'s LessonService doet HTTP-calls naar de API. Blazor heeft dus zijn eigen SQL-queries, inclusief capacity_override, is_archived filtering en alle joins.',
+explain:'Twee implementaties van "dezelfde" functionaliteit. In een productie-systeem zou je alles via de API laten gaan om duplicatie te vermijden.'},
+
+{id:88,level:'tech',topic:'API',q:'Hoe werkt de DELETE /lessons/{lessonId}/cancel endpoint?',
+a:'1. Haal userId uit request body. 2. BEGIN TRANSACTION. 3. Check of reservering bestaat. 4. Check credit_used. 5. Als credit_used=1: UPDATE users SET credits=credits+1. 6. DELETE FROM reservations. 7. <strong>DELETE FROM bike_reservations</strong> (no-op voor niet-spinning). 8. COMMIT.',
+explain:'De bike-release is toegevoegd als stap 7 in de bestaande transactie — geen aparte endpoint nodig. Voor niet-spinninglessen wordt gewoon niets verwijderd.'},
+
+{id:89,level:'tech',topic:'Architectuur',q:'Hoe werkt WeakReferenceMessenger voor cross-ViewModel communicatie?',
+a:'Sending: <code>WeakReferenceMessenger.Default.Send(new LessonReservedMessage(lessonId))</code>. Receiving: ViewModel registreert zich via <code>WeakReferenceMessenger.Default.Register&lt;LessonReservedMessage&gt;(this, (r,msg) => Refresh())</code>. "Weak" = als de ontvangende ViewModel garbage collected wordt, automatisch deregistratie.',
+explain:'Zonder WeakReferenceMessenger moet je ViewModels direct aan elkaar koppelen, wat leidt tot circulaire dependencies. Messenger lost dit op via een loosely-coupled event-bus.'},
+
+{id:90,level:'tech',topic:'Blazor',q:'Wat is het doel van de is_archived vlag op lessen?',
+a:'is_archived = 1 markeert lessen die in het verleden liggen en niet meer actief zijn. De MAUI-app filtert deze lessen uit (WHERE is_archived = 0). Historische data blijft beschikbaar voor rapportages in Blazor-admin. LessonArchiveService (BackgroundService) zet de vlag nachtelijks.',
+explain:'Soft delete: data blijft in de DB maar is niet zichtbaar in de app. Dit is beter dan fysieke delete voor historische integriteit (reserveringen, bijdrages etc.).'},
+
+{id:91,level:'tech',topic:'API',q:'Hoe werkt de multipart/form-data upload voor profielfoto\'s?',
+a:'POST /users/{id}/photo accepteert IFormFile. API slaat het bestand op in uploads/ met een unieke naam (user_{id}_{guid}.jpg). De URL wordt opgeslagen in users.photo_url. Bij DELETE: bestand van schijf verwijderen + photo_url op NULL zetten.',
+explain:'IFormFile is de .NET Minimal API manier om file uploads te ontvangen. De uploads/ map moet bestaan en schrijfbaar zijn.'},
+
+{id:92,level:'func',topic:'API',q:'Hoe werken notificaties in de app?',
+a:'Notificaties worden opgeslagen in de notifications-tabel (title, body, user_id, created_at, is_read). De MAUI-app haalt notificaties op via GET /notifications?userId=X. Een badge wordt getoond als er ongelezen notificaties zijn (is_read=0). Markeer als gelezen via PUT /notifications/{id}/read.',
+explain:'NotificationService is Singleton (gedeelde staat). De badge wordt bijgewerkt via property binding in de NavigationPage.'},
+
+{id:93,level:'func',topic:'Reserveringen',q:'Wat ziet een deelnemer op de LessonDetailPage?',
+a:'Les-info (naam, instructeur, tijd, locatie), aantal ingeschreven/capaciteit, eigen reserveringsstatus, reserveer/annuleer-knop, annuleringsdeadline-waarschuwing, deelnemerslijst, en voor spinninglessen: het fietsenselectiegrid.',
+explain:'ParticipantsViewModel laadt de deelnemerslijst apart via GET /lessons/{id}/participants. De LessonDetailViewModel coördineert alle data.'},
+
+{id:94,level:'basic',topic:'Architectuur',q:'Wat is het verschil tussen HomePage en LessonsPage?',
+a:'<strong>HomePage</strong>: dashboard met vandaag\'s ingeschreven lessen, snel overzicht. Singleton (data blijft). <strong>LessonsPage</strong>: volledig lesrooster waar je nieuwe lessen kunt vinden en reserveren. Transient (altijd verse data).',
+explain:'HomeViewModel is Singleton omdat het dashboard-overzicht snel beschikbaar moet zijn bij terugkeer. LessonsViewModel is Transient voor verse data bij elke navigatie.'},
+
+{id:95,level:'basic',topic:'Testen',q:'Welke projecten zijn beschikbaar in FitLife voor testen?',
+a:'<strong>FitLife.Tests</strong>: unit- en integratietests (xUnit, 8 domeinen). <strong>FitLife.UITests</strong>: UI-automatiseringstests. Tests raken een echte MySQL-testdatabase.',
+explain:'UI-tests automatiseren de interacties met de MAUI-app interface, bijv. inloggen, reserveren, navigeren.'},
+
+{id:96,level:'tech',topic:'UI',q:'Hoe werkt x:Name en hoe wordt het gebruikt in de fietsengrid?',
+a:'<code>x:Name="LessonDetailRoot"</code> op de ContentPage geeft de pagina een naam in de XAML-scope. In de DataTemplate van de CollectionView: <code>Command="{Binding BindingContext.SelectBikeCommand, Source={x:Reference LessonDetailRoot}}"</code>. Source={x:Reference} pakt de pagina als bindingsbron.',
+explain:'Zonder x:Reference zou de Command binding naar de BikeItem binden (geen SelectBikeCommand). x:Reference laat je uit de DataTemplate-context ontsnappen naar de pagina-context.'},
+
+{id:97,level:'prak',topic:'Praktijk',q:'Hoe stel je de app in om te werken met een fysieke Android-telefoon in plaats van de emulator?',
+a:'Vervang <code>10.0.2.2</code> door het <strong>IP-adres van je pc</strong> op het lokale netwerk (bijv. 192.168.1.5). Zorg dat de telefoon en pc op hetzelfde WiFi-netwerk zitten. Pas MauiProgram.cs aan of gebruik een configuratiebestand. Zorg dat de Windows Firewall poort 5000 toestaat.',
+explain:'10.0.2.2 is specifiek voor de Android-emulator. Op een fysiek apparaat moet je het echte LAN-IP van de host gebruiken.'},
+
+{id:98,level:'arch',topic:'Docker',q:'Waarom heeft Docker Compose een healthcheck op MySQL voor de API-container?',
+a:'MySQL heeft tijd nodig om op te starten nadat de container actief is. Zonder healthcheck zou de API-container starten terwijl MySQL nog niet klaar is voor verbindingen, wat startup-fouten geeft. De healthcheck wacht tot MySQL succesvol een ping beantwoordt.',
+explain:'depends_on met condition: service_healthy zorgt dat de API wacht op MySQL. Zonder dit geeft de auto-migratie bij opstart een connectie-fout.'},
+
+{id:99,level:'tech',topic:'API',q:'Hoe worden alle endpoints voor bikes beschermd tegen SQL-injectie?',
+a:'Alle SQL-parameters worden via <code>Parameters.AddWithValue("@param", value)</code> toegevoegd. Nooit string concatenatie in SQL. MySqlConnector verwerkt de parameters als geparametriseerde queries, wat SQL-injectie onmogelijk maakt.',
+explain:'SQL-injectie is een OWASP Top 10 beveiligingsrisico. Geparametriseerde queries zijn de standaard verdediging: de database behandelt de parameter altijd als data, nooit als SQL-code.'},
+
+{id:100,level:'prak',topic:'Praktijk',q:'Een instructeur wil de capaciteit van zijn les verlagen naar 6. Hoe doet hij dat?',
+a:'Via <strong>ManageLessonPage</strong> in de MAUI-app (instructeursrol) of via het Blazor-admin-panel. Stel capacity_override in op 6. De COALESCE-keten geeft voorrang aan capacity_override, dus de les accepteert maximaal 6 inschrijvingen ongeacht de locatiecapaciteit.',
+explain:'De ManageLessonViewModel had vroeger een bug: _maxParticipants initialiseerde op 15. Dit is gecorrigeerd naar 0 (geen override als standaard).'},
+
+{id:101,level:'oral',topic:'API',q:'Verklaar het database-schema van FitLife en de relaties tussen tabellen.',
+a:'8 tabellen: users (id, name, email, role, credits, subscription_type, renewal_date, photo_url), workouts (id, name, default_capacity), locations (id, name, capacity), lessons (id, workout_id, location_id, instructor_id, start_time, capacity_override, is_archived), reservations (id, lesson_id, user_id, credit_used, created_at), bike_reservations (id, lesson_id, user_id, row_number, bike_number, created_at), notifications (id, user_id, title, body, is_read, created_at), subscription_changes (id, user_id, current_type, new_type, effective_date). Relaties: lessons JOIN workouts, locations, users (instructor). reservations JOIN lessons, users. bike_reservations JOIN lessons, users.',
+followups:['Waarom heeft bike_reservations twee UNIQUE constraints?','Hoe zou je waitlist als aparte tabel modelleren?','Wat zijn de voor- en nadelen van soft-delete (is_archived)?'],
+tips:['Loop de 8 tabellen door','Noem de FOREIGN KEYS','Leg is_archived en credit_used uit']},
+
+{id:102,level:'oral',topic:'Testen',q:'Hoe zou je de spinningfiets-feature testen? Beschrijf een testplan.',
+a:'Unit tests: DisplayLabel berekening ((row-1)*4+bike), BikeItem kleurlogica (isAvailable/isSelected), AdvanceToNextRenewalDate berekening. Integratietests: 1. Reserve fiets → check DB, 2. Wisselen van fiets → check UPDATE, 3. Race condition (twee users tegelijk) → check 1062-afhandeling, 4. Annulering les → check bike freed, 5. UNIQUE constraint violations. UI tests: grid render, fiets selecteren, bevestigingsbadge tonen. Performance: laden van 16 fietsen < 500ms.',
+followups:['Hoe test je race conditions in xUnit?','Waarom raken integratietests de echte DB?','Hoe mock je de API voor ViewModel unit tests?'],
+tips:['Onderscheid unit/integratie/UI tests','Noem specifieke testcases','Leg de race condition test uit']},
+
+{id:103,level:'arch',topic:'Architectuur',q:'Waarom is BikeReservationService een typed HttpClient in plaats van een Singleton?',
+a:'IBikeReservationService heeft geen gedeelde state — elke call is stateless. Als Transient/Typed HttpClient: nieuwe instantie per gebruik, geen threading-problemen, automatisch beheer door IHttpClientFactory (connection pooling, lifecycle). Als Singleton zou het HttpClient-beheer problemen kunnen geven (DNS-refresh, connection exhaustion).',
+explain:'IHttpClientFactory lost het bekende HttpClient-levensduurprobleem op: niet te vroeg dispose (connection exhaustion), niet te lang open (DNS-stale). Typed HttpClients zijn de aanbevolen patroon.'},
+
+{id:104,level:'tech',topic:'Blazor',q:'Hoe werkt de OpenEditModal fix voor capacity_override in Blazor?',
+a:'Bug: OpenEditModal gebruikte <code>lesson.MaxParticipants</code> (de COALESCE-waarde, bijv. 12) als beginwaarde voor de capacity_override edit-input. Correct: gebruik <code>lesson.CapacityOverride</code> (de ruwe waarde, bijv. NULL). Fix: LessonDto kreeg een <code>int? CapacityOverride</code> property. LessonService-queries selecteren <code>l.capacity_override</code> apart. OpenEditModal gebruikt nu <code>lesson.CapacityOverride ?? 0</code>.',
+explain:'Zonder de fix sloeg de admin altijd de COALESCE-waarde op als override, waardoor de echte locatie/workout capaciteit nooit meer zichtbaar was.'},
+
+{id:105,level:'func',topic:'Reserveringen',q:'Hoe werkt MyLessonsPage anders dan LessonsPage?',
+a:'<strong>LessonsPage</strong>: toont alle beschikbare lessen (actieve, niet-gearchiveerde lessen) om in te schrijven. <strong>MyLessonsPage</strong>: toont alleen de lessen waarvoor de ingelogde gebruiker ingeschreven is (JOIN op reservations). Singleton omdat de lijst niet bij elke navigatie opnieuw geladen hoeft te worden.',
+explain:'MyLessonsViewModel luistert naar LessonReservedMessage en LessonUnregisteredMessage van WeakReferenceMessenger om de lijst automatisch bij te werken.'},
+];
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+let state = {
+  levelFilter: 'all',
+  topicFilter: 'all',
+  search: '',
+  favorites: new Set(JSON.parse(localStorage.getItem('fl-favs')||'[]')),
+  results: {}, // id → 'correct'|'incorrect'
+  showFavsOnly: false,
+  retryMode: false,
+  retryIds: [],
+  darkMode: localStorage.getItem('fl-dark') === '1',
+};
+
+if (state.darkMode) document.documentElement.classList.add('dark');
+
+// Oral exam state
+let oralQ = null, oralTimer = null, oralSecs = 0;
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+function init() {
+  updateCountBadges();
+  applyFilters();
+}
+
+function updateCountBadges() {
+  const levels = ['basic','func','tech','arch','prak','oral'];
+  levels.forEach(l => {
+    const el = document.getElementById('cnt-' + l);
+    if (el) el.textContent = Q.filter(q => q.level === l).length;
+  });
+  const el = document.getElementById('cnt-all');
+  if (el) el.textContent = Q.length;
+}
+
+function getVisible() {
+  let qs = Q;
+  if (state.retryMode && state.retryIds.length) {
+    qs = qs.filter(q => state.retryIds.includes(q.id));
+  }
+  if (state.showFavsOnly) {
+    qs = qs.filter(q => state.favorites.has(q.id));
+  }
+  if (state.levelFilter !== 'all') qs = qs.filter(q => q.level === state.levelFilter);
+  if (state.topicFilter !== 'all') qs = qs.filter(q => q.topic === state.topicFilter);
+  if (state.search) {
+    const s = state.search.toLowerCase();
+    qs = qs.filter(q => q.q.toLowerCase().includes(s) || q.a.toLowerCase().includes(s));
+  }
+  return qs;
+}
+
+function applyFilters() {
+  const visible = getVisible();
+  renderCards(visible);
+  document.getElementById('question-count').textContent = `${visible.length} van ${Q.length} vragen`;
+}
+
+function renderCards(qs) {
+  const c = document.getElementById('cards-container');
+  c.innerHTML = '';
+  qs.forEach((q, idx) => {
+    const isFav = state.favorites.has(q.id);
+    const result = state.results[q.id];
+    const cardClass = ['card', result||'', isFav?'favorited':''].filter(Boolean).join(' ');
+    const div = document.createElement('div');
+    div.className = cardClass;
+    div.id = 'card-' + q.id;
+    div.innerHTML = `
+      <div class="card-header" onclick="toggleCard(${q.id})">
+        <span class="q-num">#${idx+1}</span>
+        <div style="flex:1">
+          <div class="badges">
+            <span class="badge badge-${q.level}">${levelLabel(q.level)}</span>
+            <span class="badge badge-topic">${q.topic}</span>
+          </div>
+          <div class="q-text">${q.q}</div>
+        </div>
+        <span style="font-size:.9rem;color:var(--sub);padding-left:8px">${result==='correct'?'✅':result==='incorrect'?'❌':'💡'}</span>
+      </div>
+      <div class="card-body">
+        <div class="answer-box">${q.a}</div>
+        ${q.explain ? `<div class="explain">ℹ️ ${q.explain}</div>` : ''}
+        <div class="card-footer">
+          <button class="btn btn-success btn-sm" onclick="markResult(${q.id},'correct')">✓ Correct</button>
+          <button class="btn btn-danger btn-sm" onclick="markResult(${q.id},'incorrect')">✗ Fout</button>
+          <span class="spacer"></span>
+          <button class="fav-btn" onclick="toggleFav(${q.id})" title="Favoriet">${isFav?'⭐':'☆'}</button>
+        </div>
+      </div>`;
+    c.appendChild(div);
+  });
+  updateProgress();
+}
+
+function levelLabel(l) {
+  return {basic:'Basis',func:'Functioneel',tech:'Technisch',arch:'Architectuur',prak:'Praktijk',oral:'Mondeling'}[l]||l;
+}
+
+function toggleCard(id) {
+  const c = document.getElementById('card-' + id);
+  c.classList.toggle('open');
+}
+
+function expandAll() { document.querySelectorAll('.card').forEach(c=>c.classList.add('open')); }
+function collapseAll() { document.querySelectorAll('.card').forEach(c=>c.classList.remove('open')); }
+
+function setFilter(type, value, btn) {
+  if (type === 'level') state.levelFilter = value;
+  else state.topicFilter = value;
+  state.showFavsOnly = false;
+  state.retryMode = false;
+  document.querySelectorAll(`[data-filter="${type}"]`).forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+
+function markResult(id, result) {
+  state.results[id] = result;
+  const c = document.getElementById('card-' + id);
+  if (!c) return;
+  c.classList.remove('correct','incorrect');
+  c.classList.add(result);
+  const icon = c.querySelector('.card-header > span:last-child');
+  if (icon) icon.textContent = result==='correct'?'✅':'❌';
+  updateProgress();
+  updateScore();
+}
+
+function toggleFav(id) {
+  if (state.favorites.has(id)) state.favorites.delete(id);
+  else state.favorites.add(id);
+  localStorage.setItem('fl-favs', JSON.stringify([...state.favorites]));
+  const c = document.getElementById('card-' + id);
+  if (c) {
+    const btn = c.querySelector('.fav-btn');
+    if (btn) btn.textContent = state.favorites.has(id) ? '⭐' : '☆';
+    c.classList.toggle('favorited', state.favorites.has(id));
+  }
+  document.getElementById('fav-count').textContent = state.favorites.size;
+}
+
+function updateProgress() {
+  const visible = getVisible();
+  const answered = visible.filter(q => state.results[q.id]).length;
+  const pct = visible.length ? Math.round(answered/visible.length*100) : 0;
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-label').textContent = `${answered} van ${visible.length} beantwoord`;
+}
+
+function updateScore() {
+  const correct = Object.values(state.results).filter(v=>v==='correct').length;
+  const total = Object.keys(state.results).length;
+  document.getElementById('score-display').textContent = `${correct}/${total}`;
+}
+
+function showFavs() {
+  state.showFavsOnly = !state.showFavsOnly;
+  applyFilters();
+  toast(state.showFavsOnly ? '⭐ Favorieten getoond' : 'Alle vragen getoond');
+}
+
+function showRetryMode() {
+  const incorrect = Object.entries(state.results).filter(([,v])=>v==='incorrect').map(([k])=>parseInt(k));
+  if (!incorrect.length) { toast('Geen foute vragen! 🎉'); return; }
+  state.retryMode = true;
+  state.retryIds = incorrect;
+  state.showFavsOnly = false;
+  applyFilters();
+  toast(`🔄 Herhalingsmodus: ${incorrect.length} foute vragen`);
+}
+
+function shuffleVisible() {
+  const visible = getVisible();
+  const shuffled = [...visible].sort(()=>Math.random()-.5);
+  renderCards(shuffled);
+}
+
+function resetAll() {
+  if (!confirm('Score en resultaten resetten?')) return;
+  state.results = {};
+  applyFilters();
+  updateScore();
+  toast('↺ Reset gedaan');
+}
+
+function toggleTheme() {
+  state.darkMode = !state.darkMode;
+  document.documentElement.classList.toggle('dark', state.darkMode);
+  localStorage.setItem('fl-dark', state.darkMode ? '1' : '0');
+  document.getElementById('theme-btn').textContent = state.darkMode ? '☀️ Light' : '🌙 Dark';
+}
+
+document.getElementById('search-input').addEventListener('input', e => {
+  state.search = e.target.value;
+  applyFilters();
+});
+
+// ── ORAL EXAM ────────────────────────────────────────────────────────────────
+function startOralExam() {
+  const oralQs = Q.filter(q => q.level === 'oral');
+  oralQ = oralQs[Math.floor(Math.random()*oralQs.length)];
+  document.getElementById('oral-q-text').textContent = oralQ.q;
+  document.getElementById('oral-answer-section').style.display = 'none';
+  document.getElementById('reveal-oral-btn').style.display = '';
+  document.getElementById('oral-overlay').classList.add('show');
+  startTimer(60);
+}
+
+function startTimer(secs) {
+  clearInterval(oralTimer);
+  oralSecs = secs;
+  const fill = document.getElementById('timer-fill');
+  const label = document.getElementById('timer-secs');
+  fill.style.width = '100%';
+  fill.style.background = 'var(--orange)';
+  label.textContent = secs;
+  oralTimer = setInterval(() => {
+    oralSecs--;
+    label.textContent = oralSecs;
+    fill.style.width = (oralSecs/secs*100) + '%';
+    if (oralSecs <= 10) fill.style.background = 'var(--red)';
+    if (oralSecs <= 0) { clearInterval(oralTimer); revealOralAnswer(); }
+  }, 1000);
+}
+
+function revealOralAnswer() {
+  clearInterval(oralTimer);
+  document.getElementById('oral-answer').innerHTML = oralQ.a;
+  const followupEl = document.getElementById('oral-followups');
+  followupEl.innerHTML = (oralQ.followups||[]).map(f=>`<li>${f}</li>`).join('');
+  const tipsEl = document.getElementById('oral-tips');
+  tipsEl.innerHTML = (oralQ.tips||[]).map(t=>`<li>${t}</li>`).join('');
+  document.getElementById('oral-answer-section').style.display = 'block';
+  document.getElementById('reveal-oral-btn').style.display = 'none';
+}
+
+function nextOralQuestion() {
+  clearInterval(oralTimer);
+  startOralExam();
+}
+
+function closeOral() {
+  clearInterval(oralTimer);
+  document.getElementById('oral-overlay').classList.remove('show');
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── START ────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>FitLife.UITests</RootNamespace>
+    <!--
+      UI tests require:
+      1. Appium server:  npm install -g appium && appium driver install windows && appium
+      2. The MAUI Windows app built:
+         dotnet build ..\FitLife.Maui -f net10.0-windows10.0.19041.0 -c Debug
+      3. Real API must NOT be running on port 5000 — WireMock binds to that port instead.
+    -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk"       Version="17.12.0" />
+    <PackageReference Include="xunit"                        Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio"    Version="2.8.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.collector"           Version="6.0.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Appium.WebDriver"             Version="5.0.0" />
+    <PackageReference Include="WireMock.Net"                 Version="1.6.4" />
+  </ItemGroup>
+
+</Project>
