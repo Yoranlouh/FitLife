@@ -22,27 +22,30 @@ public class LessonDto
     public int Id { get; set; }
     public DateTime StartTime { get; set; }
     public DateTime EndTime { get; set; }
+    // Effective capacity: COALESCE(capacity_override, workout.default_capacity, location.capacity)
     public int MaxParticipants { get; set; }
+    // Raw DB value — null means the lesson inherits capacity from the location/workout
+    public int? CapacityOverride { get; set; }
     public int CurrentParticipants { get; set; }
     public int WaitlistCount { get; set; }
-    
+
     public int WorkoutId { get; set; }
     public string WorkoutName { get; set; } = string.Empty;
-    
+
     public int InstructorId { get; set; }
     public string InstructorName { get; set; } = string.Empty;
-    
+
     public int LocationId { get; set; }
     public string LocationName { get; set; } = string.Empty;
-    
+
     public bool IsRecurring { get; set; }
     public string? RecurrencePattern { get; set; }
-    
+
     // Calculated properties
     public bool IsFull => CurrentParticipants >= MaxParticipants;
     public int AvailableSpots => Math.Max(0, MaxParticipants - CurrentParticipants);
-    public double OccupancyPercentage => MaxParticipants > 0 
-        ? Math.Round((double)CurrentParticipants / MaxParticipants * 100, 1) 
+    public double OccupancyPercentage => MaxParticipants > 0
+        ? Math.Round((double)CurrentParticipants / MaxParticipants * 100, 1)
         : 0;
 }
 

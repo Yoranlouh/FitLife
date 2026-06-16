@@ -19,14 +19,15 @@ public partial class InstructorLessonsViewModel : BaseViewModel
 
     // Shown when the instructor has no upcoming lessons
     [ObservableProperty]
-    private string _emptyMessage = "Je hebt geen geplande lessen als trainer.";
+    private string _emptyMessage = string.Empty;
 
     public InstructorLessonsViewModel(ILessonManagementService lessonManagementService,
                                       IAuthenticationService   authService)
     {
         _lessonManagementService = lessonManagementService;
         _authService             = authService;
-        Title = "Mijn Lessen als Trainer";
+        Title        = Translator.T("Instructor_Title");
+        EmptyMessage = Translator.T("Instructor_Empty");
     }
 
     // Fetches lessons for the logged-in instructor from GET /lessons/instructor/{id}.
@@ -78,10 +79,10 @@ public partial class InstructorLessonsViewModel : BaseViewModel
     private async Task DeleteLesson(LessonResponse lesson)
     {
         bool confirm = await Shell.Current.DisplayAlert(
-            "Verwijderen",
-            $"Weet je zeker dat je '{lesson.WorkoutName}' op {lesson.StartTime:dd-MM-yyyy HH:mm} wilt verwijderen?",
-            "Ja, verwijderen",
-            "Annuleren");
+            Translator.T("Instructor_DeleteTitle"),
+            Translator.T("Instructor_DeleteConfirm", lesson.WorkoutName, lesson.StartTime),
+            Translator.T("Instructor_YesDelete"),
+            Translator.T("Common_Cancel"));
 
         if (!confirm) return;
 
@@ -92,11 +93,11 @@ public partial class InstructorLessonsViewModel : BaseViewModel
             if (success)
             {
                 Lessons.Remove(lesson);  // update UI only after server confirmed deletion
-                await Shell.Current.DisplayAlert("Verwijderd", message, "OK");
+                await Shell.Current.DisplayAlert(Translator.T("Instructor_DeletedTitle"), message, Translator.T("Common_OK"));
             }
             else
             {
-                await Shell.Current.DisplayAlert("Fout", message, "OK");
+                await Shell.Current.DisplayAlert(Translator.T("Common_Error"), message, Translator.T("Common_OK"));
             }
         }
         finally

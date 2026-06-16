@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
              xmlns:controls="clr-namespace:FitLife.Maui.Controls"
+             xmlns:h="clr-namespace:FitLife.Maui.Helpers"
              x:Class="FitLife.Maui.Views.ParticipantsPage"
              Title="{Binding Title}"
              x:DataType="vm:ParticipantsViewModel"
@@ -22,7 +23,7 @@
                     WidthRequest="44"
                     HorizontalOptions="Start"
                     Clicked="OnBackClicked" />
-            <Label Text="Deelnemers"
+            <Label Text="{h:Translate Participants_Title}"
                    Style="{StaticResource HeaderTitle}"
                    FontSize="18"
                    HorizontalOptions="Center" />
@@ -55,7 +56,7 @@
             <!-- Stats Bar -->
             <Grid Padding="20, 10" BackgroundColor="#F0F0F0" ColumnDefinitions="*, Auto">
                 <Label Text="{Binding ParticipantStats}" VerticalOptions="Center" FontAttributes="Bold" />
-                <Label Grid.Column="1" Text="Buddies" VerticalOptions="Center" TextColor="Gray" />
+                <Label Grid.Column="1" Text="{h:Translate Participants_Buddies}" VerticalOptions="Center" TextColor="Gray" />
             </Grid>
 
             <ActivityIndicator IsRunning="{Binding IsLoading}"
@@ -91,7 +92,7 @@
 
             <!-- Waitlist Section -->
             <Grid BackgroundColor="Black" Padding="20, 5">
-                <Label Text="Wachtlijst"
+                <Label Text="{h:Translate Participants_Waitlist}"
                        TextColor="White"
                        HorizontalOptions="Center"
                        FontAttributes="Bold" />

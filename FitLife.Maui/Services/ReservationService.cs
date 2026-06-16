@@ -17,6 +17,19 @@ public class ReservationActionResult
 
     [JsonPropertyName("remainingCredits")]
     public int? RemainingCredits { get; set; }
+
+    // True when the reserve call failed specifically because the lesson is at full capacity.
+    // The caller should then automatically join the waitlist instead of showing a plain error.
+    [JsonPropertyName("lessonFull")]
+    public bool LessonFull { get; set; }
+
+    // True when the waitlist join was rejected because the user is already on it.
+    [JsonPropertyName("alreadyOnWaitlist")]
+    public bool AlreadyOnWaitlist { get; set; }
+
+    // Position on the waitlist returned by POST /lessons/{id}/waitlist.
+    [JsonPropertyName("position")]
+    public int? Position { get; set; }
 }
 
 /// <summary>
@@ -53,6 +66,9 @@ public interface IReservationService
 
     /// <summary>Cancels a reservation via DELETE /lessons/{lessonId}/cancel.</summary>
     Task<ReservationActionResult> CancelReservationAsync(int lessonId, int userId);
+
+    /// <summary>Adds the user to the waitlist via POST /lessons/{lessonId}/waitlist.</summary>
+    Task<ReservationActionResult> JoinWaitlistAsync(int lessonId, int userId);
 }
 
 /// <summary>
@@ -128,6 +144,33 @@ public class ReservationService : IReservationService
         {
             System.Diagnostics.Debug.WriteLine($"[ReservationService] GetUserLessonsAsync error: {ex.Message}");
             return Enumerable.Empty<UserLessonDto>();
+        }
+    }
+
+    /// <summary>
+    /// Calls POST /lessons/{lessonId}/waitlist with { userId }.
+    /// Returns the user's position on the waitlist on success.
+    /// </summary>
+    public async Task<ReservationActionResult> JoinWaitlistAsync(int lessonId, int userId)
+    {
+        try
+        {
+            var body = new { userId };
+            using var response = await _httpClient.PostAsJsonAsync(
+                $"lessons/{lessonId}/waitlist", body);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ReservationActionResult>();
+                return result ?? new ReservationActionResult { Success = false, Message = "Onbekend antwoord van de server." };
+            }
+
+            return new ReservationActionResult { Success = false, Message = $"Server gaf statuscode {(int)response.StatusCode} terug." };
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ReservationService] JoinWaitlistAsync error: {ex.Message}");
+            return new ReservationActionResult { Success = false, Message = "Netwerkfout: kon niet worden aangemeld voor de wachtlijst." };
         }
     }
 

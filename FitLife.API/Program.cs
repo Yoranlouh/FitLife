@@ -1,4 +1,5 @@
 using MySqlConnector;
+using Scalar.AspNetCore;
 using SharedLibrary.DTOs.Responses;
 using System.Text.Json.Serialization;
 using System.Security.Cryptography;
@@ -15,8 +16,19 @@ using Microsoft.Extensions.FileProviders;
 // ──────────────────────────────────────────────────────────────────────────────
 var builder = WebApplication.CreateBuilder(args);
 
-// Register OpenAPI (Swagger) metadata — accessible at /openapi in development
-builder.Services.AddOpenApi();
+// Register OpenAPI metadata — Scalar UI available at /scalar in development
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer((document, context, cancellationToken) =>
+    {
+        document.Info.Title = "FitLife API";
+        document.Info.Version = "v1";
+        document.Info.Description =
+            "REST API voor de FitLife fitnessapp, gebruikt door de MAUI mobiele app. " +
+            "Geen JWT-authenticatie vereist — gebruik POST /auth/login voor gebruikersvalidatie.";
+        return Task.CompletedTask;
+    });
+});
 
 // Allow all origins/headers/methods so the MAUI app and any future web clients
 // can call this API without CORS preflight failures.
@@ -35,6 +47,12 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    // Scalar UI — browse all endpoints at /scalar in development.
+    // To disable in production: keep this block development-only (already the case here).
+    app.MapScalarApiReference(options =>
+    {
+        options.Title = "FitLife API";
+    });
 }
 
 if (!app.Environment.IsDevelopment())
@@ -98,6 +116,44 @@ try
             await using var createNotifCmd = new MySqlCommand(createNotif, migConn);
             await createNotifCmd.ExecuteNonQueryAsync();
         }
+
+        // Track whether a credit was deducted when a reservation was created.
+        // 1 = credit consumed (normal reserve flow), 0 = admin-added (no credit deducted).
+        // DEFAULT 1 so existing reservations are treated as credit-consuming, preserving
+        // the existing cancel-refund behaviour for pre-migration data.
+        const string checkCreditUsed = "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='reservations' AND COLUMN_NAME='credit_used'";
+        await using var checkCuCmd = new MySqlCommand(checkCreditUsed, migConn);
+        if (Convert.ToInt32(await checkCuCmd.ExecuteScalarAsync()) == 0)
+        {
+            await using var addCuCmd = new MySqlCommand(
+                "ALTER TABLE reservations ADD COLUMN credit_used TINYINT(1) NOT NULL DEFAULT 1;",
+                migConn);
+            await addCuCmd.ExecuteNonQueryAsync();
+        }
+
+        // Create bike_reservations table for spinning lesson bike selection.
+        // One row per (lesson, user) — UNIQUE on (lesson, row, bike) prevents double-booking a seat.
+        const string checkBikeTable = "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='bike_reservations'";
+        await using var checkBikeTableCmd = new MySqlCommand(checkBikeTable, migConn);
+        if (Convert.ToInt32(await checkBikeTableCmd.ExecuteScalarAsync()) == 0)
+        {
+            const string createBike = """
+                CREATE TABLE bike_reservations (
+                    id          INT AUTO_INCREMENT PRIMARY KEY,
+                    lesson_id   INT NOT NULL,
+                    user_id     INT NOT NULL,
+                    row_number  INT NOT NULL,
+                    bike_number INT NOT NULL,
+                    created_at  DATETIME NOT NULL DEFAULT NOW(),
+                    UNIQUE KEY unique_lesson_bike (lesson_id, row_number, bike_number),
+                    UNIQUE KEY unique_lesson_user (lesson_id, user_id),
+                    INDEX idx_bike_res_lesson (lesson_id),
+                    INDEX idx_bike_res_user   (user_id)
+                );
+                """;
+            await using var createBikeCmd = new MySqlCommand(createBike, migConn);
+            await createBikeCmd.ExecuteNonQueryAsync();
+        }
     }
 }
 catch (Exception ex)
@@ -139,7 +195,11 @@ app.MapGet("/workouts", async (IConfiguration configuration) =>
         });
 
     return Results.Ok(items);
-});
+})
+.WithName("GetWorkouts")
+.WithTags("Referentiedata")
+.WithSummary("Haal alle werkvormen op")
+.Produces<IEnumerable<DropdownItemDto>>(200);
 
 // GET /locations — Returns all locations/halls as id+name pairs for dropdown selectors
 app.MapGet("/locations", async (IConfiguration configuration) =>
@@ -159,7 +219,11 @@ app.MapGet("/locations", async (IConfiguration configuration) =>
         items.Add(new DropdownItemDto { Id = reader.GetInt32("id"), Name = reader.GetString("name") });
 
     return Results.Ok(items);
-});
+})
+.WithName("GetLocations")
+.WithTags("Referentiedata")
+.WithSummary("Haal alle locaties/zalen op")
+.Produces<IEnumerable<DropdownItemDto>>(200);
 
 // GET /instructors — Returns all instructors (role='instructor') as id+name pairs
 app.MapGet("/instructors", async (IConfiguration configuration) =>
@@ -183,7 +247,11 @@ app.MapGet("/instructors", async (IConfiguration configuration) =>
         });
 
     return Results.Ok(items);
-});
+})
+.WithName("GetInstructors")
+.WithTags("Referentiedata")
+.WithSummary("Haal alle instructeurs op")
+.Produces<IEnumerable<DropdownItemDto>>(200);
 
 // GET /lessons/instructor/{instructorId} — All lessons where the given user is the instructor.
 // Used by the MAUI InstructorLessonsPage to show a trainer their own schedule.
@@ -256,7 +324,11 @@ app.MapGet("/lessons/instructor/{instructorId:int}", async (int instructorId, IC
     }
 
     return Results.Ok(lessons);
-});
+})
+.WithName("GetInstructorLessons")
+.WithTags("Lessen")
+.WithSummary("Haal het lesrooster van een instructeur op")
+.Produces<IEnumerable<LessonResponse>>(200);
 
 // POST /lessons — Creates a new lesson. Body: LessonSaveDto. Returns the new lesson ID.
 app.MapPost("/lessons", async (IConfiguration configuration, LessonSaveDto request) =>
@@ -296,7 +368,11 @@ app.MapPost("/lessons", async (IConfiguration configuration, LessonSaveDto reque
         System.Diagnostics.Debug.WriteLine($"Error creating lesson: {ex.Message}");
         return Results.Problem("Er is een fout opgetreden bij het aanmaken van de les.");
     }
-});
+})
+.WithName("CreateLesson")
+.WithTags("Lessen")
+.WithSummary("Maak een nieuwe les aan")
+.Produces<object>(200);
 
 // PUT /lessons/{lessonId} — Updates all editable fields of an existing lesson.
 app.MapPut("/lessons/{lessonId:int}", async (int lessonId, IConfiguration configuration, LessonSaveDto request) =>
@@ -343,7 +419,11 @@ app.MapPut("/lessons/{lessonId:int}", async (int lessonId, IConfiguration config
         System.Diagnostics.Debug.WriteLine($"Error updating lesson: {ex.Message}");
         return Results.Problem("Er is een fout opgetreden bij het bijwerken van de les.");
     }
-});
+})
+.WithName("UpdateLesson")
+.WithTags("Lessen")
+.WithSummary("Werk een bestaande les bij")
+.Produces<object>(200);
 
 // DELETE /lessons/{lessonId} — Deletes a lesson. Rejected if active reservations exist.
 app.MapDelete("/lessons/{lessonId:int}", async (int lessonId, IConfiguration configuration) =>
@@ -379,7 +459,11 @@ app.MapDelete("/lessons/{lessonId:int}", async (int lessonId, IConfiguration con
         System.Diagnostics.Debug.WriteLine($"Error deleting lesson: {ex.Message}");
         return Results.Problem("Er is een fout opgetreden bij het verwijderen van de les.");
     }
-});
+})
+.WithName("DeleteLesson")
+.WithTags("Lessen")
+.WithSummary("Verwijder een les (geblokkeerd als er actieve reserveringen zijn)")
+.Produces<object>(200);
 
 // POST /lessons/{lessonId}/add-member — Admin-only: adds a member to a lesson
 // without deducting a credit. Checks capacity before inserting the reservation.
@@ -430,10 +514,10 @@ app.MapPost("/lessons/{lessonId:int}/add-member", async (int lessonId, IConfigur
         if (existing != null)
             return Results.Ok(new { success = false, message = "Dit lid is al aangemeld voor deze les." });
 
-        // Insert reservation without credit deduction
+        // Insert reservation without credit deduction — credit_used=0 so a cancel never refunds
         const string insertSql = """
-            INSERT INTO reservations (lesson_id, member_id, reservation_date, is_cancelled)
-            VALUES (@lessonId, @userId, NOW(), 0)
+            INSERT INTO reservations (lesson_id, member_id, reservation_date, is_cancelled, credit_used)
+            VALUES (@lessonId, @userId, NOW(), 0, 0)
             """;
         await using var insertCmd = new MySqlCommand(insertSql, connection);
         insertCmd.Parameters.AddWithValue("@lessonId", lessonId);
@@ -447,7 +531,11 @@ app.MapPost("/lessons/{lessonId:int}/add-member", async (int lessonId, IConfigur
         System.Diagnostics.Debug.WriteLine($"Error adding member: {ex.Message}");
         return Results.Problem("Er is een fout opgetreden bij het toevoegen van het lid.");
     }
-});
+})
+.WithName("AddMemberToLesson")
+.WithTags("Lessen")
+.WithSummary("Voeg een lid admin-zijdig toe aan een les (zonder credit)")
+.Produces<object>(200);
 
 // GET /lessons?userId={id}&from={iso}&to={iso} — Returns lessons filtered by date range.
 // from/to are optional ISO-8601 strings; omit for no date filter (e.g. list view).
@@ -547,7 +635,11 @@ app.MapGet("/lessons", async (IConfiguration configuration, int? userId, DateTim
     }
 
     return Results.Ok(lessons);
-});
+})
+.WithName("GetLessons")
+.WithTags("Lessen")
+.WithSummary("Haal lessen op, optioneel gefilterd op gebruiker (userId) en datumbereik (from/to)")
+.Produces<IEnumerable<LessonResponse>>(200);
 
 // GET /lessons/{lessonId}/participants — Returns all non-cancelled members enrolled in a lesson.
 app.MapGet("/lessons/{lessonId:int}/participants", async (int lessonId, IConfiguration configuration) =>
@@ -596,12 +688,118 @@ app.MapGet("/lessons/{lessonId:int}/participants", async (int lessonId, IConfigu
     }
 
     return Results.Ok(participants);
-});
+})
+.WithName("GetLessonParticipants")
+.WithTags("Lessen")
+.WithSummary("Haal actieve deelnemers van een les op")
+.Produces<IEnumerable<ParticipantResponse>>(200);
 
-// GET /lessons/{lessonId}/waitlist — Waitlist query placeholder.
-// Returns an empty list until the waitlist_entries table is fully implemented.
-app.MapGet("/lessons/{lessonId:int}/waitlist", (int lessonId) =>
-    Results.Ok(new List<ParticipantResponse>()));
+// GET /lessons/{lessonId}/waitlist — Returns all members on the waitlist for a lesson, ordered by position.
+app.MapGet("/lessons/{lessonId:int}/waitlist", async (int lessonId, IConfiguration configuration) =>
+{
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+
+    if (string.IsNullOrWhiteSpace(connectionString))
+    {
+        return Results.Problem("Connection string 'DefaultConnection' is niet gevonden.");
+    }
+
+    var waitlist = new List<ParticipantResponse>();
+
+    await using var connection = new MySqlConnection(connectionString);
+    await connection.OpenAsync();
+
+    const string sql = """
+        SELECT
+            u.id AS member_id,
+            u.display_name AS member_name,
+            u.photo_url AS image_url
+        FROM waitlist_entries we
+        INNER JOIN users u ON u.id = we.member_id
+        WHERE we.lesson_id = @lessonId
+        ORDER BY we.position;
+        """;
+
+    await using var command = new MySqlCommand(sql, connection);
+    command.Parameters.AddWithValue("@lessonId", lessonId);
+
+    await using var reader = await command.ExecuteReaderAsync();
+
+    while (await reader.ReadAsync())
+    {
+        waitlist.Add(new ParticipantResponse
+        {
+            MemberId = reader.GetInt32("member_id"),
+            Name = reader.IsDBNull(reader.GetOrdinal("member_name"))
+                ? "Onbekend"
+                : reader.GetString("member_name"),
+            ImageUrl = reader.IsDBNull(reader.GetOrdinal("image_url"))
+                ? null
+                : reader.GetString("image_url"),
+            IsBuddy = false
+        });
+    }
+
+    return Results.Ok(waitlist);
+})
+.WithName("GetLessonWaitlist")
+.WithTags("Lessen")
+.WithSummary("Haal de wachtlijst van een les op (geordend op positie)")
+.Produces<IEnumerable<ParticipantResponse>>(200);
+
+// POST /lessons/{lessonId}/waitlist — Adds the user to the waitlist for a full lesson.
+// Checks for duplicate entries; returns the user's position on the waitlist.
+app.MapPost("/lessons/{lessonId:int}/waitlist", async (int lessonId, IConfiguration configuration, ReservationRequestDto request) =>
+{
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrWhiteSpace(connectionString))
+        return Results.Problem("Connection string 'DefaultConnection' is niet gevonden.");
+
+    try
+    {
+        await using var connection = new MySqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        // Reject if already on waitlist
+        const string checkSql = "SELECT id FROM waitlist_entries WHERE lesson_id = @lessonId AND member_id = @userId";
+        await using var checkCmd = new MySqlCommand(checkSql, connection);
+        checkCmd.Parameters.AddWithValue("@lessonId", lessonId);
+        checkCmd.Parameters.AddWithValue("@userId", request.UserId);
+        var existing = await checkCmd.ExecuteScalarAsync();
+        if (existing != null)
+            return Results.Ok(new { success = false, alreadyOnWaitlist = true, message = "Je staat al op de wachtlijst voor deze les." });
+
+        // Determine next position and insert
+        const string insertSql = """
+            INSERT INTO waitlist_entries (lesson_id, member_id, position)
+            SELECT @lessonId, @userId, COALESCE(MAX(wt.position), 0) + 1
+            FROM waitlist_entries wt
+            WHERE wt.lesson_id = @lessonId
+            """;
+        await using var insertCmd = new MySqlCommand(insertSql, connection);
+        insertCmd.Parameters.AddWithValue("@lessonId", lessonId);
+        insertCmd.Parameters.AddWithValue("@userId", request.UserId);
+        await insertCmd.ExecuteNonQueryAsync();
+
+        // Return the user's position
+        const string posSql = "SELECT position FROM waitlist_entries WHERE lesson_id = @lessonId AND member_id = @userId";
+        await using var posCmd = new MySqlCommand(posSql, connection);
+        posCmd.Parameters.AddWithValue("@lessonId", lessonId);
+        posCmd.Parameters.AddWithValue("@userId", request.UserId);
+        var position = Convert.ToInt32(await posCmd.ExecuteScalarAsync());
+
+        return Results.Ok(new { success = true, position, message = "Je bent toegevoegd aan de wachtlijst." });
+    }
+    catch (Exception ex)
+    {
+        System.Diagnostics.Debug.WriteLine($"Error joining waitlist: {ex.Message}");
+        return Results.Problem("Er is een fout opgetreden bij het aanmelden voor de wachtlijst.");
+    }
+})
+.WithName("JoinWaitlist")
+.WithTags("Lessen")
+.WithSummary("Schrijf een gebruiker in op de wachtlijst van een volle les")
+.Produces<object>(200);
 
 // POST /auth/login — Verifies email + password against the database and returns
 // the full user profile (id, name, role, credits, subscription) on success.
@@ -709,7 +907,11 @@ app.MapPost("/auth/login", async (IConfiguration configuration, LoginRequestDto 
         System.Diagnostics.Debug.WriteLine($"Error during login: {ex.Message}");
         return Results.Problem("Er is een fout opgetreden bij het inloggen.");
     }
-});
+})
+.WithName("Login")
+.WithTags("Authenticatie")
+.WithSummary("Inloggen met email en wachtwoord")
+.Produces<LoginResponseDto>(200);
 
 // POST /lessons/{lessonId}/reserve — Creates a reservation for the given user.
 // Checks: user has ≥1 credit, lesson exists and has capacity, not already reserved.
@@ -779,7 +981,7 @@ app.MapPost("/lessons/{lessonId:int}/reserve", async (int lessonId, IConfigurati
             if (currentCount >= maxCapacity)
             {
                 await transaction.RollbackAsync();
-                return Results.Ok(new { success = false, message = "Les is vol. Je kunt je aanmelden voor de wachtlijst." });
+                return Results.Ok(new { success = false, lessonFull = true, message = "Les is vol. Je kunt je aanmelden voor de wachtlijst." });
             }
 
             // Check if user already has a reservation
@@ -795,10 +997,10 @@ app.MapPost("/lessons/{lessonId:int}/reserve", async (int lessonId, IConfigurati
                 return Results.Ok(new { success = false, message = "Je bent al aangemeld voor deze les." });
             }
 
-            // Create reservation
+            // Create reservation — credit_used=1 so a cancel later refunds exactly 1 credit
             const string insertReservationSql = """
-                INSERT INTO reservations (lesson_id, member_id, reservation_date, is_cancelled)
-                VALUES (@lessonId, @userId, NOW(), 0)
+                INSERT INTO reservations (lesson_id, member_id, reservation_date, is_cancelled, credit_used)
+                VALUES (@lessonId, @userId, NOW(), 0, 1)
                 """;
             
             await using var insertCmd = new MySqlCommand(insertReservationSql, connection, transaction);
@@ -828,7 +1030,11 @@ app.MapPost("/lessons/{lessonId:int}/reserve", async (int lessonId, IConfigurati
         System.Diagnostics.Debug.WriteLine($"Error connecting to database: {ex.Message}");
         return Results.Problem("Er is een fout opgetreden bij het reserveren.");
     }
-});
+})
+.WithName("ReserveLesson")
+.WithTags("Reserveringen")
+.WithSummary("Reserveer een les voor een gebruiker (trekt 1 credit af, transactioneel)")
+.Produces<object>(200);
 
 // DELETE /lessons/{lessonId}/cancel?userId={userId} — Cancels the user's reservation
 // and refunds 1 credit. Uses a transaction so the cancellation and credit refund are atomic.
@@ -849,17 +1055,32 @@ app.MapDelete("/lessons/{lessonId:int}/cancel", async (int lessonId, IConfigurat
 
         try
         {
-            // Check if reservation exists
-            const string checkSql = "SELECT id FROM reservations WHERE lesson_id = @lessonId AND member_id = @userId AND is_cancelled = 0";
+            // Fetch reservation id, credit_used flag, and the user's subscription type in one go
+            const string checkSql = """
+                SELECT r.id, r.credit_used, u.subscription_type
+                FROM reservations r
+                JOIN users u ON u.id = r.member_id
+                WHERE r.lesson_id = @lessonId AND r.member_id = @userId AND r.is_cancelled = 0
+                """;
             await using var checkCmd = new MySqlCommand(checkSql, connection, transaction);
             checkCmd.Parameters.AddWithValue("@lessonId", lessonId);
             checkCmd.Parameters.AddWithValue("@userId", userId);
-            
-            var reservationId = await checkCmd.ExecuteScalarAsync();
-            if (reservationId == null)
+
+            object? reservationId = null;
+            bool creditUsed = false;
+            string subscriptionType = "Rookie";
+
+            await using (var rdr = await checkCmd.ExecuteReaderAsync())
             {
-                await transaction.RollbackAsync();
-                return Results.Ok(new { success = false, message = "Geen actieve reservering gevonden voor deze les." });
+                if (!await rdr.ReadAsync())
+                {
+                    await rdr.CloseAsync();
+                    await transaction.RollbackAsync();
+                    return Results.Ok(new { success = false, message = "Geen actieve reservering gevonden voor deze les." });
+                }
+                reservationId    = rdr.GetValue(0);
+                creditUsed       = rdr.GetInt32(1) == 1;
+                subscriptionType = rdr.GetString(2);
             }
 
             // Cancel reservation
@@ -868,21 +1089,53 @@ app.MapDelete("/lessons/{lessonId:int}/cancel", async (int lessonId, IConfigurat
             cancelCmd.Parameters.AddWithValue("@reservationId", reservationId);
             await cancelCmd.ExecuteNonQueryAsync();
 
-            // Refund 1 credit
-            const string refundSql = "UPDATE users SET credits = credits + 1 WHERE id = @userId";
-            await using var refundCmd = new MySqlCommand(refundSql, connection, transaction);
-            refundCmd.Parameters.AddWithValue("@userId", userId);
-            await refundCmd.ExecuteNonQueryAsync();
+            // Release bike reservation (spinning lessons) — harmless no-op for other lesson types
+            const string releaseBikeSql = "DELETE FROM bike_reservations WHERE lesson_id = @lessonId AND user_id = @userId";
+            await using var releaseBikeCmd = new MySqlCommand(releaseBikeSql, connection, transaction);
+            releaseBikeCmd.Parameters.AddWithValue("@lessonId", lessonId);
+            releaseBikeCmd.Parameters.AddWithValue("@userId", userId);
+            await releaseBikeCmd.ExecuteNonQueryAsync();
 
-            // Get updated credits
-            const string getCreditsSql = "SELECT credits FROM users WHERE id = @userId";
-            await using var getCreditsCmd = new MySqlCommand(getCreditsSql, connection, transaction);
-            getCreditsCmd.Parameters.AddWithValue("@userId", userId);
-            var updatedCredits = await getCreditsCmd.ExecuteScalarAsync();
+            int updatedCredits;
+            string responseMessage;
+
+            if (creditUsed)
+            {
+                // Cap refund at the subscription maximum so credits never exceed the plan limit.
+                // Advanced uses 999 as an unlimited sentinel — capping there keeps it at 999.
+                int maxCredits = subscriptionType switch
+                {
+                    "Rookie"       => 9,
+                    "Intermediate" => 13,
+                    "Advanced"     => 999,
+                    _              => 9
+                };
+
+                const string refundSql = "UPDATE users SET credits = LEAST(credits + 1, @maxCredits) WHERE id = @userId";
+                await using var refundCmd = new MySqlCommand(refundSql, connection, transaction);
+                refundCmd.Parameters.AddWithValue("@maxCredits", maxCredits);
+                refundCmd.Parameters.AddWithValue("@userId", userId);
+                await refundCmd.ExecuteNonQueryAsync();
+
+                const string getCreditsSql = "SELECT credits FROM users WHERE id = @userId";
+                await using var getCreditsCmd = new MySqlCommand(getCreditsSql, connection, transaction);
+                getCreditsCmd.Parameters.AddWithValue("@userId", userId);
+                updatedCredits  = Convert.ToInt32(await getCreditsCmd.ExecuteScalarAsync());
+                responseMessage = "Reservering geannuleerd! 1 credit is teruggegeven.";
+            }
+            else
+            {
+                // Reservation was admin-added (credit_used=0) — no credit to refund
+                const string getCreditsSql = "SELECT credits FROM users WHERE id = @userId";
+                await using var getCreditsCmd = new MySqlCommand(getCreditsSql, connection, transaction);
+                getCreditsCmd.Parameters.AddWithValue("@userId", userId);
+                updatedCredits  = Convert.ToInt32(await getCreditsCmd.ExecuteScalarAsync());
+                responseMessage = "Reservering geannuleerd.";
+            }
 
             await transaction.CommitAsync();
 
-            return Results.Ok(new { success = true, message = "Reservering geannuleerd! 1 credit is teruggegeven.", remainingCredits = Convert.ToInt32(updatedCredits) });
+            return Results.Ok(new { success = true, message = responseMessage, remainingCredits = updatedCredits });
         }
         catch (Exception ex)
         {
@@ -896,7 +1149,11 @@ app.MapDelete("/lessons/{lessonId:int}/cancel", async (int lessonId, IConfigurat
         System.Diagnostics.Debug.WriteLine($"Error connecting to database: {ex.Message}");
         return Results.Problem("Er is een fout opgetreden bij het annuleren.");
     }
-});
+})
+.WithName("CancelReservation")
+.WithTags("Reserveringen")
+.WithSummary("Annuleer een reservering en restitueer 1 credit indien van toepassing (transactioneel)")
+.Produces<object>(200);
 
 // Helper: computes a lowercase hex SHA-256 hash of the input string.
 // Used to verify passwords stored in the database.
@@ -963,7 +1220,11 @@ app.MapGet("/users/{userId:int}/lessons", async (int userId, IConfiguration conf
     }
 
     return Results.Ok(lessons);
-});
+})
+.WithName("GetUserLessons")
+.WithTags("Gebruikers")
+.WithSummary("Haal alle actieve reserveringen van een gebruiker op")
+.Produces<IEnumerable<UserLessonDto>>(200);
 
 // ── Subscription endpoints ────────────────────────────────────────────────────
 
@@ -1003,7 +1264,11 @@ app.MapGet("/subscriptions/plans", () =>
     };
 
     return Results.Ok(plans);
-});
+})
+.WithName("GetSubscriptionPlans")
+.WithTags("Abonnementen")
+.WithSummary("Haal de beschikbare abonnementsplannen op (Rookie, Intermediate, Advanced)")
+.Produces<IEnumerable<SubscriptionPlanDto>>(200);
 
 // POST /subscriptions/change — Changes the user's subscription type and resets their
 // credits to match the new plan. Applied immediately (not deferred to the renewal date).
@@ -1110,10 +1375,17 @@ app.MapPost("/subscriptions/change", async (IConfiguration configuration, Subscr
         System.Diagnostics.Debug.WriteLine($"Error changing subscription: {ex.Message}");
         return Results.Problem("Er is een fout opgetreden bij het wijzigen van het abonnement.");
     }
-});
+})
+.WithName("ChangeSubscription")
+.WithTags("Abonnementen")
+.WithSummary("Wijzig het abonnementstype van een gebruiker (credits worden direct gereset)")
+.Produces<SubscriptionChangeResponseDto>(200);
 
 // GET /subscriptions/status/{userId} — Returns the user's current subscription type,
 // renewal date, and credit balance. Used by ProfileViewModel and SubscriptionViewModel.
+// If the stored renewal date is in the past, it is automatically advanced by 28-day
+// cycles until it lies in the future; credits are reset to the plan maximum for each
+// cycle that passed, and the new values are persisted to the database.
 app.MapGet("/subscriptions/status/{userId}", async (IConfiguration configuration, int userId) =>
 {
     var connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -1138,36 +1410,82 @@ app.MapGet("/subscriptions/status/{userId}", async (IConfiguration configuration
         await using var command = new MySqlCommand(sql, connection);
         command.Parameters.AddWithValue("@userId", userId);
 
-        await using var reader = await command.ExecuteReaderAsync();
+        string? subscriptionType;
+        DateTime? rawRenewalDate;
+        int credits;
 
-        if (await reader.ReadAsync())
+        await using (var reader = await command.ExecuteReaderAsync())
         {
-            var status = new SubscriptionStatusDto
+            if (!await reader.ReadAsync())
+                return Results.NotFound();
+
+            subscriptionType = reader.IsDBNull(reader.GetOrdinal("subscription_type"))
+                ? null : reader.GetString("subscription_type");
+            rawRenewalDate = reader.IsDBNull(reader.GetOrdinal("subscription_renewal_date"))
+                ? null : reader.GetDateTime("subscription_renewal_date");
+            credits = reader.IsDBNull(reader.GetOrdinal("credits")) ? 0 : reader.GetInt32("credits");
+        }
+
+        // Advance an expired renewal date by 28-day cycles until it is in the future.
+        // Each passed cycle resets credits to the subscription plan maximum.
+        var today = DateTime.UtcNow.Date;
+        var renewalDate = rawRenewalDate;
+        int cyclesPassed = 0;
+
+        if (rawRenewalDate.HasValue && subscriptionType != null)
+        {
+            var d = rawRenewalDate.Value.Date;
+            while (d < today)
             {
-                CurrentSubscriptionType = reader.IsDBNull(reader.GetOrdinal("subscription_type"))
-                    ? null
-                    : reader.GetString("subscription_type"),
-                RenewalDate = reader.IsDBNull(reader.GetOrdinal("subscription_renewal_date"))
-                    ? null
-                    : reader.GetDateTime("subscription_renewal_date").ToString("yyyy-MM-dd"),
-                PendingSubscriptionChange = null,
-                PendingBillingCycle = null,
-                Credits = reader.IsDBNull(reader.GetOrdinal("credits")) ? 0 : reader.GetInt32("credits")
+                d = d.AddDays(28);
+                cyclesPassed++;
+            }
+            renewalDate = d;
+        }
+
+        if (cyclesPassed > 0)
+        {
+            credits = subscriptionType switch
+            {
+                "Rookie"       => 9,
+                "Intermediate" => 13,
+                "Advanced"     => 999,
+                _              => credits
             };
 
-            return Results.Ok(status);
+            const string updateSql = """
+                UPDATE users
+                SET subscription_renewal_date = @newDate,
+                    credits = @credits
+                WHERE id = @userId
+                """;
+            await using var updateCmd = new MySqlCommand(updateSql, connection);
+            updateCmd.Parameters.AddWithValue("@newDate", renewalDate!.Value.Date);
+            updateCmd.Parameters.AddWithValue("@credits", credits);
+            updateCmd.Parameters.AddWithValue("@userId", userId);
+            await updateCmd.ExecuteNonQueryAsync();
         }
-        else
+
+        return Results.Ok(new SubscriptionStatusDto
         {
-            return Results.NotFound();
-        }
+            CurrentSubscriptionType = subscriptionType,
+            RenewalDate             = renewalDate?.ToString("yyyy-MM-dd"),
+            PendingSubscriptionChange = null,
+            PendingBillingCycle       = null,
+            Credits                   = credits
+        });
     }
     catch (Exception ex)
     {
         System.Diagnostics.Debug.WriteLine($"Error getting subscription status: {ex.Message}");
         return Results.Problem("Er is een fout opgetreden bij het ophalen van de abonnementsstatus.");
     }
-});
+})
+.WithName("GetSubscriptionStatus")
+.WithTags("Abonnementen")
+.WithSummary("Haal de abonnementsstatus van een gebruiker op (type, verlengdatum, credits)")
+.Produces<SubscriptionStatusDto>(200)
+.Produces(404);
 
 // POST /subscriptions/cancel — Sets subscription_type to NULL and credits to 0,
 // effectively cancelling the subscription immediately.
@@ -1272,7 +1590,11 @@ app.MapPost("/subscriptions/cancel", async (IConfiguration configuration, Subscr
         System.Diagnostics.Debug.WriteLine($"Error cancelling subscription: {ex.Message}");
         return Results.Problem("Er is een fout opgetreden bij het annuleren van het abonnement.");
     }
-});
+})
+.WithName("CancelSubscription")
+.WithTags("Abonnementen")
+.WithSummary("Stop het abonnement van een gebruiker (zet type op NULL en credits op 0)")
+.Produces<SubscriptionChangeResponseDto>(200);
 
 // POST /subscriptions/change-billing — Updates the subscription renewal date to 1 month
 // or 1 year from now depending on the requested billing cycle.
@@ -1383,7 +1705,11 @@ app.MapPost("/subscriptions/change-billing", async (IConfiguration configuration
         System.Diagnostics.Debug.WriteLine($"Error changing billing cycle: {ex.Message}");
         return Results.Problem("Er is een fout opgetreden bij het wijzigen van de factureringsperiode.");
     }
-});
+})
+.WithName("ChangeBillingCycle")
+.WithTags("Abonnementen")
+.WithSummary("Wijzig de factureringsperiode van een gebruiker (maandelijks/jaarlijks)")
+.Produces<SubscriptionChangeResponseDto>(200);
 
 // DELETE /upload/photo/{userId} — Removes the user's profile photo file and clears photo_url in the DB.
 app.MapDelete("/upload/photo/{userId:int}", async (int userId, IConfiguration configuration) =>
@@ -1408,7 +1734,11 @@ app.MapDelete("/upload/photo/{userId:int}", async (int userId, IConfiguration co
         System.Diagnostics.Debug.WriteLine($"[API] Photo delete error for user {userId}: {ex.Message}");
         return Results.Problem("Er is een fout opgetreden bij het verwijderen van de foto.");
     }
-});
+})
+.WithName("DeleteProfilePhoto")
+.WithTags("Profiel")
+.WithSummary("Verwijder de profielfoto van een gebruiker (bestand + database)")
+.Produces<object>(200);
 
 // POST /upload/photo/{userId} — Accepts a multipart/form-data upload (max 5 MB, jpg/png/webp),
 // saves it to the /uploads directory, and updates the user's photo_url in the database.
@@ -1452,7 +1782,13 @@ app.MapPost("/upload/photo/{userId:int}", async (int userId, HttpRequest request
     return rows > 0
         ? Results.Ok(new { photoUrl })
         : Results.NotFound("Gebruiker niet gevonden.");
-}).DisableAntiforgery();
+})
+.WithName("UploadProfilePhoto")
+.WithTags("Profiel")
+.WithSummary("Upload een profielfoto (multipart/form-data, jpg/png/webp, max 5 MB)")
+.Produces<object>(200)
+.Produces(404)
+.DisableAntiforgery();
 
 // GET /users/{userId}/notifications — Returns up to 100 notifications for the user,
 // newest first. Called by NotificationService.LoadAsync() after login.
@@ -1489,7 +1825,11 @@ app.MapGet("/users/{userId:int}/notifications", async (int userId, IConfiguratio
         });
     }
     return Results.Ok(items);
-});
+})
+.WithName("GetNotifications")
+.WithTags("Notificaties")
+.WithSummary("Haal notificaties van een gebruiker op (max 100, nieuwste eerst)")
+.Produces<IEnumerable<NotificationDto>>(200);
 
 // POST /users/{userId}/notifications — Inserts a notification into the database.
 // ON DUPLICATE KEY UPDATE is a no-op, making this safe to retry (idempotent).
@@ -1525,7 +1865,11 @@ app.MapPost("/users/{userId:int}/notifications", async (int userId, IConfigurati
         System.Diagnostics.Debug.WriteLine($"Error saving notification: {ex.Message}");
         return Results.Problem("Fout bij opslaan notificatie.");
     }
-});
+})
+.WithName("CreateNotification")
+.WithTags("Notificaties")
+.WithSummary("Sla een notificatie op voor een gebruiker (idempotent via ON DUPLICATE KEY)")
+.Produces<object>(200);
 
 // PUT /users/{userId}/notifications/mark-all-read — Sets is_read=1 for all of
 // the user's notifications. Called when the user opens the notifications page.
@@ -1542,7 +1886,160 @@ app.MapPut("/users/{userId:int}/notifications/mark-all-read", async (int userId,
     cmd.Parameters.AddWithValue("@userId", userId);
     await cmd.ExecuteNonQueryAsync();
     return Results.Ok(new { success = true });
-});
+})
+.WithName("MarkAllNotificationsRead")
+.WithTags("Notificaties")
+.WithSummary("Markeer alle notificaties van een gebruiker als gelezen")
+.Produces<object>(200);
+
+// GET /lessons/{lessonId}/bikes?userId={id} — Returns 16 bikes (4×4) with availability.
+// isAvailable = no one has booked that seat; isSelectedByCurrentUser = current user's own seat.
+app.MapGet("/lessons/{lessonId:int}/bikes", async (int lessonId, IConfiguration configuration, int? userId) =>
+{
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrWhiteSpace(connectionString))
+        return Results.Problem("Connection string 'DefaultConnection' is niet gevonden.");
+
+    await using var connection = new MySqlConnection(connectionString);
+    await connection.OpenAsync();
+
+    const string sql = "SELECT row_number, bike_number, user_id FROM bike_reservations WHERE lesson_id = @lessonId";
+    await using var command = new MySqlCommand(sql, connection);
+    command.Parameters.AddWithValue("@lessonId", lessonId);
+    await using var reader = await command.ExecuteReaderAsync();
+
+    var taken = new List<(int row, int bike, int uid)>();
+    while (await reader.ReadAsync())
+        taken.Add((reader.GetInt32("row_number"), reader.GetInt32("bike_number"), reader.GetInt32("user_id")));
+
+    var bikes = new List<object>();
+    for (int row = 1; row <= 4; row++)
+        for (int bike = 1; bike <= 4; bike++)
+        {
+            int idx = taken.FindIndex(t => t.row == row && t.bike == bike);
+            bool isTaken = idx >= 0;
+            bikes.Add(new
+            {
+                rowNumber               = row,
+                bikeNumber              = bike,
+                isAvailable             = !isTaken,
+                isSelectedByCurrentUser = isTaken && userId.HasValue && taken[idx].uid == userId.Value
+            });
+        }
+
+    return Results.Ok(bikes);
+})
+.WithName("GetLessonBikes")
+.WithTags("Reserveringen")
+.WithSummary("Haal fietsreserveringen op voor een spinningles (16 fietsen, 4 rijen × 4)")
+.Produces<object>(200);
+
+// POST /lessons/{lessonId}/bikes — Reserves or switches to a different bike for the user.
+// Allows changing bike (UPDATE) if the user already has one; blocks if target seat is taken by another user.
+app.MapPost("/lessons/{lessonId:int}/bikes", async (int lessonId, IConfiguration configuration, BikeReservationRequestDto request) =>
+{
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrWhiteSpace(connectionString))
+        return Results.Problem("Connection string 'DefaultConnection' is niet gevonden.");
+
+    if (request.RowNumber < 1 || request.RowNumber > 4 || request.BikeNumber < 1 || request.BikeNumber > 4)
+        return Results.Ok(new { success = false, message = "Ongeldige fietspositie." });
+
+    try
+    {
+        await using var connection = new MySqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        // Does this user already have a bike for this lesson?
+        const string checkUserSql = "SELECT id FROM bike_reservations WHERE lesson_id = @lessonId AND user_id = @userId";
+        await using var checkUserCmd = new MySqlCommand(checkUserSql, connection);
+        checkUserCmd.Parameters.AddWithValue("@lessonId", lessonId);
+        checkUserCmd.Parameters.AddWithValue("@userId",   request.UserId);
+        var existingId = await checkUserCmd.ExecuteScalarAsync();
+
+        if (existingId != null)
+        {
+            // Changing bike — make sure the target isn't already claimed by someone else
+            const string checkBikeSql = "SELECT user_id FROM bike_reservations WHERE lesson_id = @lessonId AND row_number = @row AND bike_number = @bike";
+            await using var checkBikeCmd = new MySqlCommand(checkBikeSql, connection);
+            checkBikeCmd.Parameters.AddWithValue("@lessonId", lessonId);
+            checkBikeCmd.Parameters.AddWithValue("@row",      request.RowNumber);
+            checkBikeCmd.Parameters.AddWithValue("@bike",     request.BikeNumber);
+            var takenByObj = await checkBikeCmd.ExecuteScalarAsync();
+            if (takenByObj != null && Convert.ToInt32(takenByObj) != request.UserId)
+                return Results.Ok(new { success = false, message = "Deze fiets is al bezet door een andere gebruiker." });
+
+            const string updateSql = "UPDATE bike_reservations SET row_number = @row, bike_number = @bike WHERE lesson_id = @lessonId AND user_id = @userId";
+            await using var updateCmd = new MySqlCommand(updateSql, connection);
+            updateCmd.Parameters.AddWithValue("@row",      request.RowNumber);
+            updateCmd.Parameters.AddWithValue("@bike",     request.BikeNumber);
+            updateCmd.Parameters.AddWithValue("@lessonId", lessonId);
+            updateCmd.Parameters.AddWithValue("@userId",   request.UserId);
+            await updateCmd.ExecuteNonQueryAsync();
+            return Results.Ok(new { success = true, rowNumber = request.RowNumber, bikeNumber = request.BikeNumber, message = "Fiets bijgewerkt." });
+        }
+
+        // New bike reservation
+        const string insertSql = """
+            INSERT INTO bike_reservations (lesson_id, user_id, row_number, bike_number, created_at)
+            VALUES (@lessonId, @userId, @row, @bike, NOW())
+            """;
+        await using var insertCmd = new MySqlCommand(insertSql, connection);
+        insertCmd.Parameters.AddWithValue("@lessonId", lessonId);
+        insertCmd.Parameters.AddWithValue("@userId",   request.UserId);
+        insertCmd.Parameters.AddWithValue("@row",      request.RowNumber);
+        insertCmd.Parameters.AddWithValue("@bike",     request.BikeNumber);
+        try
+        {
+            await insertCmd.ExecuteNonQueryAsync();
+            return Results.Ok(new { success = true, rowNumber = request.RowNumber, bikeNumber = request.BikeNumber, message = "Fiets succesvol gereserveerd." });
+        }
+        catch (MySqlException ex) when (ex.Number == 1062)
+        {
+            return Results.Ok(new { success = false, message = "Deze fiets is al bezet." });
+        }
+    }
+    catch (Exception ex)
+    {
+        System.Diagnostics.Debug.WriteLine($"Error reserving bike: {ex.Message}");
+        return Results.Problem("Er is een fout opgetreden bij het reserveren van de fiets.");
+    }
+})
+.WithName("ReserveBike")
+.WithTags("Reserveringen")
+.WithSummary("Reserveer of wissel een fiets voor een spinningles")
+.Produces<object>(200);
+
+// DELETE /lessons/{lessonId}/bikes?userId={id} — Releases the user's bike reservation.
+app.MapDelete("/lessons/{lessonId:int}/bikes", async (int lessonId, IConfiguration configuration, int userId) =>
+{
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrWhiteSpace(connectionString))
+        return Results.Problem("Connection string 'DefaultConnection' is niet gevonden.");
+
+    try
+    {
+        await using var connection = new MySqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        const string sql = "DELETE FROM bike_reservations WHERE lesson_id = @lessonId AND user_id = @userId";
+        await using var command = new MySqlCommand(sql, connection);
+        command.Parameters.AddWithValue("@lessonId", lessonId);
+        command.Parameters.AddWithValue("@userId",   userId);
+        await command.ExecuteNonQueryAsync();
+
+        return Results.Ok(new { success = true, message = "Fietsreservering vrijgegeven." });
+    }
+    catch (Exception ex)
+    {
+        System.Diagnostics.Debug.WriteLine($"Error releasing bike: {ex.Message}");
+        return Results.Problem("Er is een fout opgetreden bij het vrijgeven van de fiets.");
+    }
+})
+.WithName("ReleaseBike")
+.WithTags("Reserveringen")
+.WithSummary("Geef een fietsreservering vrij voor een spinningles")
+.Produces<object>(200);
 
 app.Run();
 
@@ -1742,6 +2239,19 @@ public class AddMemberDto
 {
     [JsonPropertyName("userId")]
     public int UserId { get; set; }
+}
+
+// Request body for POST /lessons/{lessonId}/bikes
+public class BikeReservationRequestDto
+{
+    [JsonPropertyName("userId")]
+    public int UserId { get; set; }
+
+    [JsonPropertyName("rowNumber")]
+    public int RowNumber { get; set; }
+
+    [JsonPropertyName("bikeNumber")]
+    public int BikeNumber { get; set; }
 }
 
 // DTO for the notification endpoints — used for both read (GET) and write (POST) operations.

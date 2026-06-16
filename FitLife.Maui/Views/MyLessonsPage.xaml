@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
+             xmlns:h="clr-namespace:FitLife.Maui.Helpers"
              x:Class="FitLife.Maui.Views.MyLessonsPage"
              x:DataType="vm:MyLessonsViewModel"
              Title="{Binding Title}"
@@ -23,7 +24,7 @@
                     WidthRequest="44"
                     HorizontalOptions="Start"
                     Clicked="OnBackClicked" />
-            <Label Text="Mijn Lessen"
+            <Label Text="{h:Translate MyLessons_Title}"
                    Style="{StaticResource HeaderTitle}"
                    FontSize="18"
                    HorizontalOptions="Center" />
@@ -40,7 +41,7 @@
                     <TapGestureRecognizer Command="{Binding SwitchToMyLessonsCommand}" />
                 </Grid.GestureRecognizers>
                 <VerticalStackLayout HorizontalOptions="Center" Spacing="4">
-                    <Label Text="Mijn Lessen"
+                    <Label Text="{h:Translate MyLessons_Title}"
                            HorizontalOptions="Center"
                            FontSize="14"
                            TextColor="White"
@@ -68,7 +69,7 @@
                     <TapGestureRecognizer Command="{Binding SwitchToHistoryCommand}" />
                 </Grid.GestureRecognizers>
                 <VerticalStackLayout HorizontalOptions="Center" Spacing="4">
-                    <Label Text="Geschiedenis"
+                    <Label Text="{h:Translate MyLessons_HistoryTab}"
                            HorizontalOptions="Center"
                            FontSize="14"
                            TextColor="White"
@@ -113,12 +114,12 @@
                         <Label Text="📅"
                                FontSize="48"
                                HorizontalOptions="Center" />
-                        <Label Text="Geen aankomende lessen"
+                        <Label Text="{h:Translate MyLessons_EmptyTitle}"
                                FontSize="16"
                                FontAttributes="Bold"
                                HorizontalOptions="Center"
                                HorizontalTextAlignment="Center" />
-                        <Label Text="Reserveer een les via het rooster om hem hier te zien."
+                        <Label Text="{h:Translate MyLessons_EmptyDesc}"
                                FontSize="13"
                                TextColor="Gray"
                                HorizontalOptions="Center"
@@ -152,7 +153,7 @@
                                             <Label Text="{Binding Location}" FontSize="13" VerticalOptions="Center" />
                                         </HorizontalStackLayout>
                                     </HorizontalStackLayout>
-                                    <Button Text="Annuleren"
+                                    <Button Text="{h:Translate MyLessons_Cancel}"
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.CancelReservationCommand}"
                                             CommandParameter="{Binding .}"
                                             BackgroundColor="#e50000"
@@ -186,7 +187,7 @@
                                        FontAttributes="Bold"
                                        TextColor="White"
                                        HorizontalOptions="Center" />
-                                <Label Text="Totaal"
+                                <Label Text="{h:Translate MyLessons_Total}"
                                        FontSize="11"
                                        TextColor="White"
                                        Opacity="0.85"
@@ -203,7 +204,7 @@
                                        FontAttributes="Bold"
                                        TextColor="White"
                                        HorizontalOptions="Center" />
-                                <Label Text="Deze maand"
+                                <Label Text="{h:Translate MyLessons_ThisMonth}"
                                        FontSize="11"
                                        TextColor="White"
                                        Opacity="0.85"
@@ -220,7 +221,7 @@
                                        FontAttributes="Bold"
                                        TextColor="White"
                                        HorizontalOptions="Center" />
-                                <Label Text="Dit jaar"
+                                <Label Text="{h:Translate MyLessons_ThisYear}"
                                        FontSize="11"
                                        TextColor="White"
                                        Opacity="0.85"
@@ -235,7 +236,7 @@
                         <HorizontalStackLayout Spacing="10">
                             <Label Text="🏆" FontSize="20" VerticalOptions="Center" />
                             <VerticalStackLayout Spacing="1" VerticalOptions="Center">
-                                <Label Text="Meest bezochte les"
+                                <Label Text="{h:Translate MyLessons_MostVisited}"
                                        FontSize="11"
                                        TextColor="Gray" />
                                 <Label Text="{Binding MostVisitedWorkout}"
@@ -246,7 +247,7 @@
                     </Frame>
 
                     <!-- History list -->
-                    <Label Text="Bezochte lessen"
+                    <Label Text="{h:Translate MyLessons_Attended}"
                            FontSize="15"
                            FontAttributes="Bold"
                            Margin="16,4,16,6" />
@@ -259,7 +260,7 @@
                                 <Label Text="🗓️"
                                        FontSize="40"
                                        HorizontalOptions="Center" />
-                                <Label Text="Nog geen lessen bijgewoond"
+                                <Label Text="{h:Translate MyLessons_NoneAttended}"
                                        FontSize="14"
                                        TextColor="Gray"
                                        HorizontalOptions="Center"

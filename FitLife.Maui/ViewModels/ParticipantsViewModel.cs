@@ -84,7 +84,7 @@ public partial class ParticipantsViewModel : BaseViewModel, IQueryAttributable
                 });
 
             // Update the header summary with actual counts
-            ParticipantStats = $"{Participants.Count}/{Lesson.MaxParticipants} Deelnemers";
+            ParticipantStats = Translator.T("Participants_Stats", Participants.Count, Lesson.MaxParticipants);
         }
         finally
         {

@@ -65,7 +65,7 @@ public partial class LessonsViewModel : BaseViewModel
 
         var weekNumber = CultureInfo.CurrentCulture.Calendar.GetWeekOfYear(
             _startOfWeek, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
-        WeekRangeText = $"Week {weekNumber}, {_startOfWeek:MMMM yyyy}";
+        WeekRangeText = Translator.T("Week_RangeText", weekNumber, _startOfWeek);
 
         WeekDays.Clear();
         for (int i = 0; i < 7; i++)
@@ -74,7 +74,7 @@ public partial class LessonsViewModel : BaseViewModel
             WeekDays.Add(new DayHeaderViewModel
             {
                 Date      = day,
-                DayName   = day.ToString("ddd", new CultureInfo("nl-NL")).ToUpper().Replace(".", ""),
+                DayName   = day.ToString("ddd", CultureInfo.CurrentCulture).ToUpper().Replace(".", ""),
                 DayNumber = day.Day.ToString(),
                 IsSelected = day.Date == SelectedDate.Date
             });
@@ -86,7 +86,7 @@ public partial class LessonsViewModel : BaseViewModel
     // Formats the selected date as a full Dutch string, e.g. "maandag, 10 jun 2024"
     private void UpdateSelectedDateText()
     {
-        SelectedDateText = SelectedDate.ToString("dddd, d MMM yyyy", new CultureInfo("nl-NL"));
+        SelectedDateText = SelectedDate.ToString("dddd, d MMM yyyy", CultureInfo.CurrentCulture);
     }
 
     // Auto-called when SelectedDate changes — refreshes day strip highlights and lesson list

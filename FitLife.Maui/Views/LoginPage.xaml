@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:viewmodels="clr-namespace:FitLife.Maui.ViewModels"
+             xmlns:h="clr-namespace:FitLife.Maui.Helpers"
              x:Class="FitLife.Maui.Views.LoginPage"
              x:DataType="viewmodels:LoginViewModel"
              BackgroundColor="{StaticResource Black}"
@@ -18,8 +19,9 @@
                    FontSize="56"
                    FontAttributes="Bold"
                    TextColor="White"
-                   HorizontalOptions="Center" />
-            <Label Text="Log in om verder te gaan"
+                   HorizontalOptions="Center"
+                   AutomationId="LoginLogo" />
+            <Label Text="{h:Translate Login_Subtitle}"
                    FontSize="16"
                    TextColor="{StaticResource GrayText}"
                    HorizontalOptions="Center" />
@@ -38,12 +40,13 @@
                     <RoundRectangle CornerRadius="8"/>
                 </Border.StrokeShape>
                 <Entry Text="{Binding Email}"
-                       Placeholder="Email adres"
+                       Placeholder="{h:Translate Login_EmailPlaceholder}"
                        PlaceholderColor="{StaticResource Gray500}"
                        TextColor="White"
                        Keyboard="Email"
                        ReturnType="Next"
-                       FontSize="16"/>
+                       FontSize="16"
+                       AutomationId="LoginEmailEntry" />
             </Border>
 
             <!-- Password Input -->
@@ -54,12 +57,13 @@
                     <RoundRectangle CornerRadius="8"/>
                 </Border.StrokeShape>
                 <Entry Text="{Binding Password}"
-                       Placeholder="Wachtwoord"
+                       Placeholder="{h:Translate Login_PasswordPlaceholder}"
                        PlaceholderColor="{StaticResource Gray500}"
                        TextColor="White"
                        IsPassword="True"
                        ReturnType="Done"
-                       FontSize="16"/>
+                       FontSize="16"
+                       AutomationId="LoginPasswordEntry" />
             </Border>
 
             <!-- Error Message -->
@@ -67,10 +71,11 @@
                    TextColor="#FF6B6B"
                    FontSize="14"
                    HorizontalOptions="Center"
-                   IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyConverter}}"/>
+                   IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyConverter}}"
+                   AutomationId="LoginErrorLabel" />
 
             <!-- Login Button -->
-            <Button Text="Inloggen"
+            <Button Text="{h:Translate Login_Button}"
                     Command="{Binding LoginCommand}"
                     BackgroundColor="{StaticResource Primary}"
                     TextColor="White"
@@ -79,7 +84,8 @@
                     HeightRequest="55"
                     CornerRadius="8"
                     Margin="0,20,0,0"
-                    IsEnabled="{Binding IsLoggingIn, Converter={StaticResource InvertedBoolConverter}}">
+                    IsEnabled="{Binding IsLoggingIn, Converter={StaticResource InvertedBoolConverter}}"
+                    AutomationId="LoginButton">
                 <Button.Shadow>
                     <Shadow Brush="{StaticResource PrimaryBrush}"
                             Opacity="0.3"
@@ -97,7 +103,7 @@
 
         <!-- Footer -->
         <Label Grid.Row="2"
-               Text="Lid worden? Meld je aan via de website."
+               Text="{h:Translate Login_Footer}"
                FontSize="12"
                TextColor="{StaticResource Gray500}"
                HorizontalOptions="Center"

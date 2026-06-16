@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
              xmlns:svc="clr-namespace:FitLife.Maui.Services"
+             xmlns:h="clr-namespace:FitLife.Maui.Helpers"
              x:Class="FitLife.Maui.Views.NotificationsPage"
              x:DataType="vm:NotificationsViewModel"
              Shell.NavBarIsVisible="False"
@@ -22,11 +23,11 @@
                     VerticalOptions="Center"
                     HorizontalOptions="Start"
                     Clicked="OnBackClicked" />
-            <Label Text="Notificaties"
+            <Label Text="{h:Translate Notifications_Title}"
                    Style="{StaticResource HeaderTitle}"
                    FontSize="20"
                    HorizontalOptions="Center" />
-            <Button Text="Alles gelezen"
+            <Button Text="{h:Translate Notifications_AllRead}"
                     TextColor="{StaticResource White}"
                     BackgroundColor="Transparent"
                     FontSize="12"
@@ -45,11 +46,11 @@
                 <Label Text="🔔"
                        FontSize="52"
                        HorizontalOptions="Center" />
-                <Label Text="Geen notificaties"
+                <Label Text="{h:Translate Notifications_Empty}"
                        FontSize="16"
                        TextColor="{StaticResource Gray500}"
                        HorizontalOptions="Center" />
-                <Label Text="Hier zie je je meldingen zodra ze binnenkomen."
+                <Label Text="{h:Translate Notifications_EmptyDesc}"
                        FontSize="13"
                        TextColor="{StaticResource Gray400}"
                        HorizontalOptions="Center"

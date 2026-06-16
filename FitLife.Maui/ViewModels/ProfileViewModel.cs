@@ -43,7 +43,7 @@ public partial class ProfileViewModel : BaseViewModel
     // Shows "Onbeperkt" for Advanced subscribers, otherwise the raw credit count
     public string CreditsDisplay =>
         SubscriptionName == "Advanced" || Credits is null or >= 999
-            ? "Onbeperkt"
+            ? Translator.T("Common_Unlimited")
             : Credits.Value.ToString();
 
     // True when the API has returned a pending subscription change — shows a warning card
@@ -67,11 +67,22 @@ public partial class ProfileViewModel : BaseViewModel
         _photoService        = photoService;
         _notificationService = notificationService;
         _subscriptionService = subscriptionService;
-        Title = "Mijn Profiel";
+        Title = Translator.T("Profile_Title");
         System.Diagnostics.Debug.WriteLine($"[ProfileViewModel] Constructor called. AuthService instance: {authService.GetHashCode()}");
         System.Diagnostics.Debug.WriteLine($"[ProfileViewModel] AuthService IsAuthenticated: {authService.IsAuthenticated}");
         System.Diagnostics.Debug.WriteLine($"[ProfileViewModel] SubscriptionService available: {_subscriptionService != null}");
         LoadUserData();
+    }
+
+    // Advances a stored renewal date by 28-day cycles until it is in the future.
+    // Used as a client-side fallback for the login-time cache, which is not automatically
+    // updated when the API advances the date on the server side.
+    private static DateTime AdvanceToNextRenewalDate(DateTime stored)
+    {
+        var today = DateTime.UtcNow.Date;
+        while (stored.Date < today)
+            stored = stored.AddDays(28);
+        return stored;
     }
 
     // Refreshes all user data and subscription info.
@@ -115,13 +126,13 @@ public partial class ProfileViewModel : BaseViewModel
             System.Diagnostics.Debug.WriteLine($"[ProfileViewModel] ProfilePictureUrl: {ProfilePictureUrl}");
 
             Credits          = _authService.CurrentUserCredits;
-            SubscriptionName = _authService.CurrentUserSubscriptionType ?? "Geen abonnement";
+            SubscriptionName = _authService.CurrentUserSubscriptionType ?? Translator.T("Profile_NoSubscription");
 
             System.Diagnostics.Debug.WriteLine($"[ProfileViewModel] Credits: {Credits}, Subscription: {SubscriptionName}");
 
             if (!string.IsNullOrEmpty(_authService.CurrentUserSubscriptionRenewalDate)
                 && DateTime.TryParse(_authService.CurrentUserSubscriptionRenewalDate, out var renewalDate))
-                SubscriptionEndDate = renewalDate;
+                SubscriptionEndDate = AdvanceToNextRenewalDate(renewalDate);
             else
                 SubscriptionEndDate = null;
         }
@@ -155,13 +166,13 @@ public partial class ProfileViewModel : BaseViewModel
 
             if (!string.IsNullOrEmpty(status.RenewalDate)
                 && DateTime.TryParse(status.RenewalDate, out var renewalDate))
-                SubscriptionEndDate = renewalDate;
+                SubscriptionEndDate = AdvanceToNextRenewalDate(renewalDate);
 
             if (!string.IsNullOrEmpty(status.PendingSubscriptionChange))
             {
                 HasPendingSubscriptionChange = true;
-                var billingCycle    = status.PendingBillingCycle == "yearly" ? "jaarlijks" : "maandelijks";
-                PendingSubscriptionInfo = $"Wijzigt naar {status.PendingSubscriptionChange} ({billingCycle}) op {SubscriptionEndDate:dd-MM-yyyy}";
+                var billingCycle    = Translator.T(status.PendingBillingCycle == "yearly" ? "Billing_Yearly" : "Billing_Monthly");
+                PendingSubscriptionInfo = Translator.T("Profile_PendingChange", status.PendingSubscriptionChange, billingCycle, SubscriptionEndDate ?? default);
                 System.Diagnostics.Debug.WriteLine($"[ProfileViewModel] Pending change: {PendingSubscriptionInfo}");
             }
             else
@@ -196,13 +207,13 @@ public partial class ProfileViewModel : BaseViewModel
                 _authService.UpdatePhotoUrl(newUrl);
                 ProfilePictureUrl = newUrl;
 
-                await Shell.Current.DisplayAlert("Gelukt", "Profielfoto bijgewerkt.", "OK");
+                await Shell.Current.DisplayAlert(Translator.T("Common_Success"), Translator.T("Profile_PhotoUpdated"), Translator.T("Common_OK"));
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[ProfileViewModel] Photo upload error: {ex.Message}");
-            await Shell.Current.DisplayAlert("Fout", "Foto uploaden mislukt. Controleer je verbinding.", "OK");
+            await Shell.Current.DisplayAlert(Translator.T("Common_Error"), Translator.T("Profile_PhotoUploadFailed"), Translator.T("Common_OK"));
         }
         finally
         {
@@ -218,9 +229,9 @@ public partial class ProfileViewModel : BaseViewModel
         if (string.IsNullOrEmpty(ProfilePictureUrl)) return;
 
         bool confirmed = await Shell.Current.DisplayAlert(
-            "Foto verwijderen",
-            "Weet je zeker dat je je profielfoto wilt verwijderen?",
-            "Verwijderen", "Annuleren");
+            Translator.T("Profile_DeletePhotoTitle"),
+            Translator.T("Profile_DeletePhotoBody"),
+            Translator.T("Profile_DeleteBtn"), Translator.T("Common_Cancel"));
         if (!confirmed) return;
 
         IsUploadingPhoto = true;
@@ -234,13 +245,13 @@ public partial class ProfileViewModel : BaseViewModel
             }
             else
             {
-                await Shell.Current.DisplayAlert("Fout", "Foto verwijderen mislukt. Controleer je verbinding.", "OK");
+                await Shell.Current.DisplayAlert(Translator.T("Common_Error"), Translator.T("Profile_PhotoDeleteFailed"), Translator.T("Common_OK"));
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[ProfileViewModel] Photo delete error: {ex.Message}");
-            await Shell.Current.DisplayAlert("Fout", "Foto verwijderen mislukt. Controleer je verbinding.", "OK");
+            await Shell.Current.DisplayAlert(Translator.T("Common_Error"), Translator.T("Profile_PhotoDeleteFailed"), Translator.T("Common_OK"));
         }
         finally
         {

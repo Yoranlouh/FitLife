@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
+             xmlns:h="clr-namespace:FitLife.Maui.Helpers"
              x:Class="FitLife.Maui.Views.WeekPage"
              Shell.NavBarIsVisible="False"
              x:DataType="vm:WeekViewModel">
@@ -18,7 +19,8 @@
                     VerticalOptions="Center"
                     WidthRequest="44"
                     HorizontalOptions="Start"
-                    Clicked="OnBackClicked" />
+                    Clicked="OnBackClicked"
+                    AutomationId="WeekBackBtn" />
             <StackLayout HorizontalOptions="Center">
                 <Label Text="FitLife" Style="{StaticResource HeaderTitle}" FontSize="14"/>
             </StackLayout>
@@ -29,22 +31,23 @@
         <Grid Grid.Row="1" BackgroundColor="{StaticResource Black}" Padding="10, 10" ColumnDefinitions="*, *">
             <HorizontalStackLayout HorizontalOptions="Center" Spacing="5">
                 <Image Source="calendar_small.png" WidthRequest="15" HeightRequest="15"/>
-                <Label Text="Kalenderweergave" TextColor="{StaticResource White}" VerticalOptions="Center"/>
+                <Label Text="{h:Translate Week_CalendarView}" TextColor="{StaticResource White}" VerticalOptions="Center"/>
             </HorizontalStackLayout>
-            <HorizontalStackLayout Grid.Column="1" HorizontalOptions="Center" Spacing="5">
+            <HorizontalStackLayout Grid.Column="1" HorizontalOptions="Center" Spacing="5"
+                                   AutomationId="WeekListViewBtn">
                 <HorizontalStackLayout.GestureRecognizers>
                     <TapGestureRecognizer Command="{Binding GoToLessonsCommand}" />
                 </HorizontalStackLayout.GestureRecognizers>
                 <Image Source="list_icon.png" WidthRequest="15" HeightRequest="15"/>
-                <Label Text="Lijstweergave" TextColor="{StaticResource White}" VerticalOptions="Center"/>
+                <Label Text="{h:Translate Week_ListView}" TextColor="{StaticResource White}" VerticalOptions="Center"/>
             </HorizontalStackLayout>
         </Grid>
 
         <!-- Week Navigation -->
         <Grid Grid.Row="2" BackgroundColor="{StaticResource Black}" Padding="10, 10" ColumnDefinitions="Auto, *, Auto">
-            <Button Text="◀" TextColor="{StaticResource White}" BackgroundColor="Transparent" Command="{Binding PreviousWeekCommand}"/>
-            <Label Grid.Column="1" Text="{Binding WeekRangeText}" TextColor="{StaticResource White}" HorizontalOptions="Center" VerticalOptions="Center"/>
-            <Button Grid.Column="2" Text="▶" TextColor="{StaticResource White}" BackgroundColor="Transparent" Command="{Binding NextWeekCommand}"/>
+            <Button Text="◀" TextColor="{StaticResource White}" BackgroundColor="Transparent" Command="{Binding PreviousWeekCommand}" AutomationId="WeekPrevBtn"/>
+            <Label Grid.Column="1" Text="{Binding WeekRangeText}" TextColor="{StaticResource White}" HorizontalOptions="Center" VerticalOptions="Center" AutomationId="WeekRangeLabel"/>
+            <Button Grid.Column="2" Text="▶" TextColor="{StaticResource White}" BackgroundColor="Transparent" Command="{Binding NextWeekCommand}" AutomationId="WeekNextBtn"/>
         </Grid>
 
                 <!-- Main Content -->
@@ -143,13 +146,15 @@
                                    IsVisible="{Binding IsBusy}"
                                    Color="{StaticResource Primary}"
                                    VerticalOptions="Center"
-                                   HorizontalOptions="Center" />
+                                   HorizontalOptions="Center"
+                                   AutomationId="WeekLoadingIndicator" />
 
                 <!-- Empty / error state: shown when the week has no lessons or loading failed -->
                 <Label Grid.Row="1"
                        Grid.ColumnSpan="2"
                        Text="{Binding EmptyMessage}"
                        IsVisible="{Binding EmptyMessage, Converter={StaticResource StringNotEmptyConverter}}"
+                       AutomationId="WeekEmptyMessage"
                        TextColor="{StaticResource Gray500}"
                        FontSize="14"
                        HorizontalOptions="Center"

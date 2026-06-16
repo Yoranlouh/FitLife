@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using SharedLibrary.DTOs.Responses;
 using System.Globalization;
 using CommunityToolkit.Maui;
@@ -72,6 +73,25 @@ public partial class
         _managementService = managementService;
         Title = "Weekoverzicht";
         UpdateWeekInfo();  // initialise day headers and week label for today's week
+
+        // Receives reservation/cancellation events fired by LessonDetailViewModel so the
+        // grid IsBooked state updates immediately — even if OnAppearing hasn't fired yet.
+        WeakReferenceMessenger.Default.Register<LessonReservedMessage>(this, (_, m) =>
+            UpdateBookingState(m.Value.Id, isBooked: true));
+        WeakReferenceMessenger.Default.Register<LessonUnregisteredMessage>(this, (_, m) =>
+            UpdateBookingState(m.Value, isBooked: false));
+    }
+
+    // Flips the IsBooked flag on the matching lesson and replaces the item in the
+    // ObservableCollection so the CollectionChanged event triggers a grid rebuild.
+    private void UpdateBookingState(int lessonId, bool isBooked)
+    {
+        var lesson = Lessons.FirstOrDefault(l => l.Id == lessonId);
+        if (lesson == null) return;
+        lesson.IsBooked = isBooked;
+        var idx = Lessons.IndexOf(lesson);
+        if (idx >= 0)
+            MainThread.BeginInvokeOnMainThread(() => Lessons[idx] = lesson);
     }
 
     // Recalculates the week label and rebuilds the seven DayHeaderViewModel objects
@@ -86,7 +106,7 @@ public partial class
         // CultureInfo.CurrentCulture.Calendar.GetWeekOfYear crashes on non-Gregorian
         // calendars (Hebrew, Hijri, etc.) when CalendarWeekRule.FirstFourDayWeek is used.
         var weekNumber = ISOWeek.GetWeekOfYear(_startOfWeek);
-        WeekRangeText = $"Week {weekNumber}, {_startOfWeek:MMMM yyyy}";
+        WeekRangeText = Translator.T("Week_RangeText", weekNumber, _startOfWeek);
 
         // Rebuild the day-strip headers (Mon through Sun)
         WeekDays.Clear();
@@ -96,7 +116,7 @@ public partial class
             WeekDays.Add(new DayHeaderViewModel
             {
                 Date      = day,
-                DayName   = day.ToString("ddd", new CultureInfo("nl-NL")).ToUpper().Replace(".", ""),
+                DayName   = day.ToString("ddd", CultureInfo.CurrentCulture).ToUpper().Replace(".", ""),
                 DayNumber = day.Day.ToString(),
                 IsSelected = day.Date == SelectedDate.Date
             });

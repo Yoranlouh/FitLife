@@ -288,7 +288,7 @@
             Id = lesson.Id,
             StartTime = lesson.StartTime,
             DurationMinutes = (int)(lesson.EndTime - lesson.StartTime).TotalMinutes,
-            CapacityOverride = lesson.MaxParticipants > 0 ? lesson.MaxParticipants : null,
+            CapacityOverride = lesson.CapacityOverride, // raw override: null = inherits location/workout capacity
             WorkoutId = lesson.WorkoutId,
             InstructorId = lesson.InstructorId,
             LocationId = lesson.LocationId

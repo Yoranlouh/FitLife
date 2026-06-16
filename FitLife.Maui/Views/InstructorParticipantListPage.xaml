@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
+             xmlns:h="clr-namespace:FitLife.Maui.Helpers"
              x:Class="FitLife.Maui.Views.InstructorParticipantListPage"
              x:DataType="vm:InstructorParticipantListViewModel"
              Title="{Binding Title}"
@@ -33,7 +34,7 @@
             </VerticalStackLayout>
         </Frame>
 
-        <Label Text="Deelnemers" FontSize="18" FontAttributes="Bold" Margin="0,10,0,0" />
+        <Label Text="{h:Translate Participants_Title}" FontSize="18" FontAttributes="Bold" Margin="0,10,0,0" />
 
         <CollectionView ItemsSource="{Binding Participants}">
             <CollectionView.ItemTemplate>

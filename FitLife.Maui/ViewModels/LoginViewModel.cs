@@ -44,13 +44,13 @@ public partial class LoginViewModel : BaseViewModel
         // Client-side validation before making the API call
         if (string.IsNullOrWhiteSpace(Email))
         {
-            ErrorMessage = "Voer je email adres in.";
+            ErrorMessage = Translator.T("Login_EnterEmail");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(Password))
         {
-            ErrorMessage = "Voer je wachtwoord in.";
+            ErrorMessage = Translator.T("Login_EnterPassword");
             return;
         }
 
@@ -82,7 +82,7 @@ public partial class LoginViewModel : BaseViewModel
         }
         catch (Exception ex)
         {
-            ErrorMessage = "Er is een fout opgetreden. Probeer het opnieuw.";
+            ErrorMessage = Translator.T("Login_GenericError");
             System.Diagnostics.Debug.WriteLine($"Login error: {ex.Message}");
         }
         finally

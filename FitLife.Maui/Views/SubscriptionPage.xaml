@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
+             xmlns:h="clr-namespace:FitLife.Maui.Helpers"
              x:Class="FitLife.Maui.Views.SubscriptionPage"
              x:DataType="vm:SubscriptionViewModel"
              Title="{Binding Title}"
@@ -20,7 +21,7 @@
                     WidthRequest="44"
                     HorizontalOptions="Start"
                     Clicked="OnBackClicked" />
-            <Label Text="Abonnement"
+            <Label Text="{h:Translate Subscription_Title}"
                    Style="{StaticResource HeaderTitle}"
                    FontSize="18"
                    HorizontalOptions="Center" />
@@ -34,7 +35,7 @@
                    Padding="20"
                    HasShadow="True">
                 <VerticalStackLayout Spacing="8">
-                    <Label Text="Huidig Abonnement"
+                    <Label Text="{h:Translate Subscription_Current}"
                            FontAttributes="Bold"
                            FontSize="16"
                            TextColor="White" />
@@ -74,13 +75,13 @@
                    HasShadow="True"
                    BackgroundColor="White">
                 <VerticalStackLayout Spacing="12">
-                    <Label Text="⚙️ Beheer Huidig Abonnement"
+                    <Label Text="{h:Translate Subscription_ManageCurrent}"
                            FontSize="16"
                            FontAttributes="Bold"
                            HorizontalOptions="Center" />
 
                     <!-- Change Billing Cycle Button -->
-                    <Button Text="Wijzig factureringsperiode"
+                    <Button Text="{h:Translate Subscription_ChangeBilling}"
                             Command="{Binding ChangeBillingCycleForCurrentSubscriptionCommand}"
                             BackgroundColor="{StaticResource Primary}"
                             TextColor="White"
@@ -88,14 +89,14 @@
                             FontSize="14" />
 
                     <!-- Cancel Subscription Button -->
-                    <Button Text="Abonnement stopzetten"
+                    <Button Text="{h:Translate Subscription_Cancel}"
                             Command="{Binding CancelSubscriptionCommand}"
                             BackgroundColor="Red"
                             TextColor="White"
                             CornerRadius="5"
                             FontSize="14" />
 
-                    <Label Text="💡 Wijzigingen worden toegepast op je vernieuwingsdatum"
+                    <Label Text="{h:Translate Subscription_ChangesNote}"
                            FontSize="11"
                            TextColor="Gray"
                            HorizontalTextAlignment="Center"
@@ -109,14 +110,14 @@
                    HasShadow="True"
                    BackgroundColor="White">
                 <VerticalStackLayout Spacing="10">
-                    <Label Text="Bekijk Prijzen"
+                    <Label Text="{h:Translate Subscription_ViewPrices}"
                            FontSize="16"
                            FontAttributes="Bold"
                            HorizontalOptions="Center" />
 
                     <HorizontalStackLayout Spacing="15"
                                           HorizontalOptions="Center">
-                        <Label Text="Maandelijks"
+                        <Label Text="{h:Translate Subscription_Monthly}"
                                FontSize="14"
                                FontAttributes="{Binding IsYearly, Converter={StaticResource InverseBoolToFontAttributesConverter}}"
                                TextColor="{Binding IsYearly, Converter={StaticResource InverseBoolToColorConverter}}"
@@ -127,7 +128,7 @@
                                 ThumbColor="White" />
 
                         <HorizontalStackLayout Spacing="5">
-                            <Label Text="Jaarlijks"
+                            <Label Text="{h:Translate Subscription_Yearly}"
                                    FontSize="14"
                                    FontAttributes="{Binding IsYearly, Converter={StaticResource BoolToFontAttributesConverter}}"
                                    TextColor="{Binding IsYearly, Converter={StaticResource BoolToColorConverter}}"
@@ -136,7 +137,7 @@
                                    Padding="5,2"
                                    CornerRadius="5"
                                    HasShadow="False">
-                                <Label Text="Bespaar ~15%"
+                                <Label Text="{h:Translate Subscription_Save15}"
                                        FontSize="10"
                                        TextColor="White"
                                        FontAttributes="Bold" />
@@ -147,7 +148,7 @@
             </Frame>
 
             <!-- Available Subscriptions Header -->
-            <Label Text="Kies een Abonnement"
+            <Label Text="{h:Translate Subscription_Choose}"
                    FontSize="20"
                    FontAttributes="Bold"
                    Margin="0,10,0,0" />
@@ -230,7 +231,7 @@
                                         <FormattedString>
                                             <Span Text="€" />
                                             <Span Text="{Binding YearlyPrice, Converter={StaticResource YearlyToMonthlyConverter}}" />
-                                            <Span Text=" per maand" />
+                                            <Span Text="{h:Translate Subscription_PerMonth}" />
                                         </FormattedString>
                                     </Label.FormattedText>
                                 </Label>
@@ -247,7 +248,7 @@
                                            TextColor="White" />
                                 </Frame>
 
-                                <Label Text="1 credit = 1 les"
+                                <Label Text="{h:Translate Subscription_CreditEqualsLesson}"
                                        FontSize="12"
                                        HorizontalOptions="Center"
                                        TextColor="Gray" />
@@ -260,32 +261,32 @@
                                     </HorizontalStackLayout>
                                     <HorizontalStackLayout Spacing="8">
                                         <Label Text="✓" TextColor="Green" FontSize="18" FontAttributes="Bold" />
-                                        <Label Text="Toegang tot alle lessen" FontSize="14" VerticalOptions="Center" />
+                                        <Label Text="{h:Translate Subscription_AccessAll}" FontSize="14" VerticalOptions="Center" />
                                     </HorizontalStackLayout>
                                     <HorizontalStackLayout Spacing="8">
                                         <Label Text="✓" TextColor="Green" FontSize="18" FontAttributes="Bold" />
-                                        <Label Text="Online reserveren via app" FontSize="14" VerticalOptions="Center" />
+                                        <Label Text="{h:Translate Subscription_OnlineReserve}" FontSize="14" VerticalOptions="Center" />
                                     </HorizontalStackLayout>
                                     <HorizontalStackLayout Spacing="8" IsVisible="{Binding IsUnlimited, Converter={StaticResource InverseBoolConverter}}">
                                         <Label Text="✓" TextColor="Green" FontSize="18" FontAttributes="Bold" />
-                                        <Label Text="Credits rollen over (max 1 maand)" FontSize="14" VerticalOptions="Center" />
+                                        <Label Text="{h:Translate Subscription_CreditsRoll}" FontSize="14" VerticalOptions="Center" />
                                     </HorizontalStackLayout>
                                     <HorizontalStackLayout Spacing="8" IsVisible="{Binding Name, Converter={StaticResource NameToShowDrinkConverter}}">
                                         <Label Text="✓" TextColor="Green" FontSize="18" FontAttributes="Bold" />
-                                        <Label Text="Gratis sportdrank" FontSize="14" VerticalOptions="Center" />
+                                        <Label Text="{h:Translate Subscription_FreeDrink}" FontSize="14" VerticalOptions="Center" />
                                     </HorizontalStackLayout>
                                     <HorizontalStackLayout Spacing="8" IsVisible="{Binding Name, Converter={StaticResource NameIsAdvancedConverter}}">
                                         <Label Text="✓" TextColor="Green" FontSize="18" FontAttributes="Bold" />
-                                        <Label Text="Prioriteit bij wachtlijsten" FontSize="14" VerticalOptions="Center" />
+                                        <Label Text="{h:Translate Subscription_WaitlistPriority}" FontSize="14" VerticalOptions="Center" />
                                     </HorizontalStackLayout>
                                     <HorizontalStackLayout Spacing="8" IsVisible="{Binding Name, Converter={StaticResource NameIsAdvancedConverter}}">
                                         <Label Text="✓" TextColor="Green" FontSize="18" FontAttributes="Bold" />
-                                        <Label Text="1x per maand gastlid" FontSize="14" VerticalOptions="Center" />
+                                        <Label Text="{h:Translate Subscription_GuestMonthly}" FontSize="14" VerticalOptions="Center" />
                                     </HorizontalStackLayout>
                                 </VerticalStackLayout>
 
                                 <!-- Select Button -->
-                                <Button Text="Kies dit abonnement"
+                                <Button Text="{h:Translate Subscription_SelectThis}"
                                         Command="{Binding SelectSubscriptionCommand}"
                                         Margin="0,15,0,0"
                                         BackgroundColor="{StaticResource Primary}"
@@ -304,19 +305,11 @@
                    BackgroundColor="LightBlue"
                    Margin="0,10,0,20">
                 <VerticalStackLayout Spacing="8">
-                    <Label Text="ℹ️ Hoe werken abonnementswijzigingen?"
+                    <Label Text="{h:Translate Subscription_HowTitle}"
                            FontSize="16"
                            FontAttributes="Bold" />
-                    <Label FontSize="14" LineBreakMode="WordWrap">
-                        <Label.FormattedText>
-                            <FormattedString>
-                                <Span Text="• Je kunt op elk moment van abonnement wisselen&#x0a;" />
-                                <Span Text="• De wijziging wordt toegepast op je volgende vervaldatum&#x0a;" />
-                                <Span Text="• Je blijft je huidige abonnement gebruiken tot die datum&#x0a;" />
-                                <Span Text="• Credits worden automatisch aangepast bij verlenging" />
-                            </FormattedString>
-                        </Label.FormattedText>
-                    </Label>
+                    <Label FontSize="14" LineBreakMode="WordWrap"
+                           Text="{h:Translate Subscription_HowText}" />
                 </VerticalStackLayout>
             </Frame>
         </VerticalStackLayout>

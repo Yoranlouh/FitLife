@@ -92,6 +92,19 @@ public static class MauiProgram
                 client.BaseAddress = new Uri(baseUrl);
             });
 
+            builder.Services.AddHttpClient<IBikeReservationService, BikeReservationService>(client =>
+            {
+                string baseUrl = DeviceInfo.Platform == DevicePlatform.Android
+                    ? "http://10.0.2.2:5000/"
+                    : "http://localhost:5000/";
+                client.BaseAddress = new Uri(baseUrl);
+            });
+
+            // MockAttendanceService is Singleton so that check-ins persist across navigations
+            // within one session. Replace MockAttendanceService with a real implementation
+            // (RFID reader / GPS geofence) to go to production.
+            builder.Services.AddSingleton<IAttendanceService, MockAttendanceService>();
+
             // AuthenticationService is Singleton — it holds the logged-in user's session data.
             // A named HttpClient is used so the base URL can be configured independently.
             builder.Services.AddSingleton<IAuthenticationService>(serviceProvider =>

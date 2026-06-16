@@ -41,7 +41,7 @@ public partial class MyLessonsViewModel : BaseViewModel
     {
         _reservationService    = reservationService;
         _authenticationService = authenticationService;
-        Title = "Mijn Lessen";
+        Title = Translator.T("MyLessons_Title");
 
         // New reservation from LessonDetailPage → add to upcoming list
         WeakReferenceMessenger.Default.Register<LessonReservedMessage>(this, (r, m) =>
@@ -155,10 +155,10 @@ public partial class MyLessonsViewModel : BaseViewModel
 
         // Ask the user to confirm before doing anything destructive.
         bool confirm = await Shell.Current.DisplayAlert(
-            "Bevestigen",
-            $"Weet je zeker dat je de reservering voor {lesson.Name} wilt annuleren?",
-            "Ja",
-            "Nee");
+            Translator.T("MyLessons_ConfirmTitle"),
+            Translator.T("MyLessons_ConfirmBody", lesson.Name),
+            Translator.T("Common_Yes"),
+            Translator.T("Common_No"));
 
         if (!confirm) return;
 
@@ -170,9 +170,9 @@ public partial class MyLessonsViewModel : BaseViewModel
             if (userId is null or <= 0)
             {
                 await Shell.Current.DisplayAlert(
-                    "Niet ingelogd",
-                    "Je bent niet meer ingelogd. Log opnieuw in om je reservering te annuleren.",
-                    "OK");
+                    Translator.T("Common_NotLoggedIn"),
+                    Translator.T("MyLessons_LoginToCancel"),
+                    Translator.T("Common_OK"));
                 return;
             }
 
@@ -188,21 +188,21 @@ public partial class MyLessonsViewModel : BaseViewModel
                 WeakReferenceMessenger.Default.Send(new LessonUnregisteredMessage(lesson.Id));
 
                 await Shell.Current.DisplayAlert(
-                    "Geannuleerd",
+                    Translator.T("MyLessons_CancelledTitle"),
                     string.IsNullOrWhiteSpace(result.Message)
-                        ? "Je reservering is geannuleerd."
+                        ? Translator.T("MyLessons_CancelledBody")
                         : result.Message,
-                    "OK");
+                    Translator.T("Common_OK"));
             }
             else
             {
                 // Show the server-provided error message (e.g. "geen actieve reservering").
                 await Shell.Current.DisplayAlert(
-                    "Annuleren mislukt",
+                    Translator.T("MyLessons_CancelFailedTitle"),
                     string.IsNullOrWhiteSpace(result.Message)
-                        ? "De reservering kon niet worden geannuleerd."
+                        ? Translator.T("MyLessons_CancelFailedBody")
                         : result.Message,
-                    "OK");
+                    Translator.T("Common_OK"));
             }
         }
         finally

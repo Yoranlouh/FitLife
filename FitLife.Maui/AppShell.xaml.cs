@@ -10,9 +10,33 @@ namespace FitLife.Maui;
 // (member, instructor, or admin).
 public partial class AppShell : Shell
 {
+    // Flyout items keyed by translation key so the menu can be re-translated
+    // in place when the language changes (FlyoutItem.Title is not bindable here
+    // because the items are built in code).
+    private readonly List<(BaseShellItem Item, string TitleKey)> _translatableItems = new();
+    private MenuItem? _logoutItem;
+    private Label?    _roleLabel;
+    private string    _roleKey = "Role_Member";
+
+    private System.ComponentModel.PropertyChangedEventHandler? _translatorHandler;
+
     public AppShell(IAuthenticationService authService, IServiceProvider services)
     {
         InitializeComponent();
+
+        // Re-translate the flyout menu whenever the language changes.
+        // AppShell is transient (rebuilt per login), so the handler unsubscribes
+        // itself once this shell is no longer the active one.
+        _translatorHandler = (_, _) =>
+        {
+            if (Current != this)
+            {
+                Translator.Instance.PropertyChanged -= _translatorHandler;
+                return;
+            }
+            ApplyMenuTranslations();
+        };
+        Translator.Instance.PropertyChanged += _translatorHandler;
 
         // Register push-routes: pages that are navigated to with GoToAsync("RouteName")
         // but are not items in the flyout menu.
@@ -39,44 +63,44 @@ public partial class AppShell : Shell
 
         // ── Visible flyout items ──────────────────────────────────────────
 
-        Items.Add(MakeFlyoutItem("Home",
+        AddTranslatedFlyoutItem("Menu_Home",
             "icon_home.svg",
             services.GetRequiredService<HomePage>(),
-            "HomePage"));
+            "HomePage");
 
-        Items.Add(MakeFlyoutItem("Instellingen",
+        AddTranslatedFlyoutItem("Menu_Settings",
             "icon_settings.svg",
             services.GetRequiredService<SettingsPage>(),
-            "SettingsPage"));
+            "SettingsPage");
 
-        Items.Add(MakeFlyoutItem("Mijn sportclub",
+        AddTranslatedFlyoutItem("Menu_MySportclub",
             "icon_sportclub.svg",
             services.GetRequiredService<MySportclubPage>(),
-            "MySportclubPage"));
+            "MySportclubPage");
 
         // Logout is a MenuItem (triggers an action) rather than a FlyoutItem (navigates to a page)
-        var logoutItem = new MenuItem
+        _logoutItem = new MenuItem
         {
-            Text            = "Uitloggen",
+            Text            = Translator.T("Menu_Logout"),
             IconImageSource = ImageSource.FromFile("icon_logout.svg"),
             Command         = new Command(async () => await PerformLogoutAsync(authService))
         };
-        Items.Add(logoutItem);
+        Items.Add(_logoutItem);
 
-        Items.Add(MakeFlyoutItem("Mijn account",
+        AddTranslatedFlyoutItem("Menu_MyAccount",
             "icon_profile_white.svg",
             services.GetRequiredService<ProfilePage>(),
-            "ProfilePage"));
+            "ProfilePage");
 
-        Items.Add(MakeFlyoutItem("Afspraken & reserveringen",
+        AddTranslatedFlyoutItem("Menu_Reservations",
             "icon_bookmark_white.svg",
             services.GetRequiredService<MyLessonsPage>(),
-            "MyLessonsPage"));
+            "MyLessonsPage");
 
-        Items.Add(MakeFlyoutItem("Rooster",
+        AddTranslatedFlyoutItem("Menu_Schedule",
             "icon_calendar_white.svg",
             services.GetRequiredService<WeekPage>(),
-            "WeekPage"));
+            "WeekPage");
 
         // ── Hidden items: navigable via //Route but not shown in the flyout ──
 
@@ -89,16 +113,31 @@ public partial class AppShell : Shell
             services.GetRequiredService<InstructorLessonsPage>(), "InstructorLessonsPage"));
     }
 
-    // Creates a visible FlyoutItem with an icon, title, and a single content page.
-    // The route string is used for programmatic navigation (GoToAsync("//RouteName")).
-    private static FlyoutItem MakeFlyoutItem(
-        string title, string iconFile, ContentPage page, string route)
+    // Creates a visible FlyoutItem with an icon, translated title, and a single
+    // content page, and registers it for live re-translation on language change.
+    private void AddTranslatedFlyoutItem(
+        string titleKey, string iconFile, ContentPage page, string route)
     {
-        var item = new FlyoutItem { Title = title };
+        var item = new FlyoutItem { Title = Translator.T(titleKey) };
         item.FlyoutIcon = ImageSource.FromFile(iconFile);
         var content = new ShellContent { Route = route, Content = page };
         item.Items.Add(content);
-        return item;
+        _translatableItems.Add((item, titleKey));
+        Items.Add(item);
+    }
+
+    // Re-applies translated titles to all flyout items, the logout entry,
+    // and the role label in the flyout header.
+    private void ApplyMenuTranslations()
+    {
+        foreach (var (item, key) in _translatableItems)
+            item.Title = Translator.T(key);
+
+        if (_logoutItem != null)
+            _logoutItem.Text = Translator.T("Menu_Logout");
+
+        if (_roleLabel != null)
+            _roleLabel.Text = Translator.T(_roleKey);
     }
 
     // Creates a FlyoutItem that is hidden from the menu but still navigable by route.
@@ -113,7 +152,7 @@ public partial class AppShell : Shell
 
     // Builds the flyout header view — shown at the top of the hamburger menu.
     // Displays the user's avatar image (or default icon), name, and role label.
-    private static View BuildFlyoutHeader(IAuthenticationService authService)
+    private View BuildFlyoutHeader(IAuthenticationService authService)
     {
         var root = new Grid
         {
@@ -146,21 +185,21 @@ public partial class AppShell : Shell
         Grid.SetRow(nameLabel, 1);
         root.Children.Add(nameLabel);
 
-        // Role badge in grey — maps internal role string to a friendly Dutch label
-        var roleText = authService.CurrentUserRole?.ToLower() switch
+        // Role badge in grey — maps internal role string to a translated label
+        _roleKey = authService.CurrentUserRole?.ToLower() switch
         {
-            "admin" or "employee" => "Administrator",
-            "instructor"          => "Instructeur",
-            _                     => "Lid"
+            "admin" or "employee" => "Role_Admin",
+            "instructor"          => "Role_Instructor",
+            _                     => "Role_Member"
         };
-        var roleLabel = new Label
+        _roleLabel = new Label
         {
-            Text      = roleText,
+            Text      = Translator.T(_roleKey),
             TextColor = Color.FromArgb("#9CA3AF"),
             FontSize  = 13
         };
-        Grid.SetRow(roleLabel, 2);
-        root.Children.Add(roleLabel);
+        Grid.SetRow(_roleLabel, 2);
+        root.Children.Add(_roleLabel);
 
         return root;
     }
@@ -175,10 +214,10 @@ public partial class AppShell : Shell
         Current.FlyoutIsPresented = false;
 
         var confirmed = await Current.DisplayAlert(
-            "Uitloggen",
-            "Weet je zeker dat je wilt uitloggen?",
-            "Ja, uitloggen",
-            "Annuleren");
+            Translator.T("Logout_Title"),
+            Translator.T("Logout_Confirm"),
+            Translator.T("Logout_Yes"),
+            Translator.T("Common_Cancel"));
 
         if (!confirmed) return;
 

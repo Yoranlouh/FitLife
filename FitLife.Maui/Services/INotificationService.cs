@@ -8,7 +8,8 @@ public enum NotificationType
     Waitlist,             // User joined the waitlist for a full lesson
     NewWorkout,           // A new workout type was added to the schedule
     LessonCancelled,      // A lesson the user was enrolled in was cancelled
-    SubscriptionExpiring  // The user's subscription expires within 7 days
+    SubscriptionExpiring, // The user's subscription expires within 7 days
+    AttendanceCheckedIn   // User successfully checked in to a lesson (RFID or GPS)
 }
 
 // Domain model for a single in-app notification.
@@ -30,6 +31,7 @@ public class AppNotification
         NotificationType.NewWorkout           => "★",
         NotificationType.LessonCancelled      => "✕",
         NotificationType.SubscriptionExpiring => "!",
+        NotificationType.AttendanceCheckedIn  => "📍",
         _                                     => "•"
     };
 
@@ -41,6 +43,7 @@ public class AppNotification
         NotificationType.NewWorkout           => Microsoft.Maui.Graphics.Color.FromArgb("#2196F3"),
         NotificationType.LessonCancelled      => Microsoft.Maui.Graphics.Color.FromArgb("#F44336"),
         NotificationType.SubscriptionExpiring => Microsoft.Maui.Graphics.Color.FromArgb("#FF6F00"),
+        NotificationType.AttendanceCheckedIn  => Microsoft.Maui.Graphics.Color.FromArgb("#4CAF50"),
         _                                     => Microsoft.Maui.Graphics.Color.FromArgb("#666666")
     };
 
@@ -50,9 +53,9 @@ public class AppNotification
         get
         {
             var diff = DateTime.Now - CreatedAt;
-            if (diff.TotalMinutes < 1) return "Zojuist";
-            if (diff.TotalHours   < 1) return $"{(int)diff.TotalMinutes} min geleden";
-            if (diff.TotalDays    < 1) return $"{(int)diff.TotalHours} uur geleden";
+            if (diff.TotalMinutes < 1) return Translator.T("Time_JustNow");
+            if (diff.TotalHours   < 1) return Translator.T("Time_MinAgo", (int)diff.TotalMinutes);
+            if (diff.TotalDays    < 1) return Translator.T("Time_HourAgo", (int)diff.TotalHours);
             return CreatedAt.ToString("d MMM");
         }
     }

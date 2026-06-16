@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
              xmlns:responses="clr-namespace:SharedLibrary.DTOs.Responses;assembly=SharedLibrary"
+             xmlns:h="clr-namespace:FitLife.Maui.Helpers"
              x:Class="FitLife.Maui.Views.LessonsPage"
              x:Name="LessonsRoot"
              x:DataType="vm:LessonsViewModel"
@@ -50,13 +51,13 @@
                     <TapGestureRecognizer Command="{Binding GoToWeekViewCommand}" />
                 </HorizontalStackLayout.GestureRecognizers>
                 <Image Source="calendar_small.png" WidthRequest="15" HeightRequest="15"/>
-                <Label Text="Kalenderweergave"
+                <Label Text="{h:Translate Week_CalendarView}"
                        TextColor="{StaticResource White}"
                        VerticalOptions="Center"/>
             </HorizontalStackLayout>
             <HorizontalStackLayout Grid.Column="1" HorizontalOptions="Center" Spacing="5">
                 <Image Source="list_icon.png" WidthRequest="15" HeightRequest="15"/>
-                <Label Text="Lijstweergave"
+                <Label Text="{h:Translate Week_ListView}"
                        TextColor="{StaticResource White}"
                        VerticalOptions="Center"/>
             </HorizontalStackLayout>
@@ -277,11 +278,11 @@
                                              VerticalOptions="Center"
                                              Spacing="8"
                                              Padding="12">
-                            <Label Text="Geen lessen gevonden"
+                            <Label Text="{h:Translate Lessons_NoneFound}"
                                    TextColor="{StaticResource Black}"
                                    FontSize="14"
                                    HorizontalOptions="Center" />
-                            <Button Text="Vernieuwen"
+                            <Button Text="{h:Translate Lessons_Refresh}"
                                     Command="{Binding LoadLessonsCommand}"
                                     FontSize="12"
                                     Padding="8,4" />

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:h="clr-namespace:FitLife.Maui.Helpers"
              x:Class="FitLife.Maui.Views.MySportclubPage"
              Shell.NavBarIsVisible="False"
              BackgroundColor="White"
@@ -22,7 +23,7 @@
                     WidthRequest="44"
                     HorizontalOptions="Start"
                     Clicked="OnBackClicked" />
-            <Label Text="Mijn Sportclub"
+            <Label Text="{h:Translate Sportclub_Title}"
                    Style="{StaticResource HeaderTitle}"
                    FontSize="18"
                    HorizontalOptions="Center" />
@@ -58,7 +59,7 @@
                     <Border.GestureRecognizers>
                         <TapGestureRecognizer Tapped="OnDirectionsTapped" />
                     </Border.GestureRecognizers>
-                    <Label Text="Routebeschrijving"
+                    <Label Text="{h:Translate Sportclub_Directions}"
                            TextColor="White"
                            FontSize="13"
                            FontAttributes="Bold"

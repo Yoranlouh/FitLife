@@ -3,6 +3,7 @@
                xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
                xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
                xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
+               xmlns:h="clr-namespace:FitLife.Maui.Helpers"
                x:Class="FitLife.Maui.Views.LegendPopup">
 
     <Border BackgroundColor="White"
@@ -16,13 +17,13 @@
                 <Border Stroke="#E0E0E0" StrokeThickness="1" StrokeShape="RoundRectangle 8" Padding="12,10">
                     <HorizontalStackLayout Spacing="10">
                         <Label Text="✓" FontSize="18"/>
-                        <Label Text="Aangemeld" FontSize="14" VerticalOptions="Center"/>
+                        <Label Text="{h:Translate Legend_Registered}" FontSize="14" VerticalOptions="Center"/>
                     </HorizontalStackLayout>
                 </Border>
                 <Border Grid.Column="1" Stroke="#E0E0E0" StrokeThickness="1" StrokeShape="RoundRectangle 8" Padding="12,10">
                     <HorizontalStackLayout Spacing="10">
                         <Label Text="W" FontSize="18" FontAttributes="Bold"/>
-                        <Label Text="Op wachtlijst" FontSize="14" VerticalOptions="Center"/>
+                        <Label Text="{h:Translate Legend_Waitlist}" FontSize="14" VerticalOptions="Center"/>
                     </HorizontalStackLayout>
                 </Border>
             </Grid>

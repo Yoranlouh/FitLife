@@ -10,6 +10,8 @@ public partial class App : Application
 {
 	public App()
 	{
+		// Restore the saved language (and matching culture) before any page is built.
+		Services.Translator.Initialize();
 		InitializeComponent();
 	}
 

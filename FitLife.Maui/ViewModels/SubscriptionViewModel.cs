@@ -47,7 +47,7 @@ public partial class SubscriptionViewModel : BaseViewModel
         _subscriptionService = subscriptionService;
         _authService         = authService;
         _notificationService = notificationService;
-        Title = "Abonnement Beheren";
+        Title = Translator.T("Profile_ManageSubscription");
     }
 
     /// <summary>
@@ -60,7 +60,7 @@ public partial class SubscriptionViewModel : BaseViewModel
         if (!_authService.IsAuthenticated || _authService.CurrentUserId == null)
         {
             System.Diagnostics.Debug.WriteLine("[SubscriptionViewModel] User not authenticated");
-            CurrentSubscription = "Niet ingelogd";
+            CurrentSubscription = Translator.T("Subscription_NotLoggedInTitle");
             return;
         }
 
@@ -91,25 +91,25 @@ public partial class SubscriptionViewModel : BaseViewModel
 
         if (status != null)
         {
-            CurrentSubscription = status.CurrentSubscriptionType ?? "Geen abonnement";
+            CurrentSubscription = status.CurrentSubscriptionType ?? Translator.T("Profile_NoSubscription");
 
             if (!string.IsNullOrEmpty(status.RenewalDate) && DateTime.TryParse(status.RenewalDate, out var renewalDate))
             {
                 ExpiryDate = renewalDate;
-                ExpiryDateDisplay = $"Verloopt op: {renewalDate:dd-MM-yyyy}";
+                ExpiryDateDisplay = Translator.T("Subscription_ExpiresOn", renewalDate);
             }
             else
             {
                 ExpiryDate = null;
-                ExpiryDateDisplay = "Geen vervaldatum";
+                ExpiryDateDisplay = Translator.T("Subscription_NoExpiry");
             }
 
             // Check for pending subscription change
             if (!string.IsNullOrEmpty(status.PendingSubscriptionChange))
             {
                 HasPendingChange = true;
-                var billingCycle = status.PendingBillingCycle == "yearly" ? "jaarlijks" : "maandelijks";
-                PendingChangeMessage = $"Je abonnement wordt gewijzigd naar {status.PendingSubscriptionChange} ({billingCycle}) op {ExpiryDate:dd-MM-yyyy}";
+                var billingCycle = Translator.T(status.PendingBillingCycle == "yearly" ? "Billing_Yearly" : "Billing_Monthly");
+                PendingChangeMessage = Translator.T("Subscription_PendingMessage", status.PendingSubscriptionChange, billingCycle, ExpiryDate ?? default);
                 System.Diagnostics.Debug.WriteLine($"[SubscriptionViewModel] Pending change detected: {PendingChangeMessage}");
             }
             else
@@ -139,8 +139,8 @@ public partial class SubscriptionViewModel : BaseViewModel
         if (userId is null or <= 0) return;
         _notificationService.Add(
             userId.Value,
-            "Abonnement verloopt bijna",
-            $"Je {CurrentSubscription} abonnement verloopt op {ExpiryDate.Value:d MMMM yyyy}. Verleng op tijd om te blijven sporten.",
+            Translator.T("Notif_ExpiringTitle"),
+            Translator.T("Notif_ExpiringBody", CurrentSubscription, ExpiryDate.Value),
             NotificationType.SubscriptionExpiring);
     }
 
@@ -189,28 +189,28 @@ public partial class SubscriptionViewModel : BaseViewModel
     {
         if (!_authService.IsAuthenticated || _authService.CurrentUserId == null)
         {
-            await Shell.Current.DisplayAlert("Fout", "Je moet ingelogd zijn om je abonnement te wijzigen.", "OK");
+            await Shell.Current.DisplayAlert(Translator.T("Common_Error"), Translator.T("Subscription_MustLoginChange"), Translator.T("Common_OK"));
             return false;
         }
 
         // Don't allow changing to the same subscription
         if (newSubscriptionType == CurrentSubscription && !HasPendingChange)
         {
-            await Shell.Current.DisplayAlert("Info", "Je hebt al dit abonnement.", "OK");
+            await Shell.Current.DisplayAlert(Translator.T("Common_Info"), Translator.T("Subscription_AlreadyHave"), Translator.T("Common_OK"));
             return false;
         }
 
         // Confirm subscription change
-        var billingCycle = IsYearly ? "jaarlijks" : "maandelijks";
+        var billingCycle = Translator.T(IsYearly ? "Billing_Yearly" : "Billing_Monthly");
         var price = IsYearly
             ? AvailableSubscriptions.FirstOrDefault(s => s.Name == newSubscriptionType)?.YearlyPrice ?? 0
             : AvailableSubscriptions.FirstOrDefault(s => s.Name == newSubscriptionType)?.MonthlyPrice ?? 0;
 
         var confirm = await Shell.Current.DisplayAlert(
-            "Abonnement wijzigen",
-            $"Weet je zeker dat je wilt overstappen naar {newSubscriptionType} ({billingCycle}, €{price:F0})?\n\nDe wijziging wordt toegepast op {ExpiryDate:dd-MM-yyyy}.",
-            "Ja, wijzigen",
-            "Annuleren"
+            Translator.T("Subscription_ChangeTitle"),
+            Translator.T("Subscription_ChangeConfirm", newSubscriptionType, billingCycle, price, ExpiryDate ?? default),
+            Translator.T("Subscription_YesChange"),
+            Translator.T("Common_Cancel")
         );
 
         if (!confirm) return false;
@@ -227,8 +227,8 @@ public partial class SubscriptionViewModel : BaseViewModel
 
             if (result.Success)
             {
-                var message = $"{result.Message}\n\nHet eventuele resterende saldo van je huidige abonnement wordt automatisch verrekend bij de eerstvolgende automatische incasso.";
-                await Shell.Current.DisplayAlert("Gelukt!", message, "OK");
+                var message = Translator.T("Subscription_ChangeSuccess", result.Message);
+                await Shell.Current.DisplayAlert(Translator.T("Subscription_SuccessTitle"), message, Translator.T("Common_OK"));
 
                 // Reload subscription status to show the pending change
                 await LoadSubscriptionStatusAsync();
@@ -236,14 +236,14 @@ public partial class SubscriptionViewModel : BaseViewModel
             }
             else
             {
-                await Shell.Current.DisplayAlert("Fout", result.Message, "OK");
+                await Shell.Current.DisplayAlert(Translator.T("Common_Error"), result.Message, Translator.T("Common_OK"));
                 return false;
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[SubscriptionViewModel] Error changing subscription: {ex.Message}");
-            await Shell.Current.DisplayAlert("Fout", "Er is een fout opgetreden. Probeer het later opnieuw.", "OK");
+            await Shell.Current.DisplayAlert(Translator.T("Common_Error"), Translator.T("Common_ErrorRetry"), Translator.T("Common_OK"));
             return false;
         }
         finally
@@ -260,22 +260,22 @@ public partial class SubscriptionViewModel : BaseViewModel
     {
         if (!_authService.IsAuthenticated || _authService.CurrentUserId == null)
         {
-            await Shell.Current.DisplayAlert("Fout", "Je moet ingelogd zijn om je abonnement te annuleren.", "OK");
+            await Shell.Current.DisplayAlert(Translator.T("Common_Error"), Translator.T("Subscription_MustLoginCancel"), Translator.T("Common_OK"));
             return;
         }
 
-        if (string.IsNullOrEmpty(CurrentSubscription) || CurrentSubscription == "Geen abonnement")
+        if (string.IsNullOrEmpty(CurrentSubscription) || CurrentSubscription == Translator.T("Profile_NoSubscription"))
         {
-            await Shell.Current.DisplayAlert("Info", "Je hebt geen actief abonnement.", "OK");
+            await Shell.Current.DisplayAlert(Translator.T("Common_Info"), Translator.T("Subscription_NoActive"), Translator.T("Common_OK"));
             return;
         }
 
         // Confirm cancellation
         var confirm = await Shell.Current.DisplayAlert(
-            "Abonnement stopzetten",
-            $"Weet je zeker dat je je {CurrentSubscription} abonnement wilt stopzetten?\n\nJe abonnement blijft actief tot {ExpiryDate:dd-MM-yyyy}. Na deze datum wordt het niet verlengd.",
-            "Ja, stopzetten",
-            "Annuleren"
+            Translator.T("Subscription_CancelTitle"),
+            Translator.T("Subscription_CancelConfirm", CurrentSubscription, ExpiryDate ?? default),
+            Translator.T("Subscription_YesCancel"),
+            Translator.T("Common_Cancel")
         );
 
         if (!confirm) return;
@@ -288,20 +288,20 @@ public partial class SubscriptionViewModel : BaseViewModel
 
             if (result.Success)
             {
-                await Shell.Current.DisplayAlert("Gelukt!", result.Message, "OK");
+                await Shell.Current.DisplayAlert(Translator.T("Subscription_SuccessTitle"), result.Message, Translator.T("Common_OK"));
 
                 // Reload subscription status
                 await LoadSubscriptionStatusAsync();
             }
             else
             {
-                await Shell.Current.DisplayAlert("Fout", result.Message, "OK");
+                await Shell.Current.DisplayAlert(Translator.T("Common_Error"), result.Message, Translator.T("Common_OK"));
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[SubscriptionViewModel] Error cancelling subscription: {ex.Message}");
-            await Shell.Current.DisplayAlert("Fout", "Er is een fout opgetreden. Probeer het later opnieuw.", "OK");
+            await Shell.Current.DisplayAlert(Translator.T("Common_Error"), Translator.T("Common_ErrorRetry"), Translator.T("Common_OK"));
         }
         finally
         {
@@ -317,25 +317,25 @@ public partial class SubscriptionViewModel : BaseViewModel
     {
         if (!_authService.IsAuthenticated || _authService.CurrentUserId == null)
         {
-            await Shell.Current.DisplayAlert("Fout", "Je moet ingelogd zijn om je factureringsperiode te wijzigen.", "OK");
+            await Shell.Current.DisplayAlert(Translator.T("Common_Error"), Translator.T("Subscription_MustLoginBilling"), Translator.T("Common_OK"));
             return;
         }
 
-        if (string.IsNullOrEmpty(CurrentSubscription) || CurrentSubscription == "Geen abonnement")
+        if (string.IsNullOrEmpty(CurrentSubscription) || CurrentSubscription == Translator.T("Profile_NoSubscription"))
         {
-            await Shell.Current.DisplayAlert("Info", "Je hebt geen actief abonnement.", "OK");
+            await Shell.Current.DisplayAlert(Translator.T("Common_Info"), Translator.T("Subscription_NoActive"), Translator.T("Common_OK"));
             return;
         }
 
-        var newBillingCycle = IsYearly ? "jaarlijks" : "maandelijks";
-        var oldBillingCycle = IsYearly ? "maandelijks" : "jaarlijks";
+        var newBillingCycle = Translator.T(IsYearly ? "Billing_Yearly" : "Billing_Monthly");
+        var oldBillingCycle = Translator.T(IsYearly ? "Billing_Monthly" : "Billing_Yearly");
 
         // Confirm billing cycle change
         var confirm = await Shell.Current.DisplayAlert(
-            "Factureringsperiode wijzigen",
-            $"Weet je zeker dat je wilt overstappen van {oldBillingCycle} naar {newBillingCycle} betalen?\n\nJe blijft je huidige {CurrentSubscription} abonnement behouden.\n\nDe wijziging wordt toegepast op {ExpiryDate:dd-MM-yyyy}.",
-            "Ja, wijzigen",
-            "Annuleren"
+            Translator.T("Subscription_BillingTitle"),
+            Translator.T("Subscription_BillingConfirm", oldBillingCycle, newBillingCycle, CurrentSubscription, ExpiryDate ?? default),
+            Translator.T("Subscription_YesChange"),
+            Translator.T("Common_Cancel")
         );
 
         if (!confirm) return;
@@ -351,20 +351,20 @@ public partial class SubscriptionViewModel : BaseViewModel
 
             if (result.Success)
             {
-                await Shell.Current.DisplayAlert("Gelukt!", result.Message, "OK");
+                await Shell.Current.DisplayAlert(Translator.T("Subscription_SuccessTitle"), result.Message, Translator.T("Common_OK"));
 
                 // Reload subscription status
                 await LoadSubscriptionStatusAsync();
             }
             else
             {
-                await Shell.Current.DisplayAlert("Fout", result.Message, "OK");
+                await Shell.Current.DisplayAlert(Translator.T("Common_Error"), result.Message, Translator.T("Common_OK"));
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[SubscriptionViewModel] Error changing billing cycle: {ex.Message}");
-            await Shell.Current.DisplayAlert("Fout", "Er is een fout opgetreden. Probeer het later opnieuw.", "OK");
+            await Shell.Current.DisplayAlert(Translator.T("Common_Error"), Translator.T("Common_ErrorRetry"), Translator.T("Common_OK"));
         }
         finally
         {
@@ -391,12 +391,12 @@ public partial class SubscriptionOption : ObservableObject
     /// <summary>
     /// Display text for credits (handles unlimited case)
     /// </summary>
-    public string CreditsDisplay => IsUnlimited ? "Onbeperkt credits" : $"{Credits} credits per maand";
+    public string CreditsDisplay => IsUnlimited ? Translator.T("Subscription_UnlimitedCredits") : Translator.T("Subscription_CreditsPerMonth", Credits);
 
     /// <summary>
     /// Display text for lessons (handles unlimited case)
     /// </summary>
-    public string LessonsDisplay => IsUnlimited ? "Onbeperkt lessen per maand" : $"{Credits} lessen per maand";
+    public string LessonsDisplay => IsUnlimited ? Translator.T("Subscription_UnlimitedLessons") : Translator.T("Subscription_LessonsPerMonth", Credits);
 
     /// <summary>
     /// Command to select this subscription

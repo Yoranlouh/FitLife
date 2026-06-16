@@ -23,14 +23,14 @@ public partial class ManageLessonViewModel : BaseViewModel
     [ObservableProperty] private TimeSpan _startTime      = new(9, 0, 0);
     [ObservableProperty] private TimeSpan _endTime        = new(10, 0, 0);
 
-    [ObservableProperty] private int      _maxParticipants = 15;
+    [ObservableProperty] private int      _maxParticipants = 0;
     [ObservableProperty] private string   _statusMessage   = string.Empty;
 
     // True when the logged-in user is an admin (can choose any instructor);
     // false for instructors (auto-assigned to themselves)
     [ObservableProperty] private bool     _isAdmin;
     [ObservableProperty] private string   _addMemberInput  = string.Empty;
-    [ObservableProperty] private string   _saveButtonText  = "Les Aanmaken";
+    [ObservableProperty] private string   _saveButtonText  = string.Empty;
 
     // True after dropdown data is loaded; hides the loading overlay
     [ObservableProperty] private bool     _dataLoaded;
@@ -49,9 +49,9 @@ public partial class ManageLessonViewModel : BaseViewModel
     private SimpleItemDto? _selectedInstructor;
 
     // Display-only strings shown in the picker buttons
-    public string SelectedWorkoutName    => SelectedWorkout?.Name    ?? "Selecteer workout...";
-    public string SelectedLocationName   => SelectedLocation?.Name   ?? "Selecteer locatie...";
-    public string SelectedInstructorName => SelectedInstructor?.Name ?? "Selecteer instructeur...";
+    public string SelectedWorkoutName    => SelectedWorkout?.Name    ?? Translator.T("Manage_PickWorkout");
+    public string SelectedLocationName   => SelectedLocation?.Name   ?? Translator.T("Manage_PickLocation");
+    public string SelectedInstructorName => SelectedInstructor?.Name ?? Translator.T("Manage_PickInstructor");
 
     // Dropdown options loaded from the API at page load
     public ObservableCollection<SimpleItemDto> Workouts    { get; } = new();
@@ -64,7 +64,8 @@ public partial class ManageLessonViewModel : BaseViewModel
         _lessonManagementService = lessonManagementService;
         _authService             = authService;
         IsAdmin                  = authService.IsAdmin;
-        Title                    = "Les Aanmaken";
+        Title                    = Translator.T("Manage_CreateTitle");
+        SaveButtonText           = Translator.T("Manage_SaveCreate");
     }
 
     // Called automatically when LessonId is set via Shell query.
@@ -72,8 +73,8 @@ public partial class ManageLessonViewModel : BaseViewModel
     partial void OnLessonIdChanged(int value)
     {
         IsEditMode     = value > 0;
-        Title          = IsEditMode ? "Les Wijzigen" : "Les Aanmaken";
-        SaveButtonText = IsEditMode ? "Les Opslaan"  : "Les Aanmaken";
+        Title          = Translator.T(IsEditMode ? "Manage_EditTitle"  : "Manage_CreateTitle");
+        SaveButtonText = Translator.T(IsEditMode ? "Manage_SaveUpdate" : "Manage_SaveCreate");
     }
 
     // Fetches workouts, locations, and instructors from the API in parallel.
@@ -117,13 +118,13 @@ public partial class ManageLessonViewModel : BaseViewModel
             }
 
             if (Workouts.Count == 0 || Locations.Count == 0 || Instructors.Count == 0)
-                StatusMessage = "⚠️ Kon gegevens niet laden. Controleer de API-verbinding.";
+                StatusMessage = Translator.T("Manage_LoadFailed");
             else
                 DataLoaded = true;
         }
         catch (Exception ex)
         {
-            StatusMessage = $"⚠️ Fout bij laden: {ex.Message}";
+            StatusMessage = Translator.T("Manage_LoadError", ex.Message);
         }
         finally
         {
@@ -136,11 +137,12 @@ public partial class ManageLessonViewModel : BaseViewModel
     [RelayCommand]
     private async Task SelectWorkout()
     {
-        if (!Workouts.Any()) { StatusMessage = "Workouts worden geladen..."; return; }
+        if (!Workouts.Any()) { StatusMessage = Translator.T("Manage_WorkoutsLoading"); return; }
 
         var names  = Workouts.Select(w => w.Name).ToArray();
-        var chosen = await Shell.Current.DisplayActionSheet("Kies een workout", "Annuleren", null, names);
-        if (!string.IsNullOrEmpty(chosen) && chosen != "Annuleren")
+        var cancel = Translator.T("Common_Cancel");
+        var chosen = await Shell.Current.DisplayActionSheet(Translator.T("Manage_ChooseWorkout"), cancel, null, names);
+        if (!string.IsNullOrEmpty(chosen) && chosen != cancel)
             SelectedWorkout = Workouts.FirstOrDefault(w => w.Name == chosen);
     }
 
@@ -148,11 +150,12 @@ public partial class ManageLessonViewModel : BaseViewModel
     [RelayCommand]
     private async Task SelectLocation()
     {
-        if (!Locations.Any()) { StatusMessage = "Locaties worden geladen..."; return; }
+        if (!Locations.Any()) { StatusMessage = Translator.T("Manage_LocationsLoading"); return; }
 
         var names  = Locations.Select(l => l.Name).ToArray();
-        var chosen = await Shell.Current.DisplayActionSheet("Kies een locatie", "Annuleren", null, names);
-        if (!string.IsNullOrEmpty(chosen) && chosen != "Annuleren")
+        var cancel = Translator.T("Common_Cancel");
+        var chosen = await Shell.Current.DisplayActionSheet(Translator.T("Manage_ChooseLocation"), cancel, null, names);
+        if (!string.IsNullOrEmpty(chosen) && chosen != cancel)
             SelectedLocation = Locations.FirstOrDefault(l => l.Name == chosen);
     }
 
@@ -160,11 +163,12 @@ public partial class ManageLessonViewModel : BaseViewModel
     [RelayCommand]
     private async Task SelectInstructor()
     {
-        if (!Instructors.Any()) { StatusMessage = "Instructeurs worden geladen..."; return; }
+        if (!Instructors.Any()) { StatusMessage = Translator.T("Manage_InstructorsLoading"); return; }
 
         var names  = Instructors.Select(i => i.Name).ToArray();
-        var chosen = await Shell.Current.DisplayActionSheet("Kies een instructeur", "Annuleren", null, names);
-        if (!string.IsNullOrEmpty(chosen) && chosen != "Annuleren")
+        var cancel = Translator.T("Common_Cancel");
+        var chosen = await Shell.Current.DisplayActionSheet(Translator.T("Manage_ChooseInstructor"), cancel, null, names);
+        if (!string.IsNullOrEmpty(chosen) && chosen != cancel)
             SelectedInstructor = Instructors.FirstOrDefault(i => i.Name == chosen);
     }
 
@@ -174,10 +178,10 @@ public partial class ManageLessonViewModel : BaseViewModel
     private async Task SaveLesson()
     {
         // Validate required fields before calling the API
-        if (SelectedWorkout is null)    { StatusMessage = "Selecteer een workout type."; return; }
-        if (SelectedLocation is null)   { StatusMessage = "Selecteer een locatie."; return; }
-        if (SelectedInstructor is null) { StatusMessage = "Selecteer een instructeur."; return; }
-        if (EndTime <= StartTime)       { StatusMessage = "Eindtijd moet na de begintijd liggen."; return; }
+        if (SelectedWorkout is null)    { StatusMessage = Translator.T("Manage_SelectWorkout"); return; }
+        if (SelectedLocation is null)   { StatusMessage = Translator.T("Manage_SelectLocation"); return; }
+        if (SelectedInstructor is null) { StatusMessage = Translator.T("Manage_SelectInstructor"); return; }
+        if (EndTime <= StartTime)       { StatusMessage = Translator.T("Manage_EndAfterStart"); return; }
 
         // Build the request DTO from form fields
         var request = new LessonSaveRequest
@@ -201,7 +205,7 @@ public partial class ManageLessonViewModel : BaseViewModel
 
             if (success)
             {
-                await Shell.Current.DisplayAlert(IsEditMode ? "Bijgewerkt" : "Les aangemaakt", message, "OK");
+                await Shell.Current.DisplayAlert(Translator.T(IsEditMode ? "Manage_UpdatedTitle" : "Manage_CreatedTitle"), message, Translator.T("Common_OK"));
                 await Shell.Current.GoToAsync("..");  // navigate back to the lesson list
             }
             else
@@ -222,12 +226,12 @@ public partial class ManageLessonViewModel : BaseViewModel
     {
         if (!IsEditMode || LessonId <= 0)
         {
-            StatusMessage = "Sla de les eerst op voordat je leden toevoegt.";
+            StatusMessage = Translator.T("Manage_SaveFirst");
             return;
         }
         if (!int.TryParse(AddMemberInput.Trim(), out int userId))
         {
-            StatusMessage = "Voer een geldig gebruikers-ID in.";
+            StatusMessage = Translator.T("Manage_InvalidUserId");
             return;
         }
 

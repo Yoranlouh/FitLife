@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
              xmlns:responses="clr-namespace:SharedLibrary.DTOs.Responses;assembly=SharedLibrary"
+             xmlns:h="clr-namespace:FitLife.Maui.Helpers"
              x:Class="FitLife.Maui.Views.InstructorLessonsPage"
              x:DataType="vm:InstructorLessonsViewModel"
              Shell.NavBarIsVisible="False"
@@ -24,12 +25,12 @@
                     WidthRequest="44"
                     HorizontalOptions="Start"
                     Clicked="OnBackClicked" />
-            <Label Text="Trainer Rooster"
+            <Label Text="{h:Translate Instructor_Title}"
                    Style="{StaticResource HeaderTitle}"
                    FontSize="18"
                    VerticalOptions="Center"
                    HorizontalOptions="Center" />
-            <Button Text="+ Nieuwe Les"
+            <Button Text="{h:Translate Instructor_NewLesson}"
                     Command="{Binding AddNewLessonCommand}"
                     BackgroundColor="White"
                     TextColor="#5B6636"
@@ -94,7 +95,7 @@
                                 <!-- Knoppen -->
                                 <VerticalStackLayout Grid.Row="0" Grid.Column="1" Grid.RowSpan="4"
                                                      VerticalOptions="Center" Spacing="6">
-                                    <Button Text="Wijzigen"
+                                    <Button Text="{h:Translate Instructor_Edit}"
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.OpenManageLessonCommand}"
                                             CommandParameter="{Binding .}"
                                             FontSize="12"
@@ -103,7 +104,7 @@
                                             CornerRadius="6"
                                             Padding="10,5"
                                             HeightRequest="36" />
-                                    <Button Text="Verwijderen"
+                                    <Button Text="{h:Translate Instructor_Delete}"
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DeleteLessonCommand}"
                                             CommandParameter="{Binding .}"
                                             FontSize="12"

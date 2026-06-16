@@ -38,8 +38,15 @@ public partial class HomeViewModel : BaseViewModel
     {
         _authService         = authService;
         _notificationService = notificationService;
-        Title = "Hoofdmenu";
+        Title = Translator.T("Home_Title");
         RefreshRole();
+
+        // Re-translate the welcome message live when the language changes.
+        Translator.Instance.PropertyChanged += (_, _) =>
+        {
+            Title = Translator.T("Home_Title");
+            RefreshRole();
+        };
     }
 
     // Reads the current user's role from the authentication service and updates
@@ -50,9 +57,9 @@ public partial class HomeViewModel : BaseViewModel
         IsInstructor = _authService.IsInstructor;
         IsMember     = _authService.IsMember;
 
-        WelcomeMessage = IsAdmin      ? "Welkom, Admin"
-            : IsInstructor ? "Welkom, Trainer"
-            : "Welkom bij FitLife";
+        WelcomeMessage = IsAdmin      ? Translator.T("Home_WelcomeAdmin")
+            : IsInstructor ? Translator.T("Home_WelcomeTrainer")
+            : Translator.T("Home_WelcomeMember");
     }
 
     // Reads the current unread notification count from the in-memory service.

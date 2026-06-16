@@ -99,12 +99,22 @@
                                 </HorizontalStackLayout>
                             </VerticalStackLayout>
 
-                            <!-- Right Arrow -->
-                            <Label Grid.Column="2" 
-                                   Text="›" 
-                                   FontSize="24" 
-                                   TextColor="{StaticResource Gray400}" 
-                                   VerticalOptions="Center"/>
+                            <!-- Right: vinkje als gebruiker ingeschreven is, dan pijl -->
+                            <VerticalStackLayout Grid.Column="2"
+                                                 VerticalOptions="Center"
+                                                 HorizontalOptions="Center"
+                                                 Spacing="1">
+                                <Label Text="✓"
+                                       FontSize="13"
+                                       FontAttributes="Bold"
+                                       TextColor="#4CAF50"
+                                       HorizontalOptions="Center"
+                                       IsVisible="{Binding IsBooked}"/>
+                                <Label Text="›"
+                                       FontSize="24"
+                                       TextColor="{StaticResource Gray400}"
+                                       HorizontalOptions="Center"/>
+                            </VerticalStackLayout>
                             
                         </Grid>
                     </DataTemplate>

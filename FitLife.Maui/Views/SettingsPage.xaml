@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
+             xmlns:h="clr-namespace:FitLife.Maui.Helpers"
              x:Class="FitLife.Maui.Views.SettingsPage"
              x:DataType="vm:SettingsViewModel"
              Shell.NavBarIsVisible="False"
@@ -24,7 +25,7 @@
                     WidthRequest="44"
                     HorizontalOptions="Start"
                     Clicked="OnBackClicked" />
-            <Label Text="Instellingen"
+            <Label Text="{h:Translate Settings_Title}"
                    Style="{StaticResource HeaderTitle}"
                    FontSize="18"
                    HorizontalOptions="Center" />
@@ -37,7 +38,7 @@
                      TAAL
                 ══════════════════════════════════════ -->
                 <VerticalStackLayout Spacing="8">
-                    <Label Text="TAAL"
+                    <Label Text="{h:Translate Settings_Language}"
                            FontSize="11"
                            FontAttributes="Bold"
                            CharacterSpacing="1.5"
@@ -140,7 +141,7 @@
                      NOTIFICATIES
                 ══════════════════════════════════════ -->
                 <VerticalStackLayout Spacing="8">
-                    <Label Text="NOTIFICATIES"
+                    <Label Text="{h:Translate Settings_Notifications}"
                            FontSize="11"
                            FontAttributes="Bold"
                            CharacterSpacing="1.5"
@@ -154,10 +155,10 @@
                             <!-- Wachtlijst -->
                             <Grid ColumnDefinitions="*, Auto" Padding="16,14" ColumnSpacing="12">
                                 <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="2">
-                                    <Label Text="Wachtlijst"
+                                    <Label Text="{h:Translate Settings_Waitlist}"
                                            FontSize="15"
                                            TextColor="{StaticResource Tertiary}" />
-                                    <Label Text="Melding als er een plek vrijkomt"
+                                    <Label Text="{h:Translate Settings_WaitlistDesc}"
                                            FontSize="12"
                                            TextColor="{StaticResource Gray400}" />
                                 </VerticalStackLayout>
@@ -172,10 +173,10 @@
                             <!-- Pushmeldingen -->
                             <Grid ColumnDefinitions="*, Auto" Padding="16,14" ColumnSpacing="12">
                                 <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="2">
-                                    <Label Text="Pushmeldingen"
+                                    <Label Text="{h:Translate Settings_Push}"
                                            FontSize="15"
                                            TextColor="{StaticResource Tertiary}" />
-                                    <Label Text="Alle meldingen van de app"
+                                    <Label Text="{h:Translate Settings_PushDesc}"
                                            FontSize="12"
                                            TextColor="{StaticResource Gray400}" />
                                 </VerticalStackLayout>
@@ -190,10 +191,10 @@
                             <!-- Afgelaste trainingen -->
                             <Grid ColumnDefinitions="*, Auto" Padding="16,14" ColumnSpacing="12">
                                 <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="2">
-                                    <Label Text="Afgelaste trainingen"
+                                    <Label Text="{h:Translate Settings_Cancelled}"
                                            FontSize="15"
                                            TextColor="{StaticResource Tertiary}" />
-                                    <Label Text="Melding bij annulering van een les"
+                                    <Label Text="{h:Translate Settings_CancelledDesc}"
                                            FontSize="12"
                                            TextColor="{StaticResource Gray400}" />
                                 </VerticalStackLayout>
@@ -208,10 +209,10 @@
                             <!-- Algemeen & Nieuws -->
                             <Grid ColumnDefinitions="*, Auto" Padding="16,14" ColumnSpacing="12">
                                 <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="2">
-                                    <Label Text="Algemeen &amp; nieuws"
+                                    <Label Text="{h:Translate Settings_News}"
                                            FontSize="15"
                                            TextColor="{StaticResource Tertiary}" />
-                                    <Label Text="Updates en aankondigingen van FitLife"
+                                    <Label Text="{h:Translate Settings_NewsDesc}"
                                            FontSize="12"
                                            TextColor="{StaticResource Gray400}" />
                                 </VerticalStackLayout>
@@ -229,7 +230,7 @@
                      LOCATIE
                 ══════════════════════════════════════ -->
                 <VerticalStackLayout Spacing="8">
-                    <Label Text="LOCATIE"
+                    <Label Text="{h:Translate Settings_Location}"
                            FontSize="11"
                            FontAttributes="Bold"
                            CharacterSpacing="1.5"
@@ -242,10 +243,10 @@
 
                             <Grid ColumnDefinitions="*, Auto" Padding="16,14" ColumnSpacing="12">
                                 <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="2">
-                                    <Label Text="Locatie delen"
+                                    <Label Text="{h:Translate Settings_LocationSharing}"
                                            FontSize="15"
                                            TextColor="{StaticResource Tertiary}" />
-                                    <Label Text="Toestemming voor automatisch inchecken"
+                                    <Label Text="{h:Translate Settings_LocationSharingDesc}"
                                            FontSize="12"
                                            TextColor="{StaticResource Gray400}" />
                                 </VerticalStackLayout>
@@ -255,7 +256,7 @@
                                         VerticalOptions="Center" />
                             </Grid>
 
-                            <Label Text="FitLife vraagt eenmalig toestemming aan je apparaat zodra je dit aanzet. Je kunt dit altijd wijzigen via de app-instellingen van je telefoon."
+                            <Label Text="{h:Translate Settings_LocationInfo}"
                                    FontSize="12"
                                    TextColor="{StaticResource Gray400}"
                                    Padding="16,0,16,14"

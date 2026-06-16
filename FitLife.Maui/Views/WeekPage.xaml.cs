@@ -225,7 +225,7 @@ public partial class WeekPage
 
                 if (isAnyBooked)
                 {
-                    // Toon vinkje ipv getal
+                    // Toon vinkje: gebruiker is ingeschreven voor minstens één les in dit slot
                     circle.Content = new Label
                     {
                         Text = "✓",
@@ -237,18 +237,6 @@ public partial class WeekPage
                         HorizontalTextAlignment = TextAlignment.Center,
                         VerticalTextAlignment = TextAlignment.Center
                     };
-
-                    // Toon zwart poppetje icon rechtsonder
-                    var personIcon = new Image
-                    {
-                        Source = "icon_profile.svg",
-                        WidthRequest = 14,
-                        HeightRequest = 14,
-                        HorizontalOptions = LayoutOptions.End,
-                        VerticalOptions = LayoutOptions.End,
-                        Margin = new Thickness(0, 0, 2, 2)
-                    };
-                    cellGrid.Children.Add(personIcon);
                 }
                 else
                 {

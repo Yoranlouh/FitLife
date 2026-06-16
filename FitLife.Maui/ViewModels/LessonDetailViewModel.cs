@@ -1,5 +1,6 @@
 using FitLife.Maui.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -13,10 +14,12 @@ namespace FitLife.Maui.ViewModels;
 // via Shell navigation (instead of just an ID) to avoid a second API call.
 public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
 {
-    private readonly IParticipantService     _participantService;
-    private readonly IReservationService     _reservationService;
-    private readonly IAuthenticationService  _authenticationService;
-    private readonly INotificationService    _notificationService;
+    private readonly IParticipantService      _participantService;
+    private readonly IReservationService      _reservationService;
+    private readonly IAuthenticationService   _authenticationService;
+    private readonly INotificationService     _notificationService;
+    private readonly IAttendanceService       _attendanceService;
+    private readonly IBikeReservationService  _bikeReservationService;
 
     // The lesson being shown — populated from the Shell navigation query
     [ObservableProperty]
@@ -28,6 +31,12 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowReserveButton))]
     [NotifyPropertyChangedFor(nameof(ShowCancellationDeadlineWarning))]
+    [NotifyPropertyChangedFor(nameof(ShowCheckInSection))]
+    [NotifyPropertyChangedFor(nameof(ShowCheckInButtons))]
+    [NotifyPropertyChangedFor(nameof(ShowGpsCheckInButton))]
+    [NotifyPropertyChangedFor(nameof(ShowCheckInEarlyMessage))]
+    [NotifyPropertyChangedFor(nameof(ShowLessonEndedMessage))]
+    [NotifyPropertyChangedFor(nameof(ShowBikeSection))]
     private bool _isReserved;
 
     // True when the lesson is more than 7 days away (booking window not yet open)
@@ -45,6 +54,79 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowCancellationDeadlineWarning))]
     private bool _isCancellationDeadlinePassed;
+
+    // ── Attendance ──────────────────────────────────────────────────────────
+
+    // True when the current user has checked in (RFID or GPS) for this lesson
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowCheckedInBadge))]
+    [NotifyPropertyChangedFor(nameof(ShowCheckInButtons))]
+    [NotifyPropertyChangedFor(nameof(ShowGpsCheckInButton))]
+    [NotifyPropertyChangedFor(nameof(ShowCheckInEarlyMessage))]
+    [NotifyPropertyChangedFor(nameof(ShowLessonEndedMessage))]
+    private bool _isCheckedIn;
+
+    // True when the check-in window is open: 15 min before start until lesson ends
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowCheckInButtons))]
+    [NotifyPropertyChangedFor(nameof(ShowGpsCheckInButton))]
+    [NotifyPropertyChangedFor(nameof(ShowCheckInEarlyMessage))]
+    private bool _isCheckInWindowOpen;
+
+    // True when the lesson has fully ended (now > EndTime)
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowCheckInEarlyMessage))]
+    [NotifyPropertyChangedFor(nameof(ShowLessonEndedMessage))]
+    private bool _isLessonEnded;
+
+    // ── Spinning bike selection ──────────────────────────────────────────────────
+
+    // True when the current lesson's workout name is "Spinning" (case-insensitive)
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowBikeSection))]
+    private bool _isSpinningLesson;
+
+    // Shows the full label of the selected bike, e.g. "Jouw fiets: Rij 2 - Fiets 3"
+    [ObservableProperty]
+    private string _selectedBikeDisplay = string.Empty;
+
+    // True after the user has successfully selected a bike
+    [ObservableProperty]
+    private bool _hasBikeSelected;
+
+    // 4×4 grid of all bikes for the spinning lesson
+    public ObservableCollection<BikeItem> BikeOptions { get; } = new();
+
+    // The bike section is shown only when reserved for a spinning lesson
+    public bool ShowBikeSection => IsSpinningLesson && IsReserved;
+
+    // ── Attendance ──────────────────────────────────────────────────────────────
+
+    // Shown when check-in window is not yet open, e.g. "Beschikbaar vanaf 09:45"
+    [ObservableProperty]
+    private string _checkInEarlyText = "";
+
+    // Reads the location permission setting saved by SettingsViewModel
+    public bool IsLocationSharingEnabled
+        => Preferences.Get("settings_location_sharing", false);
+
+    // Show the entire attendance card whenever the user is reserved
+    public bool ShowCheckInSection => IsReserved;
+
+    // Green "aanwezig" badge — only after a successful check-in
+    public bool ShowCheckedInBadge => IsCheckedIn;
+
+    // RFID check-in button: reserved, not yet checked in, window is open
+    public bool ShowCheckInButtons => IsReserved && !IsCheckedIn && IsCheckInWindowOpen;
+
+    // GPS simulate button: same as RFID, plus location permission enabled
+    public bool ShowGpsCheckInButton => IsReserved && !IsCheckedIn && IsCheckInWindowOpen && IsLocationSharingEnabled;
+
+    // "Too early" notice: reserved, not checked in, window not yet open, lesson not ended
+    public bool ShowCheckInEarlyMessage => IsReserved && !IsCheckedIn && !IsCheckInWindowOpen && !IsLessonEnded;
+
+    // "Lesson ended without check-in" notice
+    public bool ShowLessonEndedMessage => IsReserved && !IsCheckedIn && IsLessonEnded;
 
     // Displayed when the booking window is not yet open, e.g. "Reserveren mogelijk vanaf 15 juni"
     [ObservableProperty]
@@ -82,32 +164,36 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
     {
         get
         {
-            if (IsAdvanced) return "Onbeperkt";
-            return CurrentCredits.HasValue ? $"{CurrentCredits.Value} credits over" : "—";
+            if (IsAdvanced) return Translator.T("Common_Unlimited");
+            return CurrentCredits.HasValue ? Translator.T("Detail_CreditsLeft", CurrentCredits.Value) : "—";
         }
     }
 
     // Shows the subscription tier and cost model, e.g. "Rookie · 1 credit per les"
     public string SubscriptionLineDisplay
         => IsAdvanced
-            ? $"{SubscriptionName} · Onbeperkt lessen"
-            : $"{SubscriptionName} · 1 credit per les";
+            ? Translator.T("Detail_SubLineUnlimited", SubscriptionName)
+            : Translator.T("Detail_SubLineCredit", SubscriptionName);
 
     // Advanced subscribers have unlimited lessons (identified by name or a credit value ≥ 999)
     private bool IsAdvanced
         => string.Equals(SubscriptionName, "Advanced", StringComparison.OrdinalIgnoreCase)
            || CurrentCredits >= 999;
 
-    public LessonDetailViewModel(IParticipantService    participantService,
-                                 IReservationService    reservationService,
-                                 IAuthenticationService authenticationService,
-                                 INotificationService   notificationService)
+    public LessonDetailViewModel(IParticipantService     participantService,
+                                 IReservationService     reservationService,
+                                 IAuthenticationService  authenticationService,
+                                 INotificationService    notificationService,
+                                 IAttendanceService      attendanceService,
+                                 IBikeReservationService bikeReservationService)
     {
-        _participantService    = participantService;
-        _reservationService    = reservationService;
-        _authenticationService = authenticationService;
-        _notificationService   = notificationService;
-        Title = "Groepsevent";
+        _participantService     = participantService;
+        _reservationService     = reservationService;
+        _authenticationService  = authenticationService;
+        _notificationService    = notificationService;
+        _attendanceService      = attendanceService;
+        _bikeReservationService = bikeReservationService;
+        Title = Translator.T("Detail_PageTitle");
     }
 
     // Receives the LessonResponse from the previous page via Shell query.
@@ -116,8 +202,10 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
     {
         if (query.TryGetValue("Lesson", out var lessonObj) && lessonObj is LessonResponse lesson)
         {
-            Lesson          = lesson;
-            MaxParticipants = lesson.MaxParticipants;
+            Lesson           = lesson;
+            MaxParticipants  = lesson.MaxParticipants;
+            IsReserved       = lesson.IsBooked;
+            IsSpinningLesson = lesson.WorkoutName.Equals("Spinning", StringComparison.OrdinalIgnoreCase);
 
             var now = DateTime.Now;
             // Booking opens 7 days before the lesson
@@ -130,11 +218,27 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
             if (IsTooFarInFuture)
             {
                 var openDate = lesson.StartTime.AddDays(-7);
-                ReservationOpenDateText = $"Reserveren mogelijk vanaf {openDate:d MMMM}";
+                ReservationOpenDateText = Translator.T("Detail_BookableFrom", openDate);
             }
+
+            // ── Attendance state ─────────────────────────────────────────────
+            var checkInOpensAt = lesson.StartTime.AddMinutes(-15);
+            IsCheckInWindowOpen = now >= checkInOpensAt && now <= lesson.EndTime;
+            IsLessonEnded       = now > lesson.EndTime;
+
+            if (!IsCheckInWindowOpen && !IsLessonEnded)
+                CheckInEarlyText = Translator.T("Attendance_NotYetOpen", checkInOpensAt);
+
+            var userId = _authenticationService.CurrentUserId;
+            if (userId.HasValue)
+                IsCheckedIn = _attendanceService.IsCheckedIn(lesson.Id, userId.Value);
 
             LoadSubscriptionData();        // read from in-memory auth service (instant)
             await LoadParticipantData();   // async API call
+
+            // Load bike grid for spinning lessons where the user is already registered
+            if (IsSpinningLesson && IsReserved)
+                await LoadBikesAsync();
         }
     }
 
@@ -142,13 +246,13 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
     // and populates the credits / subscription display properties.
     private void LoadSubscriptionData()
     {
-        SubscriptionName = _authenticationService.CurrentUserSubscriptionType ?? "Onbekend";
+        SubscriptionName = _authenticationService.CurrentUserSubscriptionType ?? Translator.T("Common_Unknown");
         CurrentCredits   = _authenticationService.CurrentUserCredits;
 
         if (!string.IsNullOrEmpty(_authenticationService.CurrentUserSubscriptionRenewalDate)
             && DateTime.TryParse(_authenticationService.CurrentUserSubscriptionRenewalDate, out var renewal))
         {
-            RenewalDateDisplay = $"Verloopt: {renewal:d MMMM yyyy}";
+            RenewalDateDisplay = Translator.T("Detail_Expires", renewal);
         }
         else
         {
@@ -186,16 +290,16 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
         if (IsTooFarInFuture)
         {
             await Shell.Current.DisplayAlert(
-                "Niet mogelijk",
-                $"Je kunt maximaal 1 week van tevoren reserveren.\n{ReservationOpenDateText}.",
-                "OK");
+                Translator.T("Detail_NotPossibleTitle"),
+                Translator.T("Detail_TooFarBody", ReservationOpenDateText),
+                Translator.T("Common_OK"));
             return;
         }
 
         var userId = _authenticationService.CurrentUserId;
         if (userId is null or <= 0)
         {
-            await Shell.Current.DisplayAlert("Niet ingelogd", "Log opnieuw in om een les te reserveren.", "OK");
+            await Shell.Current.DisplayAlert(Translator.T("Common_NotLoggedIn"), Translator.T("Detail_LoginToReserve"), Translator.T("Common_OK"));
             return;
         }
 
@@ -215,27 +319,66 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
                 else if (!IsAdvanced && CurrentCredits.HasValue)
                     CurrentCredits = CurrentCredits.Value - 1;
 
+                // For spinning lessons, load the bike grid so the member can pick a seat
+                if (IsSpinningLesson)
+                    await LoadBikesAsync();
+
                 // Notify MyLessonsViewModel so it can add this lesson to the upcoming list
                 WeakReferenceMessenger.Default.Send(new LessonReservedMessage(Lesson));
 
                 _notificationService.Add(
                     userId.Value,
-                    "Aangemeld voor les",
-                    $"Je bent ingeschreven voor {Lesson.WorkoutName} op {Lesson.StartTime:d MMMM 'om' HH:mm}.",
+                    Translator.T("Notif_ReservedTitle"),
+                    Translator.T("Notif_ReservedBody", Lesson.WorkoutName, Lesson.StartTime),
                     NotificationType.LessonReserved);
 
                 var msg = string.IsNullOrWhiteSpace(result.Message)
-                    ? "Je bent ingeschreven voor deze les."
+                    ? Translator.T("Detail_ReservedDefault")
                     : result.Message;
-                await Shell.Current.DisplayAlert("Ingeschreven!", msg, "OK");
+                await Shell.Current.DisplayAlert(Translator.T("Detail_ReservedAlertTitle"), msg, Translator.T("Common_OK"));
+            }
+            else if (result.LessonFull)
+            {
+                // Lesson is at capacity — automatically add the user to the waitlist
+                var waitlistResult = await _reservationService.JoinWaitlistAsync(Lesson.Id, userId.Value);
+
+                if (waitlistResult.Success)
+                {
+                    IsOnWaitlist = true;
+
+                    _notificationService.Add(
+                        userId.Value,
+                        Translator.T("Notif_WaitlistTitle"),
+                        Translator.T("Notif_WaitlistBody", Lesson.WorkoutName, Lesson.StartTime),
+                        NotificationType.Waitlist);
+
+                    await Shell.Current.DisplayAlert(
+                        Translator.T("Detail_LessonFullWaitlistTitle"),
+                        Translator.T("Detail_LessonFullWaitlistBody"),
+                        Translator.T("Common_OK"));
+                }
+                else if (waitlistResult.AlreadyOnWaitlist)
+                {
+                    await Shell.Current.DisplayAlert(
+                        Translator.T("Detail_LessonFullWaitlistTitle"),
+                        Translator.T("Detail_AlreadyOnWaitlist"),
+                        Translator.T("Common_OK"));
+                }
+                else
+                {
+                    await Shell.Current.DisplayAlert(
+                        Translator.T("Detail_WaitlistFailedTitle"),
+                        Translator.T("Detail_WaitlistFailedBody"),
+                        Translator.T("Common_OK"));
+                }
             }
             else
             {
-                await Shell.Current.DisplayAlert("Inschrijven mislukt",
+                await Shell.Current.DisplayAlert(Translator.T("Detail_ReserveFailedTitle"),
                     string.IsNullOrWhiteSpace(result.Message)
-                        ? "Je kon niet worden ingeschreven."
+                        ? Translator.T("Detail_ReserveFailedBody")
                         : result.Message,
-                    "OK");
+                    Translator.T("Common_OK"));
             }
         }
         finally
@@ -255,17 +398,17 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
         if (IsCancellationDeadlinePassed)
         {
             await Shell.Current.DisplayAlert(
-                "Afmelden niet mogelijk",
-                "Je kunt je niet meer afmelden. Afmelden is alleen mogelijk tot 1 uur voor aanvang van de les.",
-                "OK");
+                Translator.T("Detail_CancelNotPossibleTitle"),
+                Translator.T("Detail_CancelDeadlineBody"),
+                Translator.T("Common_OK"));
             return;
         }
 
         var userId = _authenticationService.CurrentUserId;
         if (userId is null or <= 0)
         {
-            await Shell.Current.DisplayAlert("Niet ingelogd",
-                "Je bent niet meer ingelogd. Log opnieuw in om je af te melden.", "OK");
+            await Shell.Current.DisplayAlert(Translator.T("Common_NotLoggedIn"),
+                Translator.T("Detail_LoginToCancel"), Translator.T("Common_OK"));
             return;
         }
 
@@ -285,22 +428,30 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
                 else if (!IsAdvanced && CurrentCredits.HasValue)
                     CurrentCredits = CurrentCredits.Value + 1;
 
+                // The cancel endpoint already releases the bike server-side — just clear local state
+                if (IsSpinningLesson)
+                {
+                    BikeOptions.Clear();
+                    SelectedBikeDisplay = string.Empty;
+                    HasBikeSelected     = false;
+                }
+
                 // Notify MyLessonsViewModel to remove this lesson from the upcoming list
                 WeakReferenceMessenger.Default.Send(new LessonUnregisteredMessage(Lesson.Id));
 
-                await Shell.Current.DisplayAlert("Afgemeld",
+                await Shell.Current.DisplayAlert(Translator.T("Detail_UnregisteredTitle"),
                     string.IsNullOrWhiteSpace(result.Message)
-                        ? "Je hebt je succesvol afgemeld."
+                        ? Translator.T("Detail_UnregisteredBody")
                         : result.Message,
-                    "OK");
+                    Translator.T("Common_OK"));
             }
             else
             {
-                await Shell.Current.DisplayAlert("Afmelden mislukt",
+                await Shell.Current.DisplayAlert(Translator.T("Detail_CancelFailedTitle"),
                     string.IsNullOrWhiteSpace(result.Message)
-                        ? "Je kon niet worden afgemeld."
+                        ? Translator.T("Detail_CancelFailedBody")
                         : result.Message,
-                    "OK");
+                    Translator.T("Common_OK"));
             }
         }
         finally
@@ -319,7 +470,7 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
         var userId = _authenticationService.CurrentUserId;
         if (userId is null or <= 0)
         {
-            await Shell.Current.DisplayAlert("Niet ingelogd", "Log opnieuw in.", "OK");
+            await Shell.Current.DisplayAlert(Translator.T("Common_NotLoggedIn"), Translator.T("Common_LoginAgain"), Translator.T("Common_OK"));
             return;
         }
 
@@ -330,12 +481,123 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
         {
             _notificationService.Add(
                 userId.Value,
-                "Op de wachtlijst",
-                $"Je staat op de wachtlijst voor {Lesson.WorkoutName} op {Lesson.StartTime:d MMMM 'om' HH:mm}. We laten je weten als er een plek vrijkomt.",
+                Translator.T("Notif_WaitlistTitle"),
+                Translator.T("Notif_WaitlistBody", Lesson.WorkoutName, Lesson.StartTime),
                 NotificationType.Waitlist);
         }
 
-        await Shell.Current.DisplayAlert("Wachtlijst", "Je staat nu op de wachtlijst.", "OK");
+        await Shell.Current.DisplayAlert(Translator.T("Participants_Waitlist"), Translator.T("Detail_OnWaitlistNow"), Translator.T("Common_OK"));
+    }
+
+    // Manual RFID check-in — the user taps the button to simulate scanning their badge.
+    // TODO production: trigger actual NFC/RFID read here instead of calling CheckInAsync directly.
+    [RelayCommand]
+    private async Task CheckInRfid()
+    {
+        if (Lesson == null || IsBusy) return;
+        await PerformCheckIn(CheckInMethod.Rfid);
+    }
+
+    // GPS-simulated check-in — available only when location sharing is enabled in Settings.
+    // TODO production: replace with a real geofence trigger; remove the manual button.
+    [RelayCommand]
+    private async Task CheckInGps()
+    {
+        if (Lesson == null || IsBusy) return;
+        await PerformCheckIn(CheckInMethod.Gps);
+    }
+
+    private async Task PerformCheckIn(CheckInMethod method)
+    {
+        var userId = _authenticationService.CurrentUserId;
+        if (userId is null or <= 0)
+        {
+            await Shell.Current.DisplayAlert(Translator.T("Common_NotLoggedIn"), Translator.T("Common_LoginAgain"), Translator.T("Common_OK"));
+            return;
+        }
+
+        IsBusy = true;
+        try
+        {
+            var success = await _attendanceService.CheckInAsync(Lesson!.Id, userId.Value, method);
+            if (!success) return;
+
+            IsCheckedIn = true;
+
+            _notificationService.Add(
+                userId.Value,
+                Translator.T("Notif_CheckedInTitle"),
+                Translator.T("Notif_CheckedInBody", Lesson.WorkoutName, DateTime.Now),
+                NotificationType.AttendanceCheckedIn);
+
+            var title = method == CheckInMethod.Gps
+                ? Translator.T("Attendance_GpsAlertTitle")
+                : Translator.T("Attendance_AlertTitle");
+            var body = method == CheckInMethod.Gps
+                ? Translator.T("Attendance_GpsAlertBody")
+                : Translator.T("Attendance_AlertBody", Lesson.WorkoutName);
+
+            await Shell.Current.DisplayAlert(title, body, Translator.T("Common_OK"));
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    // Fetches the 16-bike grid from the API and updates BikeOptions + SelectedBikeDisplay.
+    // Called after reservation succeeds and when navigating to a spinning lesson already booked.
+    private async Task LoadBikesAsync()
+    {
+        var userId = _authenticationService.CurrentUserId;
+        if (Lesson == null || userId == null) return;
+
+        var bikes = await _bikeReservationService.GetBikesAsync(Lesson.Id, userId.Value);
+
+        BikeOptions.Clear();
+        foreach (var bike in bikes)
+            BikeOptions.Add(bike);
+
+        var own = bikes.FirstOrDefault(b => b.IsSelectedByCurrentUser);
+        if (own != null)
+        {
+            SelectedBikeDisplay = Translator.T("Spinning_YourBike",
+                Translator.T("Spinning_BikeLabel", own.RowNumber, own.BikeNumber));
+            HasBikeSelected = true;
+        }
+        else
+        {
+            SelectedBikeDisplay = string.Empty;
+            HasBikeSelected     = false;
+        }
+    }
+
+    // Called when the user taps a bike button in the 4×4 grid.
+    // Available bikes can be selected or switched; taken bikes are disabled in the UI.
+    [RelayCommand]
+    private async Task SelectBike(BikeItem bike)
+    {
+        if (Lesson == null || IsBusy || !bike.IsAvailable) return;
+
+        var userId = _authenticationService.CurrentUserId;
+        if (userId == null) return;
+
+        IsBusy = true;
+        try
+        {
+            var result = await _bikeReservationService.SelectBikeAsync(
+                Lesson.Id, userId.Value, bike.RowNumber, bike.BikeNumber);
+
+            if (result.Success)
+                await LoadBikesAsync(); // refresh grid to reflect the new selection
+            else
+                await Shell.Current.DisplayAlert(
+                    Translator.T("Common_Error"), result.Message, Translator.T("Common_OK"));
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     // Navigates to the full participant list page for this lesson.
