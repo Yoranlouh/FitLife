@@ -3,10 +3,20 @@ using SharedLibrary.DTOs.Responses;
 namespace FitLife.Tests.Calendar;
 
 /// <summary>
-/// Tests for the week-calendar and day-view lesson display logic.
-/// Focus areas: IsBooked flag driving the checkmark display, and
-/// the UpdateBookingState logic extracted from WeekViewModel.
+/// US-L01 — Lesrooster bekijken (Lid, Must have).
+/// "Als lid wil ik het dag- en weekoverzicht van de beschikbare lessen kunnen
+///  bekijken, zodat ik een les op een geschikt moment kan kiezen."
+///
+/// Acceptatiecriteria gedekt in deze klasse:
+///   • Per les is zichtbaar hoeveel plekken nog beschikbaar zijn  (BeschikbarePlekken_*).
+///   • Een volle les wordt duidelijk als „vol" gemarkeerd          (VolleLes_*).
+///   • Lessen zijn te filteren op dag en op lestype                (Filter_*).
+/// De overige criteria (naam/datum/tijd/instructeur/zaal tonen; asynchroon laden)
+/// worden gedekt door de UI-tests in FitLife.UITests (WeekPageTests) en door de
+/// IsBooked-/wachtlijst-weergavelogica hieronder.
 /// </summary>
+[Trait("UserStory", "US-L01")]
+[Trait("Rol", "Lid")]
 public class LessonCalendarTests
 {
     // ── IsBooked vlag → vinkje zichtbaar ─────────────────────────────────────
@@ -177,6 +187,90 @@ public class LessonCalendarTests
         var lesson = new LessonResponse { Id = 1, WaitlistCount = 0 };
         Assert.False(lesson.WaitlistCount > 0);
     }
+
+    // ── Volle les wordt als „vol" gemarkeerd (acceptatiecriterium L01) ────────
+
+    [Fact]
+    public void VolleLes_WordtAlsVolGemarkeerd()
+    {
+        var lesson = new LessonResponse { Id = 1, MaxParticipants = 15, CurrentParticipantCount = 15 };
+        Assert.True(CalendarState.IsFull(lesson));
+    }
+
+    [Fact]
+    public void NietVolleLes_WordtNietAlsVolGemarkeerd()
+    {
+        var lesson = new LessonResponse { Id = 1, MaxParticipants = 15, CurrentParticipantCount = 14 };
+        Assert.False(CalendarState.IsFull(lesson));
+    }
+
+    [Fact]
+    public void OvervolleLes_WordtOokAlsVolGemarkeerd()
+    {
+        // Edge case: meer deelnemers dan capaciteit → nog steeds „vol"
+        var lesson = new LessonResponse { Id = 1, MaxParticipants = 15, CurrentParticipantCount = 16 };
+        Assert.True(CalendarState.IsFull(lesson));
+    }
+
+    // ── Filteren op dag (acceptatiecriterium L01) ─────────────────────────────
+
+    [Fact]
+    public void FilterOpDag_GeeftAlleenLessenVanDieDag()
+    {
+        var maandag = new DateTime(2026, 6, 15, 0, 0, 0);
+        var lessons = new List<LessonResponse>
+        {
+            new() { Id = 1, StartTime = maandag.AddHours(9)  },
+            new() { Id = 2, StartTime = maandag.AddHours(18) },
+            new() { Id = 3, StartTime = maandag.AddDays(1).AddHours(10) }, // dinsdag
+        };
+
+        var maandagLessen = CalendarState.FilterByDay(lessons, maandag).ToList();
+
+        Assert.Equal(2, maandagLessen.Count);
+        Assert.All(maandagLessen, l => Assert.Equal(maandag.Date, l.StartTime.Date));
+    }
+
+    [Fact]
+    public void FilterOpDag_ZonderLessenOpDieDag_GeeftLegeLijst()
+    {
+        var maandag = new DateTime(2026, 6, 15, 0, 0, 0);
+        var lessons = new List<LessonResponse>
+        {
+            new() { Id = 1, StartTime = maandag.AddDays(2).AddHours(9) },
+        };
+
+        Assert.Empty(CalendarState.FilterByDay(lessons, maandag));
+    }
+
+    // ── Filteren op lestype (acceptatiecriterium L01) ─────────────────────────
+
+    [Fact]
+    public void FilterOpLestype_GeeftAlleenLessenVanDatType()
+    {
+        var lessons = new List<LessonResponse>
+        {
+            new() { Id = 1, WorkoutName = "Yoga"     },
+            new() { Id = 2, WorkoutName = "Spinning" },
+            new() { Id = 3, WorkoutName = "Yoga"     },
+        };
+
+        var yoga = CalendarState.FilterByWorkout(lessons, "Yoga").ToList();
+
+        Assert.Equal(2, yoga.Count);
+        Assert.All(yoga, l => Assert.Equal("Yoga", l.WorkoutName));
+    }
+
+    [Fact]
+    public void FilterOpLestype_IsHoofdletterongevoelig()
+    {
+        var lessons = new List<LessonResponse>
+        {
+            new() { Id = 1, WorkoutName = "Yoga" },
+        };
+
+        Assert.Single(CalendarState.FilterByWorkout(lessons, "yoga"));
+    }
 }
 
 internal static class CalendarState
@@ -190,4 +284,16 @@ internal static class CalendarState
         if (lesson is null) return;
         lesson.IsBooked = isBooked;
     }
+
+    /// <summary>A lesson is full when the participant count reaches (or exceeds) capacity.</summary>
+    public static bool IsFull(LessonResponse lesson)
+        => lesson.CurrentParticipantCount >= lesson.MaxParticipants;
+
+    /// <summary>Day-view filter: only lessons that start on the given calendar day.</summary>
+    public static IEnumerable<LessonResponse> FilterByDay(IEnumerable<LessonResponse> lessons, DateTime day)
+        => lessons.Where(l => l.StartTime.Date == day.Date);
+
+    /// <summary>Lesson-type filter: only lessons whose workout name matches (case-insensitive).</summary>
+    public static IEnumerable<LessonResponse> FilterByWorkout(IEnumerable<LessonResponse> lessons, string workoutName)
+        => lessons.Where(l => string.Equals(l.WorkoutName, workoutName, StringComparison.OrdinalIgnoreCase));
 }

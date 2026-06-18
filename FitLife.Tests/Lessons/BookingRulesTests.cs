@@ -1,13 +1,32 @@
 namespace FitLife.Tests.Lessons;
 
-/// <summary>
-/// Tests for the booking window, cancellation deadline and check-in window rules
-/// extracted from LessonDetailViewModel.ApplyQueryAttributes.
-/// All tests use a fixed "now" so time-dependent logic is deterministic.
-/// </summary>
-public class BookingRulesTests
+// Tests for the booking window, cancellation deadline and check-in window rules
+// extracted from LessonDetailViewModel.ApplyQueryAttributes.
+// All tests use a fixed "now" so time-dependent logic is deterministic.
+//
+// The rules span three user stories, so the tests are split into one [Trait]-tagged
+// class per story. The pure-C# replica of the rules lives in BookingRules at the
+// bottom of this file and is shared by all three classes.
+//
+//   • US-L02 — Les reserveren          (boekvenster, reserveerknop, verlopen-melding)
+//   • US-L03 — Reservering annuleren    (annuleringsdeadline)
+//   • US-I03 — Presentie registreren    (check-in venster, check-in knoppen/meldingen)
+
+internal static class BookingRulesTestTime
 {
-    private static readonly DateTime Now = new(2026, 6, 15, 10, 0, 0);
+    public static readonly DateTime Now = new(2026, 6, 15, 10, 0, 0);
+}
+
+/// <summary>
+/// US-L02 — Les reserveren (Lid, Must have).
+/// "Reserveren is niet mogelijk wanneer de les vol is of al begonnen is" en
+/// het boekvenster (max. 7 dagen vooruit) bepalen of de reserveerknop zichtbaar is.
+/// </summary>
+[Trait("UserStory", "US-L02")]
+[Trait("Rol", "Lid")]
+public class ReserveWindowRulesTests
+{
+    private static readonly DateTime Now = BookingRulesTestTime.Now;
 
     // ── IsTooFarInFuture: 7-dagenvenster ─────────────────────────────────────
 
@@ -62,6 +81,58 @@ public class BookingRulesTests
         Assert.False(BookingRules.IsLessonStartedOrPast(start, Now));
     }
 
+    // ── ShowReserveButton ────────────────────────────────────────────────────
+
+    [Fact]
+    public void ShowReserveButton_AlleVoorwaardenOk_IsTrue()
+    {
+        Assert.True(BookingRules.ShowReserveButton(
+            isReserved: false, isTooFarInFuture: false, isLessonStartedOrPast: false));
+    }
+
+    [Fact]
+    public void ShowReserveButton_AlIngeschreven_IsFalse()
+    {
+        Assert.False(BookingRules.ShowReserveButton(
+            isReserved: true, isTooFarInFuture: false, isLessonStartedOrPast: false));
+    }
+
+    [Fact]
+    public void ShowReserveButton_TooFarInFuture_IsFalse()
+    {
+        Assert.False(BookingRules.ShowReserveButton(
+            isReserved: false, isTooFarInFuture: true, isLessonStartedOrPast: false));
+    }
+
+    [Fact]
+    public void ShowReserveButton_LesAlGestart_IsFalse()
+    {
+        Assert.False(BookingRules.ShowReserveButton(
+            isReserved: false, isTooFarInFuture: false, isLessonStartedOrPast: true));
+    }
+
+    // ── ShowExpiredMessage ────────────────────────────────────────────────────
+
+    [Fact]
+    public void ShowExpiredMessage_LesVerlopenEnNietIngeschreven_IsTrue()
+        => Assert.True(BookingRules.ShowExpiredMessage(isReserved: false, isLessonStartedOrPast: true));
+
+    [Fact]
+    public void ShowExpiredMessage_IngeschrevenVoorVerlopen_IsFalse()
+        => Assert.False(BookingRules.ShowExpiredMessage(isReserved: true, isLessonStartedOrPast: true));
+}
+
+/// <summary>
+/// US-L03 — Reservering annuleren (Lid, Must have).
+/// "Annuleren kan tot een ingestelde termijn vóór aanvang van de les."
+/// De grens is 1 uur vóór aanvang; daarna is de annuleringsdeadline verstreken.
+/// </summary>
+[Trait("UserStory", "US-L03")]
+[Trait("Rol", "Lid")]
+public class CancellationDeadlineRulesTests
+{
+    private static readonly DateTime Now = BookingRulesTestTime.Now;
+
     // ── IsCancellationDeadlinePassed: 1-uurgrens ─────────────────────────────
 
     [Fact]
@@ -92,6 +163,36 @@ public class BookingRulesTests
         var start = Now.AddHours(-2);
         Assert.True(BookingRules.IsCancellationDeadlinePassed(start, Now));
     }
+
+    // ── ShowCancellationDeadlineWarning ───────────────────────────────────────
+
+    [Fact]
+    public void ShowCancellationWarning_IngeschrevenEnDeadlineVerlopen_IsTrue()
+        => Assert.True(BookingRules.ShowCancellationDeadlineWarning(
+               isReserved: true, isCancellationDeadlinePassed: true));
+
+    [Fact]
+    public void ShowCancellationWarning_NietIngeschreven_IsFalse()
+        => Assert.False(BookingRules.ShowCancellationDeadlineWarning(
+               isReserved: false, isCancellationDeadlinePassed: true));
+
+    [Fact]
+    public void ShowCancellationWarning_DeadlineNietVerlopen_IsFalse()
+        => Assert.False(BookingRules.ShowCancellationDeadlineWarning(
+               isReserved: true, isCancellationDeadlinePassed: false));
+}
+
+/// <summary>
+/// US-I03 — Presentie registreren (Instructeur, Could have).
+/// "Presentie kan alleen geregistreerd worden voor lessen die bezig of afgelopen zijn."
+/// Het check-in venster opent 15 minuten vóór aanvang en sluit aan het einde van de les;
+/// de zichtbaarheid van de check-in knoppen/meldingen volgt daaruit.
+/// </summary>
+[Trait("UserStory", "US-I03")]
+[Trait("Rol", "Instructeur")]
+public class CheckInWindowRulesTests
+{
+    private static readonly DateTime Now = BookingRulesTestTime.Now;
 
     // ── Check-in venster: 15 minuten voor aanvang tot einde les ──────────────
 
@@ -135,36 +236,6 @@ public class BookingRulesTests
         var start = Now.AddMinutes(-60);
         var end   = Now;   // einde is nu
         Assert.False(BookingRules.IsCheckInWindowOpen(start, end, Now));
-    }
-
-    // ── ShowReserveButton ────────────────────────────────────────────────────
-
-    [Fact]
-    public void ShowReserveButton_AlleVoorwaardenOk_IsTrue()
-    {
-        Assert.True(BookingRules.ShowReserveButton(
-            isReserved: false, isTooFarInFuture: false, isLessonStartedOrPast: false));
-    }
-
-    [Fact]
-    public void ShowReserveButton_AlIngeschreven_IsFalse()
-    {
-        Assert.False(BookingRules.ShowReserveButton(
-            isReserved: true, isTooFarInFuture: false, isLessonStartedOrPast: false));
-    }
-
-    [Fact]
-    public void ShowReserveButton_TooFarInFuture_IsFalse()
-    {
-        Assert.False(BookingRules.ShowReserveButton(
-            isReserved: false, isTooFarInFuture: true, isLessonStartedOrPast: false));
-    }
-
-    [Fact]
-    public void ShowReserveButton_LesAlGestart_IsFalse()
-    {
-        Assert.False(BookingRules.ShowReserveButton(
-            isReserved: false, isTooFarInFuture: false, isLessonStartedOrPast: true));
     }
 
     // ── ShowCheckInSection / ShowCheckedInBadge ───────────────────────────────
@@ -228,33 +299,6 @@ public class BookingRulesTests
     public void ShowLessonEndedMessage_NaAfloop_WelIngecheckt_IsFalse()
         => Assert.False(BookingRules.ShowLessonEndedMessage(
                isReserved: true, isCheckedIn: true, isLessonEnded: true));
-
-    // ── ShowExpiredMessage ────────────────────────────────────────────────────
-
-    [Fact]
-    public void ShowExpiredMessage_LesVerlopenEnNietIngeschreven_IsTrue()
-        => Assert.True(BookingRules.ShowExpiredMessage(isReserved: false, isLessonStartedOrPast: true));
-
-    [Fact]
-    public void ShowExpiredMessage_IngeschrevenVoorVerlopen_IsFalse()
-        => Assert.False(BookingRules.ShowExpiredMessage(isReserved: true, isLessonStartedOrPast: true));
-
-    // ── ShowCancellationDeadlineWarning ───────────────────────────────────────
-
-    [Fact]
-    public void ShowCancellationWarning_IngeschrevenEnDeadlineVerlopen_IsTrue()
-        => Assert.True(BookingRules.ShowCancellationDeadlineWarning(
-               isReserved: true, isCancellationDeadlinePassed: true));
-
-    [Fact]
-    public void ShowCancellationWarning_NietIngeschreven_IsFalse()
-        => Assert.False(BookingRules.ShowCancellationDeadlineWarning(
-               isReserved: false, isCancellationDeadlinePassed: true));
-
-    [Fact]
-    public void ShowCancellationWarning_DeadlineNietVerlopen_IsFalse()
-        => Assert.False(BookingRules.ShowCancellationDeadlineWarning(
-               isReserved: true, isCancellationDeadlinePassed: false));
 }
 
 /// <summary>

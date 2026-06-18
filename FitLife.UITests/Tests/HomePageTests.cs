@@ -1,10 +1,13 @@
 namespace FitLife.UITests.Tests;
 
 /// <summary>
-/// UI tests for the HomePage.
+/// Cross-cutting — Home/dashboard navigatie.
+/// De homepage is de toegangspoort tot de stories: de ledentegels leiden naar het
+/// rooster (US-L01), reserveringen (US-L05), profiel (US-L06) en abonnement (US-L06).
 /// Each test navigates back to the Home page before running (via GoToHomePage)
 /// so tests are independent even though they share the same app session.
 /// </summary>
+[Trait("UserStory", "Cross-cutting")]
 [Collection(UITestCollection.Name)]
 public sealed class HomePageTests(AppiumFixture fixture)
 {
@@ -116,6 +119,7 @@ public sealed class HomePageTests(AppiumFixture fixture)
     // ── Navigation ────────────────────────────────────────────────────────────
 
     [Fact]
+    [Trait("UserStory", "US-L01")]
     public void HomePage_TikOpRoosterTegel_NavigeertNaarWeekPagina()
     {
         _fixture.GoToHomePage();
@@ -134,6 +138,7 @@ public sealed class HomePageTests(AppiumFixture fixture)
     }
 
     [Fact]
+    [Trait("UserStory", "US-L06")]
     public void HomePage_TikOpProfielTegel_NavigeertNaarProfielPagina()
     {
         _fixture.GoToHomePage();

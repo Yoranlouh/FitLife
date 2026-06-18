@@ -3,9 +3,22 @@ using FitLife.Maui.Services;
 namespace FitLife.Tests.Attendance;
 
 /// <summary>
-/// Tests for MockAttendanceService — the in-memory check-in implementation
-/// used as a stand-in for real RFID and GPS check-in during development.
+/// US-I03 — Presentie registreren (Instructeur, Could have).
+/// "Als instructeur wil ik per deelnemer kunnen aangeven of hij aanwezig was,
+///  zodat presentie wordt bijgehouden."
+///
+/// De presentie wordt in deze app vastgelegd via een check-in per (les, deelnemer)
+/// — RFID-scan of GPS-detectie. MockAttendanceService is de in-memory implementatie
+/// hiervan tijdens ontwikkeling.
+///
+/// Acceptatiecriteria gedekt:
+///   • Per deelnemer kan aanwezigheid worden vastgelegd        (CheckIn_* → IsCheckedIn true).
+///   • De presentie wordt opgeslagen en is later terug te zien (IsCheckedIn na CheckIn).
+/// Het criterium "alleen voor lessen die bezig of afgelopen zijn" wordt afgedwongen
+/// door het check-in-venster in BookingRules (US-I03, IsCheckInWindowOpen).
 /// </summary>
+[Trait("UserStory", "US-I03")]
+[Trait("Rol", "Instructeur")]
 public class AttendanceServiceTests
 {
     // ── IsCheckedIn: beginstatus ──────────────────────────────────────────────

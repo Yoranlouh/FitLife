@@ -1,10 +1,14 @@
 namespace FitLife.UITests.Tests;
 
 /// <summary>
-/// UI tests for ProfilePage.
+/// US-L06 — Abonnement en credits inzien (Lid, Should have).
+/// UI-test voor ProfilePage: abonnementsnaam en het actuele aantal credits zijn
+/// zichtbaar. Bevat ook de knoppen voor profielfoto (US-L07) en Mijn lessen (US-L05).
 /// Navigation path: Home → tap Profiel tile → ProfilePage.
 /// The mock API returns a Rookie subscriber with 9 credits.
 /// </summary>
+[Trait("UserStory", "US-L06")]
+[Trait("Rol", "Lid")]
 [Collection(UITestCollection.Name)]
 public sealed class ProfilePageTests(AppiumFixture fixture)
 {
@@ -79,6 +83,7 @@ public sealed class ProfilePageTests(AppiumFixture fixture)
     // ── Action buttons ────────────────────────────────────────────────────────
 
     [Fact]
+    [Trait("UserStory", "US-L07")]
     public void ProfielPagina_FotoWijzigenKnop_IsZichtbaar()
     {
         var page = NavigateToProfilePage();
@@ -97,6 +102,7 @@ public sealed class ProfilePageTests(AppiumFixture fixture)
     }
 
     [Fact]
+    [Trait("UserStory", "US-L05")]
     public void ProfielPagina_MijnLessenKnop_IsZichtbaar()
     {
         var page = NavigateToProfilePage();

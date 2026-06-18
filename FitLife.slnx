@@ -1,4 +1,8 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="README.md" />
+    <File Path="compose.yaml" />
+  </Folder>
   <Project Path="FitLife.Domain/FitLife.Domain.csproj" />
   <Project Path="FitLife.Application/FitLife.Application.csproj" />
   <Project Path="FitLife.Infrastructure/FitLife.Infrastructure.csproj" />

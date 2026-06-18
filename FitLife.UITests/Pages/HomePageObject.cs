@@ -7,7 +7,6 @@ public sealed class HomePageObject(WindowsDriver driver)
     private const string WelcomeId           = "HomeWelcomeLabel";
     private const string HamburgerBtnId      = "HomeHamburgerBtn";
     private const string NotificationBellId  = "HomeNotificationBell";
-    private const string MemberTilesGridId   = "HomeMemberTilesGrid";
     private const string TileScheduleId      = "HomeTileSchedule";
     private const string TileReservationsId  = "HomeTileReservations";
     private const string TileProfileId       = "HomeTileProfile";
@@ -33,7 +32,11 @@ public sealed class HomePageObject(WindowsDriver driver)
     public AppiumElement WelcomeLabel     => driver.FindElement(MobileBy.AccessibilityId(WelcomeId));
     public AppiumElement HamburgerButton  => driver.FindElement(MobileBy.AccessibilityId(HamburgerBtnId));
     public AppiumElement NotificationBell => driver.FindElement(MobileBy.AccessibilityId(NotificationBellId));
-    public AppiumElement MemberTilesGrid  => driver.FindElement(MobileBy.AccessibilityId(MemberTilesGridId));
+    // Note: the tappable tiles are Borders with only a TapGestureRecognizer, which WinUI does
+    // not expose to UI Automation. The AutomationIds therefore live on the inner Labels, which
+    // do surface; tapping a Label fires the parent Border's gesture. The member-tiles "grid"
+    // likewise has no peer, so its visibility is represented by the (visible) schedule tile.
+    public AppiumElement MemberTilesGrid  => driver.FindElement(MobileBy.AccessibilityId(TileScheduleId));
     public AppiumElement TileSchedule     => driver.FindElement(MobileBy.AccessibilityId(TileScheduleId));
     public AppiumElement TileReservations => driver.FindElement(MobileBy.AccessibilityId(TileReservationsId));
     public AppiumElement TileProfile      => driver.FindElement(MobileBy.AccessibilityId(TileProfileId));
@@ -41,7 +44,7 @@ public sealed class HomePageObject(WindowsDriver driver)
 
     public bool IsMemberTilesGridVisible()
     {
-        try { return driver.FindElement(MobileBy.AccessibilityId(MemberTilesGridId)).Displayed; }
+        try { return driver.FindElement(MobileBy.AccessibilityId(TileScheduleId)).Displayed; }
         catch (NoSuchElementException) { return false; }
     }
 

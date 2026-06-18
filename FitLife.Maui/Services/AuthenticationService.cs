@@ -100,10 +100,17 @@ public class AuthenticationService : IAuthenticationService
     public string? CurrentUserSubscriptionRenewalDate => _currentUser?.SubscriptionRenewalDate;
     public string? CurrentUserRole               => _currentUser?.Role;
 
-    // Role helpers used by the app to show/hide role-specific UI elements
-    public bool IsAdmin      => string.Equals(_currentUser?.Role, "admin",       StringComparison.OrdinalIgnoreCase);
-    public bool IsInstructor => string.Equals(_currentUser?.Role, "instructor",  StringComparison.OrdinalIgnoreCase);
-    public bool IsMember     => !IsAdmin && !IsInstructor;
+    // Role helpers used by the app to show/hide role-specific UI elements.
+    //
+    // For now an admin has EXACTLY the same capabilities as a trainer: trainers
+    // manage everything themselves (lessons, workouts, participants, members) and
+    // each keeps track of their own work in the web portal. Therefore the "admin"
+    // role is treated as an instructor everywhere in the app — IsInstructor is true
+    // for both "instructor" and "admin", so they see the identical staff view.
+    public bool IsAdmin      => string.Equals(_currentUser?.Role, "admin", StringComparison.OrdinalIgnoreCase);
+    public bool IsInstructor => string.Equals(_currentUser?.Role, "instructor", StringComparison.OrdinalIgnoreCase)
+                             || IsAdmin;
+    public bool IsMember     => !IsInstructor;
 
     // Sends the login credentials to POST /auth/login.
     // On success, stores the response in _currentUser so all session properties become available.

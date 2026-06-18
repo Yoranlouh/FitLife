@@ -3,10 +3,13 @@ using SharedLibrary.DTOs.Responses;
 namespace FitLife.Tests.Calendar;
 
 /// <summary>
-/// Tests for the multi-select lesson popup (MultipleLessonsPopup).
-/// The popup shows a list of lessons for a calendar slot when multiple lessons overlap;
-/// each row shows the lesson name, time, and a green checkmark if the user is booked.
+/// US-L01 — Lesrooster bekijken (Lid, Must have).
+/// Multi-select lessenpopup (MultipleLessonsPopup): toont de lessen van één
+/// kalenderslot wanneer meerdere lessen overlappen. Dekt het criterium
+/// "het overzicht toont per les naam/tijd" en de inschrijvingsstatus (vinkje).
 /// </summary>
+[Trait("UserStory", "US-L01")]
+[Trait("Rol", "Lid")]
 public class PopupLessonDisplayTests
 {
     // ── Vinkje per les in popup ───────────────────────────────────────────────

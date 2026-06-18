@@ -4,6 +4,7 @@
              xmlns:vm="clr-namespace:FitLife.Maui.ViewModels"
              xmlns:h="clr-namespace:FitLife.Maui.Helpers"
              x:Class="FitLife.Maui.Views.MyLessonsPage"
+             x:Name="MyLessonsRoot"
              x:DataType="vm:MyLessonsViewModel"
              Title="{Binding Title}"
              Shell.NavBarIsVisible="False">
@@ -154,7 +155,7 @@
                                         </HorizontalStackLayout>
                                     </HorizontalStackLayout>
                                     <Button Text="{h:Translate MyLessons_Cancel}"
-                                            Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.CancelReservationCommand}"
+                                            Command="{Binding BindingContext.CancelReservationCommand, Source={x:Reference MyLessonsRoot}}"
                                             CommandParameter="{Binding .}"
                                             BackgroundColor="#e50000"
                                             TextColor="White"

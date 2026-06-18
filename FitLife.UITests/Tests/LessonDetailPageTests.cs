@@ -1,11 +1,14 @@
 namespace FitLife.UITests.Tests;
 
 /// <summary>
-/// UI tests for LessonDetailPage.
+/// US-L02 — Les reserveren (Lid, Must have).
+/// UI-test voor LessonDetailPage: een toekomstige, niet-geboekte les toont de
+/// Aanmelden-knop (reserveren) en verbergt de Afmelden-knop. Toont ook lesnaam,
+/// locatie en deelnemersrij (raakt US-L01/US-I02).
 /// Navigation path: Home → WeekPage → tap a lesson block → LessonDetailPage.
-/// The mock API always returns a lesson in the future (not yet booked) so the
-/// Reserve button is the expected primary action.
 /// </summary>
+[Trait("UserStory", "US-L02")]
+[Trait("Rol", "Lid")]
 [Collection(UITestCollection.Name)]
 public sealed class LessonDetailPageTests(AppiumFixture fixture)
 {
@@ -25,18 +28,10 @@ public sealed class LessonDetailPageTests(AppiumFixture fixture)
         week.WaitForPage();
         week.WaitForLoadingComplete();
 
-        // Lesson blocks are placed inside the LessonGrid by code-behind.
-        // We find any interactive element inside that grid (a Border/Button with a name).
-        // If no lessons are displayed, skip via Assert.Skip equivalent (xUnit lacks it
-        // at this level — we fail with a descriptive message).
-        var lessonGrid = _fixture.Driver.FindElement(MobileBy.AccessibilityId("LessonGrid"));
-        var lessonBlocks = lessonGrid.FindElements(By.XPath(".//Group"));
-
-        if (lessonBlocks.Count == 0)
-        {
-            // Fallback: try to click any coloured border inside the grid
-            lessonBlocks = lessonGrid.FindElements(By.XPath(".//Button"));
-        }
+        // Lesson blocks are added to the LessonGrid by code-behind, each tagged with
+        // AutomationId="LessonBlock". We locate them directly by that id, which is far
+        // more robust than guessing the UIA control type via XPath.
+        var lessonBlocks = _fixture.Driver.FindElements(MobileBy.AccessibilityId("LessonBlock"));
 
         Assert.True(lessonBlocks.Count > 0,
             "Er moet minstens één les zichtbaar zijn in de weekweergave om te testen");

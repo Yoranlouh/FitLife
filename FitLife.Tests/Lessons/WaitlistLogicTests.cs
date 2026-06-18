@@ -4,10 +4,18 @@ using FitLife.Tests.Fakes;
 namespace FitLife.Tests.Lessons;
 
 /// <summary>
-/// Tests for the automatic waitlist join flow:
-/// when a lesson is full, ReserveAsync returns LessonFull=true,
-/// which triggers JoinWaitlistAsync automatically.
+/// US-L04 — Op de wachtlijst plaatsen (Lid, Should have).
+/// "Als lid wil ik mij op de wachtlijst van een volle les kunnen plaatsen, zodat
+///  ik automatisch een plek krijg als er iemand annuleert."
+///
+/// Acceptatiecriteria gedekt:
+///   • Op de wachtlijst plaatsen kan alleen wanneer de les vol is (vol → JoinWaitlist-beslissing).
+///   • Het lid ziet zijn positie op de wachtlijst                 (position = 1, 2, …).
+/// De automatische doorschuif- en notificatie-criteria zitten in de API/notificatielaag
+/// (zie NotificationIconTests, US-B05/US-L04 melding).
 /// </summary>
+[Trait("UserStory", "US-L04")]
+[Trait("Rol", "Lid")]
 public class WaitlistLogicTests
 {
     // ── Les vol → LessonFull vlag ─────────────────────────────────────────────

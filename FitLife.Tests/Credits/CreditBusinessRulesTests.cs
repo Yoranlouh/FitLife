@@ -1,32 +1,24 @@
 namespace FitLife.Tests.Credits;
 
+// Tests for the credit business rules implemented in the FitLife.API cancel and
+// reserve endpoints. The rules are expressed as pure functions in CreditCalculator
+// (bottom of this file) so they can be tested without any database or HTTP dependency.
+//
+// Credits raken meerdere user stories, daarom zijn de tests per story gesplitst:
+//   • US-L02 — Les reserveren            (1 credit afschrijven; alleen bij voldoende credits)
+//   • US-L03 — Reservering annuleren      (credit teruggestort, nooit boven maximum)
+//   • US-L06 — Abonnement en credits inzien (maxima per abonnement, onbeperkt-weergave)
+//   • US-B04 — Leden en abonnementen beheren (abonnement bepaalt het aantal credits)
+
 /// <summary>
-/// Tests for the credit business rules implemented in the FitLife.API cancel and reserve endpoints.
-/// The rules are expressed as pure functions in CreditCalculator so they can be tested
-/// without any database or HTTP dependency.
+/// US-L02 — Les reserveren (Lid, Must have).
+/// "Reserveren kan alleen wanneer het lid voldoende credits heeft" en
+/// "bij een succesvolle reservering wordt precies één credit afgeschreven".
 /// </summary>
-public class CreditBusinessRulesTests
+[Trait("UserStory", "US-L02")]
+[Trait("Rol", "Lid")]
+public class ReserveCreditRulesTests
 {
-    // ── MaxCreditsFor: abonnement maxima ──────────────────────────────────────
-
-    [Fact]
-    public void MaxCredits_Rookie_Is9()
-        => Assert.Equal(9, CreditCalculator.MaxCreditsFor("Rookie"));
-
-    [Fact]
-    public void MaxCredits_Intermediate_Is13()
-        => Assert.Equal(13, CreditCalculator.MaxCreditsFor("Intermediate"));
-
-    [Fact]
-    public void MaxCredits_Advanced_Is999_Sentinel()
-        => Assert.Equal(999, CreditCalculator.MaxCreditsFor("Advanced"));
-
-    [Fact]
-    public void MaxCredits_OnbekendType_VallerugOp9()
-        => Assert.Equal(9, CreditCalculator.MaxCreditsFor("Onbekend"));
-
-    // ── Creditverbruik bij inschrijven ────────────────────────────────────────
-
     [Fact]
     public void Inschrijven_TrektEenCreditAf()
         => Assert.Equal(12, CreditCalculator.AfterReserve(currentCredits: 13));
@@ -55,8 +47,32 @@ public class CreditBusinessRulesTests
     public void CanReserve_Advanced_Sentinel_IsTrue()
         => Assert.True(CreditCalculator.CanReserve(999));
 
-    // ── Creditteruggave bij annuleren (credit_used = true) ────────────────────
+    [Fact]
+    public void Inschrijven_NaAlCreditsGebruikt_IsNietMogelijk()
+    {
+        // Na gebruik van alle 9 Rookie-credits kan de gebruiker niet meer boeken
+        Assert.False(CreditCalculator.CanReserve(credits: 0));
+    }
 
+    [Fact]
+    public void Inschrijven_ZolangCreditsOver_IsMogelijk()
+    {
+        Assert.True(CreditCalculator.CanReserve(1));
+        Assert.True(CreditCalculator.CanReserve(9));
+        Assert.True(CreditCalculator.CanReserve(13));
+    }
+}
+
+/// <summary>
+/// US-L03 — Reservering annuleren (Lid, Must have).
+/// "Bij annulering binnen de termijn wordt de credit teruggestort."
+/// De teruggave mag het abonnementsmaximum nooit overschrijden, en een
+/// admin-toegevoegde reservering (credit_used = false) geeft geen credit terug.
+/// </summary>
+[Trait("UserStory", "US-L03")]
+[Trait("Rol", "Lid")]
+public class CancelCreditRulesTests
+{
     [Fact]
     public void Annuleren_MetCreditUsed_GeeftEenCreditTerug()
         => Assert.Equal(6, CreditCalculator.AfterCancel(currentCredits: 5, "Intermediate", creditUsed: true));
@@ -64,8 +80,6 @@ public class CreditBusinessRulesTests
     [Fact]
     public void Annuleren_ZonderCreditUsed_GeeftGeenCreditTerug()
         => Assert.Equal(5, CreditCalculator.AfterCancel(currentCredits: 5, "Intermediate", creditUsed: false));
-
-    // ── Maximum credits per abonnement: nooit overschrijden ───────────────────
 
     [Fact]
     public void Annuleren_Rookie_OpMaximum_BlijftOp9()
@@ -91,8 +105,6 @@ public class CreditBusinessRulesTests
     public void Annuleren_Advanced_OndeSentinel_KlapmtBijSentinel()
         // Hypothetisch: als Advanced op 998 staat door een edge case → klamt bij 999
         => Assert.Equal(999, CreditCalculator.AfterCancel(currentCredits: 998, "Advanced", creditUsed: true));
-
-    // ── Gebruiker mag nooit meer credits terugkrijgen dan eerder verbruikt ─────
 
     [Fact]
     public void AdminToegevoegdeReservering_BijAnnuleren_GeenCreditTerug()
@@ -122,8 +134,32 @@ public class CreditBusinessRulesTests
         int creditsAfter = CreditCalculator.AfterCancel(max, type, creditUsed: true);
         Assert.True(creditsAfter <= max, $"Credits ({creditsAfter}) mag maximum ({max}) niet overschrijden");
     }
+}
 
-    // ── Beschikbare credits berekenen (display logica) ────────────────────────
+/// <summary>
+/// US-L06 — Abonnement en credits inzien (Lid, Should have).
+/// "Het actuele aantal beschikbare credits wordt getoond" en het abonnementstype
+/// bepaalt het maximum (Advanced = onbeperkt).
+/// </summary>
+[Trait("UserStory", "US-L06")]
+[Trait("Rol", "Lid")]
+public class CreditDisplayRulesTests
+{
+    [Fact]
+    public void MaxCredits_Rookie_Is9()
+        => Assert.Equal(9, CreditCalculator.MaxCreditsFor("Rookie"));
+
+    [Fact]
+    public void MaxCredits_Intermediate_Is13()
+        => Assert.Equal(13, CreditCalculator.MaxCreditsFor("Intermediate"));
+
+    [Fact]
+    public void MaxCredits_Advanced_Is999_Sentinel()
+        => Assert.Equal(999, CreditCalculator.MaxCreditsFor("Advanced"));
+
+    [Fact]
+    public void MaxCredits_OnbekendType_VallerugOp9()
+        => Assert.Equal(9, CreditCalculator.MaxCreditsFor("Onbekend"));
 
     [Fact]
     public void CreditsDisplay_Rookiemet5Credits_Toont5VanMax9()
@@ -145,22 +181,29 @@ public class CreditBusinessRulesTests
     [Fact]
     public void CreditsDisplay_IntermediateAbonnement_IsNietOnbeperkt()
         => Assert.False(CreditCalculator.IsUnlimited("Intermediate"));
+}
 
-    // ── Gebruiker mag niet meer lessen boeken dan toegestaan ──────────────────
+/// <summary>
+/// US-B04 — Leden en abonnementen beheren (Beheerder, Must have).
+/// "Het abonnement bepaalt het aantal credits dat een lid ontvangt."
+/// Het toegekende maximum volgt rechtstreeks uit het gekoppelde abonnementstype.
+/// </summary>
+[Trait("UserStory", "US-B04")]
+[Trait("Rol", "Beheerder")]
+public class SubscriptionCreditAllotmentTests
+{
+    [Theory]
+    [InlineData("Rookie", 9)]
+    [InlineData("Intermediate", 13)]
+    [InlineData("Advanced", 999)]
+    public void AbonnementBepaaltAantalCredits(string subscriptionType, int expectedMax)
+        => Assert.Equal(expectedMax, CreditCalculator.MaxCreditsFor(subscriptionType));
 
     [Fact]
-    public void Inschrijven_NaAlCreditsGebruikt_IsNietMogelijk()
+    public void HogerAbonnement_GeeftMeerCredits()
     {
-        // Na gebruik van alle 9 Rookie-credits kan de gebruiker niet meer boeken
-        Assert.False(CreditCalculator.CanReserve(credits: 0));
-    }
-
-    [Fact]
-    public void Inschrijven_ZolangCreditsOver_IsMogelijk()
-    {
-        Assert.True(CreditCalculator.CanReserve(1));
-        Assert.True(CreditCalculator.CanReserve(9));
-        Assert.True(CreditCalculator.CanReserve(13));
+        Assert.True(CreditCalculator.MaxCreditsFor("Intermediate") > CreditCalculator.MaxCreditsFor("Rookie"));
+        Assert.True(CreditCalculator.MaxCreditsFor("Advanced")     > CreditCalculator.MaxCreditsFor("Intermediate"));
     }
 }
 

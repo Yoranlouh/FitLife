@@ -23,12 +23,12 @@ public partial class ManageLessonViewModel : BaseViewModel
     [ObservableProperty] private TimeSpan _startTime      = new(9, 0, 0);
     [ObservableProperty] private TimeSpan _endTime        = new(10, 0, 0);
 
-    [ObservableProperty] private int      _maxParticipants = 0;
     [ObservableProperty] private string   _statusMessage   = string.Empty;
 
-    // True when the logged-in user is an admin (can choose any instructor);
-    // false for instructors (auto-assigned to themselves)
-    [ObservableProperty] private bool     _isAdmin;
+    // True for staff (trainer or admin) who may choose any instructor for the lesson.
+    // An admin has exactly the same function as a trainer, so both can assign instructors;
+    // the logged-in user is pre-selected as a sensible default but can be changed.
+    [ObservableProperty] private bool     _canAssignInstructor;
     [ObservableProperty] private string   _addMemberInput  = string.Empty;
     [ObservableProperty] private string   _saveButtonText  = string.Empty;
 
@@ -63,7 +63,7 @@ public partial class ManageLessonViewModel : BaseViewModel
     {
         _lessonManagementService = lessonManagementService;
         _authService             = authService;
-        IsAdmin                  = authService.IsAdmin;
+        CanAssignInstructor      = authService.IsInstructor;   // admin == trainer: alle staf mag kiezen
         Title                    = Translator.T("Manage_CreateTitle");
         SaveButtonText           = Translator.T("Manage_SaveCreate");
     }
@@ -110,8 +110,9 @@ public partial class ManageLessonViewModel : BaseViewModel
             Instructors.Clear();
             foreach (var i in instructors) Instructors.Add(i);
 
-            // Trainers (non-admins) are auto-assigned as the instructor for the lesson
-            if (!IsAdmin && _authService.CurrentUserId.HasValue)
+            // Pre-select the logged-in user as the default instructor (create mode only,
+            // when nothing is selected yet). All staff can still pick a different instructor.
+            if (!IsEditMode && SelectedInstructor is null && _authService.CurrentUserId.HasValue)
             {
                 SelectedInstructor = Instructors.FirstOrDefault(i => i.Id == _authService.CurrentUserId.Value)
                                      ?? Instructors.FirstOrDefault();
@@ -159,7 +160,7 @@ public partial class ManageLessonViewModel : BaseViewModel
             SelectedLocation = Locations.FirstOrDefault(l => l.Name == chosen);
     }
 
-    // Shows an ActionSheet listing all instructors (admin-only — trainers see a read-only field).
+    // Shows an ActionSheet listing all instructors. Available to all staff (trainer + admin).
     [RelayCommand]
     private async Task SelectInstructor()
     {
@@ -188,7 +189,7 @@ public partial class ManageLessonViewModel : BaseViewModel
         {
             StartTime       = StartDate.Date + StartTime,
             EndTime         = StartDate.Date + EndTime,
-            MaxParticipants = MaxParticipants,
+            MaxParticipants = 0,
             WorkoutId       = SelectedWorkout.Id,
             InstructorId    = SelectedInstructor.Id,
             LocationId      = SelectedLocation.Id

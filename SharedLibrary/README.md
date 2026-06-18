@@ -1,6 +1,6 @@
 ﻿# SharedLibrary
 
-A shared .NET library containing common models and DTOs for the Cine.NET project.
+A shared .NET library containing common models and DTOs for the FitLife project.
 
 ## Structure
 

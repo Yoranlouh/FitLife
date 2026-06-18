@@ -3,10 +3,12 @@ using FitLife.Tests.Fakes;
 namespace FitLife.Tests.Translations;
 
 /// <summary>
-/// Tests for the translation lookup logic.
-/// Uses FakeTranslator which mirrors the production Translator's key-lookup and
-/// fallback behaviour without any MAUI Preferences dependency.
+/// Cross-cutting — Meertaligheid (NL/EN).
+/// Niet gekoppeld aan één user story; ondersteunt alle stories door de UI-teksten
+/// runtime te vertalen. Uses FakeTranslator which mirrors the production Translator's
+/// key-lookup and fallback behaviour without any MAUI Preferences dependency.
 /// </summary>
+[Trait("UserStory", "Cross-cutting")]
 public class TranslatorTests
 {
     // ── Standaardtaal: Nederlands ─────────────────────────────────────────────

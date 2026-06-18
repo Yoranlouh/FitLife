@@ -120,7 +120,11 @@
                 </FlexLayout>
 
                 <!-- Grid Body - Time column + 7 equal day columns -->
+                <!-- AutomationId is nodig zodat UI-tests (Appium) het rooster en de
+                     dynamisch toegevoegde lesblokken kunnen vinden; x:Name alleen
+                     wordt door MAUI niet als UIA-AutomationId weergegeven. -->
                 <Grid x:Name="LessonGrid"
+                      AutomationId="LessonGrid"
                       Grid.Row="1"
                       Grid.ColumnSpan="2"
                       ColumnDefinitions="50,*,*,*,*,*,*,*"

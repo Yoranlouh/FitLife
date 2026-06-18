@@ -37,6 +37,7 @@
     <Compile Include="..\FitLife.Maui\Services\ReservationService.cs"      Link="MauiServices\ReservationService.cs" />
     <Compile Include="..\FitLife.Maui\Services\LessonService.cs"           Link="MauiServices\LessonService.cs" />
     <Compile Include="..\FitLife.Maui\Services\LessonManagementService.cs" Link="MauiServices\LessonManagementService.cs" />
+    <Compile Include="..\FitLife.Maui\Services\ParticipantService.cs"       Link="MauiServices\ParticipantService.cs" />
   </ItemGroup>
 
 </Project>

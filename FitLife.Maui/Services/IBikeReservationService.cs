@@ -1,12 +1,23 @@
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace FitLife.Maui.Services;
 
 /// <summary>
 /// Represents a single bike in the spinning room (4 rows × 4 bikes = 16 total).
 /// </summary>
-public class BikeItem
+/// <remarks>
+/// This is an <see cref="ObservableObject"/> on purpose: the bike grid is updated
+/// <b>in place</b> after a selection (see <c>LessonDetailViewModel.LoadBikesAsync</c>)
+/// instead of clearing and rebuilding the backing collection. Rebuilding the
+/// CollectionView's ItemsSource from inside a tapped item's command crashes the
+/// native list renderer (the tapped button is destroyed mid-gesture). Keeping the
+/// 16 items stable and only mutating their state avoids that entirely — which is
+/// why <see cref="IsAvailable"/> and <see cref="IsSelectedByCurrentUser"/> must
+/// raise change notifications for the computed colours below.
+/// </remarks>
+public partial class BikeItem : ObservableObject
 {
     [JsonPropertyName("rowNumber")]
     public int RowNumber { get; set; }
@@ -14,27 +25,51 @@ public class BikeItem
     [JsonPropertyName("bikeNumber")]
     public int BikeNumber { get; set; }
 
-    [JsonPropertyName("isAvailable")]
-    public bool IsAvailable { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BackgroundColor))]
+    [NotifyPropertyChangedFor(nameof(TextColor))]
+    [NotifyPropertyChangedFor(nameof(StrokeColor))]
+    [NotifyPropertyChangedFor(nameof(StrokeThickness))]
+    [property: JsonPropertyName("isAvailable")]
+    private bool _isAvailable;
 
-    [JsonPropertyName("isSelectedByCurrentUser")]
-    public bool IsSelectedByCurrentUser { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BackgroundColor))]
+    [NotifyPropertyChangedFor(nameof(TextColor))]
+    [NotifyPropertyChangedFor(nameof(StrokeColor))]
+    [NotifyPropertyChangedFor(nameof(StrokeThickness))]
+    [property: JsonPropertyName("isSelectedByCurrentUser")]
+    private bool _isSelectedByCurrentUser;
 
     // Sequential number shown on the button (1–16), row-major order
+    [JsonIgnore]
     public string DisplayLabel => ((RowNumber - 1) * 4 + BikeNumber).ToString();
 
     // Visual colours driven by availability state
+    [JsonIgnore]
     public Color BackgroundColor => IsSelectedByCurrentUser
         ? Color.FromArgb("#C5E17A")   // green — own bike
         : IsAvailable
             ? Color.FromArgb("#F5F5F5") // light gray — free
             : Color.FromArgb("#FFCDD2"); // light red — taken
 
+    [JsonIgnore]
     public Color TextColor => IsSelectedByCurrentUser
         ? Color.FromArgb("#1A1A1A")
         : IsAvailable
             ? Color.FromArgb("#333333")
             : Color.FromArgb("#B71C1C");
+
+    // Border emphasises the user's own selected bike so it stands out from free/taken seats
+    [JsonIgnore]
+    public Color StrokeColor => IsSelectedByCurrentUser
+        ? Color.FromArgb("#2E7D32")   // strong green outline — own bike
+        : IsAvailable
+            ? Color.FromArgb("#CCCCCC") // neutral gray — free
+            : Color.FromArgb("#E59A9A"); // muted red — taken
+
+    [JsonIgnore]
+    public double StrokeThickness => IsSelectedByCurrentUser ? 2.5 : 1;
 }
 
 /// <summary>Result returned by bike reservation API calls.</summary>

@@ -1,9 +1,13 @@
 namespace FitLife.UITests.Tests;
 
 /// <summary>
-/// UI tests for the WeekPage (calendar view).
+/// US-L01 — Lesrooster bekijken (Lid, Must have).
+/// UI-test voor de WeekPage (kalenderweergave): het dag-/weekoverzicht is zichtbaar,
+/// laadt asynchroon (WaitForLoadingComplete) en is per week te navigeren.
 /// Navigates from the Home page via the Rooster tile before each test.
 /// </summary>
+[Trait("UserStory", "US-L01")]
+[Trait("Rol", "Lid")]
 [Collection(UITestCollection.Name)]
 public sealed class WeekPageTests(AppiumFixture fixture)
 {

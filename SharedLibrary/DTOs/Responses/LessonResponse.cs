@@ -36,6 +36,9 @@ namespace SharedLibrary.DTOs.Responses
         // True when the current user already has an active reservation for this lesson
         public bool     IsBooked     { get; set; }
 
+        // True when the current user is on the waitlist for this lesson
+        public bool     IsOnWaitlist { get; set; }
+
         // Hex colour string (e.g. "#5B6636") used to tint lesson cards in the schedule UI
         public string   WorkoutColor { get; set; } = "#5B6636";
     }

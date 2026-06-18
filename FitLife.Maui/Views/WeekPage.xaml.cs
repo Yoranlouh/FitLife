@@ -24,14 +24,7 @@ public partial class WeekPage
         _viewModel = viewModel;
         _viewModel.Lessons.CollectionChanged += OnLessonsCollectionChanged;
 	}
-
-    // Debounce-token voor grid-herbouw. Eén lessen-load veroorzaakt 1 Clear + N Adds.
-    // Die changes komen NIET als één atomair main-thread-blok binnen (bewezen via logcat:
-    // tussen elke Add draait de herbouw al), dus een simpele "pending"-vlag coalesceert niet
-    // en elke Add triggert een volledige UpdateLessonGrid → de load wordt O(N²) en de
-    // UI-thread bevriest (ANR). Elke change verhoogt de generatie en plant een uitgestelde
-    // herbouw; alleen de laatst geplande herbouw van een burst draait, dus de grid wordt
-    // precies één keer per load opgebouwd — dezelfde granulariteit als een CollectionView.
+    
     private int _gridUpdateGeneration;
 
     private void OnLessonsCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -179,6 +172,7 @@ public partial class WeekPage
                 // Bereken totaal aantal beschikbare plekken
                 int totalAvailableSpots = lessonsInSlot.Sum(l => Math.Max(0, l.MaxParticipants - l.CurrentParticipantCount));
                 bool isAnyBooked = lessonsInSlot.Any(l => l.IsBooked);
+                bool isAnyOnWaitlist = lessonsInSlot.Any(l => l.IsOnWaitlist);
 
                 var border = new Border
                 {
@@ -238,6 +232,21 @@ public partial class WeekPage
                         VerticalTextAlignment = TextAlignment.Center
                     };
                 }
+                else if (isAnyOnWaitlist)
+                {
+                    // Toon W: gebruiker staat op de wachtlijst voor minstens één les in dit slot
+                    circle.Content = new Label
+                    {
+                        Text = "W",
+                        TextColor = Colors.Black,
+                        FontSize = 18,
+                        FontAttributes = FontAttributes.Bold,
+                        HorizontalOptions = LayoutOptions.Center,
+                        VerticalOptions = LayoutOptions.Center,
+                        HorizontalTextAlignment = TextAlignment.Center,
+                        VerticalTextAlignment = TextAlignment.Center
+                    };
+                }
                 else
                 {
                     // Toon totaal aantal plekken
@@ -253,6 +262,11 @@ public partial class WeekPage
                         VerticalTextAlignment = TextAlignment.Center
                     };
                 }
+
+                // AutomationId op de (zichtbare) cirkel-Label zodat UI-tests een lesblok kunnen
+                // vinden en aantikken; de Border zelf krijgt in WinUI geen automation-peer.
+                if (circle.Content is Label circleLabel)
+                    circleLabel.AutomationId = "LessonBlock";
 
                 cellGrid.Children.Add(circleContainer);
                 circleContainer.Children.Add(circle);
@@ -302,11 +316,7 @@ public partial class WeekPage
         }
     }
 
-    // Splits a slot cell into proportional colour stripes for overlapping lessons.
-    // Uses BoxViews in a star-sized Grid instead of Polygon shapes: MAUI Shape elements
-    // with Aspect=Stretch.Fill and no fixed size enter a measure/arrange loop when placed
-    // in a star-width cell inside a ScrollView, which freezes the UI thread and prevents
-    // the grid from ever rendering. BoxViews have a determinate size and lay out cheaply.
+    // Overlappende lessen delen een tijdslot in de grid met split color vakje
     private void AddDiagonalBackground(Grid grid, List<Color> colors)
     {
         if (colors.Count < 2) return;
@@ -325,7 +335,7 @@ public partial class WeekPage
         grid.Children.Add(stripeGrid);
     }
 
-    // Delegates to the central WorkoutColorHelper so all views use one source for color resolution.
+    // WorkoutColorHelper
     private static Color GetWorkoutColor(string? workoutColor)
         => WorkoutColorHelper.Resolve(workoutColor);
 

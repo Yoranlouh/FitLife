@@ -4,10 +4,23 @@ using SharedLibrary.DTOs.Responses;
 
 namespace FitLife.Tests.Lessons;
 
-public class LessonManagementServiceTests
-{
-    // ── Lessen ophalen (instructeur) ─────────────────────────────────────────
+// Tests for LessonManagementService. Trainers (and admins — who have exactly the
+// same function as trainers) use this service to manage their own schedule.
+// The tests are split per user story:
+//   • US-I01 — Eigen rooster bekijken          (instructeur ziet eigen lessen)
+//   • US-B01 — Lessen beheren                  (aanmaken, bewerken, verwijderen + capaciteit)
+//   • US-B03 — Instructeurs beheren            (instructeurs koppelbaar via dropdown)
+//   • US-B04 — Leden en abonnementen beheren   (lid handmatig aan les toevoegen)
 
+/// <summary>
+/// US-I01 — Eigen rooster bekijken (Instructeur, Must have).
+/// "Als instructeur wil ik een overzicht van mijn eigen lessen kunnen bekijken."
+/// Alleen de lessen van de opgegeven instructeur worden opgehaald.
+/// </summary>
+[Trait("UserStory", "US-I01")]
+[Trait("Rol", "Instructeur")]
+public class InstructorScheduleTests
+{
     [Fact]
     public async Task GetInstructeurLessen_BijSucces_RetourneertLessen()
     {
@@ -33,7 +46,18 @@ public class LessonManagementServiceTests
 
         Assert.Empty(result);
     }
+}
 
+/// <summary>
+/// US-B01 — Lessen beheren (Beheerder/Trainer, Must have).
+/// "Als beheerder wil ik lessen kunnen aanmaken, bewerken en verwijderen."
+/// Een les vereist workout/instructeur/zaal/tijd; verwijderen wordt geweigerd
+/// zolang er conflicterende reserveringen zijn (HTTP 409 Conflict).
+/// </summary>
+[Trait("UserStory", "US-B01")]
+[Trait("Rol", "Beheerder")]
+public class LessonCrudTests
+{
     // ── Les aanmaken ──────────────────────────────────────────────────────────
 
     [Fact]
@@ -130,32 +154,7 @@ public class LessonManagementServiceTests
         Assert.Contains("Netwerkfout", message);
     }
 
-    // ── Lid toevoegen zonder credit ───────────────────────────────────────────
-
-    [Fact]
-    public async Task LidToevoegen_BijSucces_GeeftSuccesTerug()
-    {
-        var body = new ApiResult { Success = true, Message = "Lid succesvol toegevoegd." };
-        var service = new LessonManagementService(MockHttpMessageHandler.CreateJsonClient(body));
-
-        var (success, _) = await service.AddMemberToLessonAsync(lessonId: 1, userId: 42);
-
-        Assert.True(success);
-    }
-
-    [Fact]
-    public async Task LidToevoegen_LesVolOfAlAangemeld_GeeftMislukteResultaat()
-    {
-        var body = new ApiResult { Success = false, Message = "Dit lid is al aangemeld voor deze les." };
-        var service = new LessonManagementService(MockHttpMessageHandler.CreateJsonClient(body));
-
-        var (success, message) = await service.AddMemberToLessonAsync(lessonId: 1, userId: 42);
-
-        Assert.False(success);
-        Assert.False(string.IsNullOrEmpty(message));
-    }
-
-    // ── Dropdown lijsten ophalen ──────────────────────────────────────────────
+    // ── Dropdown: workouts voor het aanmaken van een les ──────────────────────
 
     [Fact]
     public async Task GetWorkouts_RetourneertItems()
@@ -188,6 +187,92 @@ public class LessonManagementServiceTests
     [InlineData(16, 15, true)]   // 16/15 → overvol (edge case)
     public void LescapaciteitBereikt_DrempelLogica(int current, int max, bool expected)
         => Assert.Equal(expected, LessonCapacityRules.IsAtCapacity(current, max));
+}
+
+/// <summary>
+/// US-B03 — Instructeurs beheren (Beheerder, Should have).
+/// "Een instructeur kan aan een of meerdere lessen gekoppeld worden."
+/// De instructeurs-dropdown levert de koppelbare instructeurs; de zalen-dropdown
+/// (US-B02) levert de koppelbare zalen voor een les.
+/// </summary>
+[Trait("UserStory", "US-B03")]
+[Trait("Rol", "Beheerder")]
+public class InstructorAndLocationDropdownTests
+{
+    [Fact]
+    public async Task GetInstructors_RetourneertKoppelbareInstructeurs()
+    {
+        var body = new[]
+        {
+            new { id = 2, name = "Jan de Trainer", color = (string?)null },
+            new { id = 3, name = "Marie Fietst",   color = (string?)null },
+        };
+        var service = new LessonManagementService(MockHttpMessageHandler.CreateJsonClient(body));
+
+        var result = (await service.GetInstructorsAsync()).ToList();
+
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, i => i.Name == "Jan de Trainer");
+    }
+
+    [Fact]
+    public async Task GetInstructors_BijNetwerkfout_RetourneertLegeReeks()
+    {
+        var service = new LessonManagementService(MockHttpMessageHandler.CreateNetworkErrorClient());
+
+        Assert.Empty(await service.GetInstructorsAsync());
+    }
+
+    // US-B02 — Zalen beheren: een zaal heeft een naam en wordt aan lessen gekoppeld.
+    [Fact]
+    [Trait("UserStory", "US-B02")]
+    public async Task GetLocations_RetourneertKoppelbareZalen()
+    {
+        var body = new[]
+        {
+            new { id = 1, name = "Zaal A",      color = (string?)null },
+            new { id = 2, name = "Fietsenzaal", color = (string?)null },
+        };
+        var service = new LessonManagementService(MockHttpMessageHandler.CreateJsonClient(body));
+
+        var result = (await service.GetLocationsAsync()).ToList();
+
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, l => l.Name == "Zaal A");
+    }
+}
+
+/// <summary>
+/// US-B04 — Leden en abonnementen beheren (Beheerder/Trainer, Must have).
+/// "De beheerder kan een lid toevoegen." Een lid handmatig aan een les toevoegen
+/// gebeurt zonder creditafschrijving; een vol/dubbele toevoeging mislukt netjes.
+/// </summary>
+[Trait("UserStory", "US-B04")]
+[Trait("Rol", "Beheerder")]
+public class AddMemberToLessonTests
+{
+    [Fact]
+    public async Task LidToevoegen_BijSucces_GeeftSuccesTerug()
+    {
+        var body = new ApiResult { Success = true, Message = "Lid succesvol toegevoegd." };
+        var service = new LessonManagementService(MockHttpMessageHandler.CreateJsonClient(body));
+
+        var (success, _) = await service.AddMemberToLessonAsync(lessonId: 1, userId: 42);
+
+        Assert.True(success);
+    }
+
+    [Fact]
+    public async Task LidToevoegen_LesVolOfAlAangemeld_GeeftMislukteResultaat()
+    {
+        var body = new ApiResult { Success = false, Message = "Dit lid is al aangemeld voor deze les." };
+        var service = new LessonManagementService(MockHttpMessageHandler.CreateJsonClient(body));
+
+        var (success, message) = await service.AddMemberToLessonAsync(lessonId: 1, userId: 42);
+
+        Assert.False(success);
+        Assert.False(string.IsNullOrEmpty(message));
+    }
 }
 
 internal static class LessonCapacityRules

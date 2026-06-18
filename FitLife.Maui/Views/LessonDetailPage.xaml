@@ -202,8 +202,9 @@
                         </HorizontalStackLayout>
                     </Border>
 
-                    <!-- 4×4 fietsrooster -->
-                    <CollectionView ItemsSource="{Binding BikeOptions}">
+                    <!-- 4×4 fietsrooster — elk vakje toont het fietsnummer (1 t/m 16) -->
+                    <CollectionView ItemsSource="{Binding BikeOptions}"
+                                    SelectionMode="None">
                         <CollectionView.ItemsLayout>
                             <GridItemsLayout Orientation="Vertical"
                                              Span="4"
@@ -211,27 +212,56 @@
                                              HorizontalItemSpacing="6"/>
                         </CollectionView.ItemsLayout>
                         <CollectionView.ItemTemplate>
-                            <DataTemplate>
+                            <DataTemplate x:DataType="services:BikeItem">
                                 <Border StrokeShape="RoundRectangle 6"
-                                        StrokeThickness="1"
-                                        Stroke="#CCCCCC"
+                                        StrokeThickness="{Binding StrokeThickness}"
+                                        Stroke="{Binding StrokeColor}"
                                         BackgroundColor="{Binding BackgroundColor}"
-                                        Padding="2"
-                                        HeightRequest="46">
+                                        Padding="0"
+                                        HeightRequest="48">
                                     <Button Text="{Binding DisplayLabel}"
                                             TextColor="{Binding TextColor}"
                                             BackgroundColor="Transparent"
-                                            FontSize="11"
+                                            FontSize="16"
                                             FontAttributes="Bold"
                                             IsEnabled="{Binding IsAvailable}"
                                             Command="{Binding BindingContext.SelectBikeCommand, Source={x:Reference LessonDetailRoot}}"
                                             CommandParameter="{Binding .}"
-                                            HeightRequest="40"
-                                            Padding="0"/>
+                                            HeightRequest="46"
+                                            Padding="0"
+                                            AutomationId="{Binding DisplayLabel, StringFormat='BikeCell_{0}'}"/>
                                 </Border>
                             </DataTemplate>
                         </CollectionView.ItemTemplate>
                     </CollectionView>
+
+                    <!-- Legenda: maakt vrij / jouw fiets / bezet visueel duidelijk -->
+                    <HorizontalStackLayout Spacing="14" Margin="0,2,0,0">
+                        <HorizontalStackLayout Spacing="5">
+                            <Border WidthRequest="14" HeightRequest="14"
+                                    BackgroundColor="#F5F5F5" Stroke="#CCCCCC"
+                                    StrokeThickness="1" StrokeShape="RoundRectangle 3"
+                                    VerticalOptions="Center"/>
+                            <Label Text="{h:Translate Spinning_LegendFree}"
+                                   FontSize="11" TextColor="#5B6636" VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+                        <HorizontalStackLayout Spacing="5">
+                            <Border WidthRequest="14" HeightRequest="14"
+                                    BackgroundColor="#C5E17A" Stroke="#2E7D32"
+                                    StrokeThickness="2" StrokeShape="RoundRectangle 3"
+                                    VerticalOptions="Center"/>
+                            <Label Text="{h:Translate Spinning_LegendYours}"
+                                   FontSize="11" TextColor="#5B6636" VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+                        <HorizontalStackLayout Spacing="5">
+                            <Border WidthRequest="14" HeightRequest="14"
+                                    BackgroundColor="#FFCDD2" Stroke="#E59A9A"
+                                    StrokeThickness="1" StrokeShape="RoundRectangle 3"
+                                    VerticalOptions="Center"/>
+                            <Label Text="{h:Translate Spinning_LegendTaken}"
+                                   FontSize="11" TextColor="#5B6636" VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+                    </HorizontalStackLayout>
                 </VerticalStackLayout>
             </Border>
 

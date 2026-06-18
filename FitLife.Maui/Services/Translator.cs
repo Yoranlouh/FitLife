@@ -396,6 +396,9 @@ public sealed class Translator : INotifyPropertyChanged
         ["Spinning_BikeLabel"]       = "Rij {0} - Fiets {1}",
         ["Spinning_BikeTaken"]       = "Bezet",
         ["Spinning_YourBike"]        = "Jouw fiets: {0}",
+        ["Spinning_LegendFree"]      = "Vrij",
+        ["Spinning_LegendYours"]     = "Jouw fiets",
+        ["Spinning_LegendTaken"]     = "Bezet",
 
         // ── Aanwezigheidsregistratie ──
         ["Attendance_SectionTitle"]  = "AANWEZIGHEID",
@@ -738,6 +741,9 @@ public sealed class Translator : INotifyPropertyChanged
         ["Spinning_BikeLabel"]       = "Row {0} - Bike {1}",
         ["Spinning_BikeTaken"]       = "Taken",
         ["Spinning_YourBike"]        = "Your bike: {0}",
+        ["Spinning_LegendFree"]      = "Free",
+        ["Spinning_LegendYours"]     = "Your bike",
+        ["Spinning_LegendTaken"]     = "Taken",
 
         // ── Attendance registration ──
         ["Attendance_SectionTitle"]  = "ATTENDANCE",

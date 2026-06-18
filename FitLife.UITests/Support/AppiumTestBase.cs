@@ -14,6 +14,14 @@ public sealed class AppiumFixture : IDisposable
 
     public AppiumFixture()
     {
+        // 0. Verify the prerequisites up front so failures give an actionable message
+        //    instead of a raw SocketException ("connection refused") on every test.
+        if (!File.Exists(AppiumConfig.AppExePath))
+            throw new InvalidOperationException(
+                $"De MAUI-app is niet gevonden op:\n  {AppiumConfig.AppExePath}\n" +
+                "Bouw eerst de app:\n" +
+                "  dotnet build FitLife.Maui -f net10.0-windows10.0.19041.0 -c Debug");
+
         // 1. Start the mock API before the app touches the network
         _mockServer = new MockApiServer();
 
@@ -23,10 +31,26 @@ public sealed class AppiumFixture : IDisposable
         options.PlatformName   = "Windows";
         options.AutomationName = "Windows";
 
-        Driver = new WindowsDriver(
-            AppiumConfig.AppiumServerUri,
-            options,
-            TimeSpan.FromMilliseconds(AppiumConfig.AppLaunchTimeoutMs));
+        try
+        {
+            Driver = new WindowsDriver(
+                AppiumConfig.AppiumServerUri,
+                options,
+                TimeSpan.FromMilliseconds(AppiumConfig.AppLaunchTimeoutMs));
+        }
+        catch (Exception ex) when (ex is WebDriverException or System.Net.Sockets.SocketException
+                                   || ex.InnerException is System.Net.Sockets.SocketException)
+        {
+            _mockServer.Dispose();
+            throw new InvalidOperationException(
+                $"Kon geen verbinding maken met de Appium-server op {AppiumConfig.AppiumServerUri}.\n" +
+                "De UI-tests vereisen een draaiende Appium-server met de Windows-driver. Start die eerst:\n" +
+                "  1. npm install -g appium\n" +
+                "  2. appium driver install windows\n" +
+                "  3. appium            (laat dit in een aparte terminal draaien)\n" +
+                "Zorg ook dat er geen echte FitLife.API op poort 5000 draait (WireMock bindt die poort).",
+                ex);
+        }
 
         Driver.Manage().Timeouts().ImplicitWait = AppiumConfig.ElementTimeout;
 

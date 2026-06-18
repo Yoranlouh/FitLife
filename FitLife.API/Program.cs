@@ -74,7 +74,25 @@ try
     if (!string.IsNullOrEmpty(migConnStr))
     {
         await using var migConn = new MySqlConnection(migConnStr);
-        await migConn.OpenAsync();
+
+        // docker-compose's 'depends_on' only waits for the 'db' container to start,
+        // not for MySQL to actually be ready to accept connections — on a cold start
+        // the API container can reach this point before MySQL is listening yet.
+        // Without a retry, that single failed OpenAsync would skip ALL migrations
+        // below (incl. bike_reservations) for the lifetime of this API process.
+        const int maxOpenAttempts = 10;
+        for (var attempt = 1; attempt <= maxOpenAttempts; attempt++)
+        {
+            try
+            {
+                await migConn.OpenAsync();
+                break;
+            }
+            catch (MySqlException) when (attempt < maxOpenAttempts)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(3));
+            }
+        }
         const string checkCol = "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='workouts' AND COLUMN_NAME='color'";
         await using var checkCmd = new MySqlCommand(checkCol, migConn);
         if (Convert.ToInt32(await checkCmd.ExecuteScalarAsync()) == 0)
@@ -142,10 +160,10 @@ try
                     id          INT AUTO_INCREMENT PRIMARY KEY,
                     lesson_id   INT NOT NULL,
                     user_id     INT NOT NULL,
-                    row_number  INT NOT NULL,
+                    `row_number` INT NOT NULL,
                     bike_number INT NOT NULL,
                     created_at  DATETIME NOT NULL DEFAULT NOW(),
-                    UNIQUE KEY unique_lesson_bike (lesson_id, row_number, bike_number),
+                    UNIQUE KEY unique_lesson_bike (lesson_id, `row_number`, bike_number),
                     UNIQUE KEY unique_lesson_user (lesson_id, user_id),
                     INDEX idx_bike_res_lesson (lesson_id),
                     INDEX idx_bike_res_user   (user_id)
@@ -580,7 +598,11 @@ app.MapGet("/lessons", async (IConfiguration configuration, int? userId, DateTim
             CASE WHEN @userId > 0 AND EXISTS (
                 SELECT 1 FROM reservations rb
                 WHERE rb.lesson_id = l.id AND rb.member_id = @userId AND rb.is_cancelled = 0
-            ) THEN 1 ELSE 0 END AS is_booked
+            ) THEN 1 ELSE 0 END AS is_booked,
+            CASE WHEN @userId > 0 AND EXISTS (
+                SELECT 1 FROM waitlist_entries wb
+                WHERE wb.lesson_id = l.id AND wb.member_id = @userId
+            ) THEN 1 ELSE 0 END AS is_on_waitlist
         FROM lessons l
         INNER JOIN workouts w ON w.id = l.workout_id
         LEFT JOIN users u ON u.id = l.instructor_id
@@ -612,6 +634,7 @@ app.MapGet("/lessons", async (IConfiguration configuration, int? userId, DateTim
         var lessonId = reader.GetInt32("id");
         var maxParticipants = reader.GetInt32("max_participants");
         bool isBooked = reader.GetInt32("is_booked") == 1;
+        bool isOnWaitlist = reader.GetInt32("is_on_waitlist") == 1;
         int currentCount = reader.GetInt32("current_participants");
         int waitlistCount = reader.GetInt32("waitlist_count");
 
@@ -630,7 +653,8 @@ app.MapGet("/lessons", async (IConfiguration configuration, int? userId, DateTim
             LocationName = reader.GetString("location_name"),
             CurrentParticipantCount = currentCount,
             WaitlistCount = waitlistCount,
-            IsBooked = isBooked
+            IsBooked = isBooked,
+            IsOnWaitlist = isOnWaitlist
         });
     }
 
@@ -984,29 +1008,58 @@ app.MapPost("/lessons/{lessonId:int}/reserve", async (int lessonId, IConfigurati
                 return Results.Ok(new { success = false, lessonFull = true, message = "Les is vol. Je kunt je aanmelden voor de wachtlijst." });
             }
 
-            // Check if user already has a reservation
-            const string checkExistingSql = "SELECT id FROM reservations WHERE lesson_id = @lessonId AND member_id = @userId AND is_cancelled = 0";
+            // Check if user already has a row for this lesson — active OR previously cancelled.
+            // 'reservations' has a UNIQUE KEY on (lesson_id, member_id), so a second plain INSERT
+            // for the same pair (e.g. reserve -> cancel -> reserve again) would violate it and
+            // throw, which the outer catch turned into a 500. Fetch is_cancelled too so a
+            // cancelled row can be revived via UPDATE instead of inserting a duplicate.
+            const string checkExistingSql = "SELECT id, is_cancelled FROM reservations WHERE lesson_id = @lessonId AND member_id = @userId";
             await using var existingCmd = new MySqlCommand(checkExistingSql, connection, transaction);
             existingCmd.Parameters.AddWithValue("@lessonId", lessonId);
             existingCmd.Parameters.AddWithValue("@userId", request.UserId);
-            
-            var existingReservation = await existingCmd.ExecuteScalarAsync();
-            if (existingReservation != null)
+
+            object? existingId = null;
+            bool existingIsCancelled = false;
+            await using (var existingRdr = await existingCmd.ExecuteReaderAsync())
+            {
+                if (await existingRdr.ReadAsync())
+                {
+                    existingId          = existingRdr.GetValue(0);
+                    existingIsCancelled = existingRdr.GetInt32(1) == 1;
+                }
+            }
+
+            if (existingId != null && !existingIsCancelled)
             {
                 await transaction.RollbackAsync();
                 return Results.Ok(new { success = false, message = "Je bent al aangemeld voor deze les." });
             }
 
-            // Create reservation — credit_used=1 so a cancel later refunds exactly 1 credit
-            const string insertReservationSql = """
-                INSERT INTO reservations (lesson_id, member_id, reservation_date, is_cancelled, credit_used)
-                VALUES (@lessonId, @userId, NOW(), 0, 1)
-                """;
-            
-            await using var insertCmd = new MySqlCommand(insertReservationSql, connection, transaction);
-            insertCmd.Parameters.AddWithValue("@lessonId", lessonId);
-            insertCmd.Parameters.AddWithValue("@userId", request.UserId);
-            await insertCmd.ExecuteNonQueryAsync();
+            if (existingId != null && existingIsCancelled)
+            {
+                // Revive the previously cancelled row instead of inserting a new one
+                const string reviveSql = """
+                    UPDATE reservations
+                    SET is_cancelled = 0, credit_used = 1, reservation_date = NOW()
+                    WHERE id = @id
+                    """;
+                await using var reviveCmd = new MySqlCommand(reviveSql, connection, transaction);
+                reviveCmd.Parameters.AddWithValue("@id", existingId);
+                await reviveCmd.ExecuteNonQueryAsync();
+            }
+            else
+            {
+                // Create reservation — credit_used=1 so a cancel later refunds exactly 1 credit
+                const string insertReservationSql = """
+                    INSERT INTO reservations (lesson_id, member_id, reservation_date, is_cancelled, credit_used)
+                    VALUES (@lessonId, @userId, NOW(), 0, 1)
+                    """;
+
+                await using var insertCmd = new MySqlCommand(insertReservationSql, connection, transaction);
+                insertCmd.Parameters.AddWithValue("@lessonId", lessonId);
+                insertCmd.Parameters.AddWithValue("@userId", request.UserId);
+                await insertCmd.ExecuteNonQueryAsync();
+            }
 
             // Deduct 1 credit from user
             const string deductCreditSql = "UPDATE users SET credits = credits - 1 WHERE id = @userId";
@@ -1903,7 +1956,7 @@ app.MapGet("/lessons/{lessonId:int}/bikes", async (int lessonId, IConfiguration 
     await using var connection = new MySqlConnection(connectionString);
     await connection.OpenAsync();
 
-    const string sql = "SELECT row_number, bike_number, user_id FROM bike_reservations WHERE lesson_id = @lessonId";
+    const string sql = "SELECT `row_number`, bike_number, user_id FROM bike_reservations WHERE lesson_id = @lessonId";
     await using var command = new MySqlCommand(sql, connection);
     command.Parameters.AddWithValue("@lessonId", lessonId);
     await using var reader = await command.ExecuteReaderAsync();
@@ -1960,7 +2013,7 @@ app.MapPost("/lessons/{lessonId:int}/bikes", async (int lessonId, IConfiguration
         if (existingId != null)
         {
             // Changing bike — make sure the target isn't already claimed by someone else
-            const string checkBikeSql = "SELECT user_id FROM bike_reservations WHERE lesson_id = @lessonId AND row_number = @row AND bike_number = @bike";
+            const string checkBikeSql = "SELECT user_id FROM bike_reservations WHERE lesson_id = @lessonId AND `row_number` = @row AND bike_number = @bike";
             await using var checkBikeCmd = new MySqlCommand(checkBikeSql, connection);
             checkBikeCmd.Parameters.AddWithValue("@lessonId", lessonId);
             checkBikeCmd.Parameters.AddWithValue("@row",      request.RowNumber);
@@ -1969,7 +2022,7 @@ app.MapPost("/lessons/{lessonId:int}/bikes", async (int lessonId, IConfiguration
             if (takenByObj != null && Convert.ToInt32(takenByObj) != request.UserId)
                 return Results.Ok(new { success = false, message = "Deze fiets is al bezet door een andere gebruiker." });
 
-            const string updateSql = "UPDATE bike_reservations SET row_number = @row, bike_number = @bike WHERE lesson_id = @lessonId AND user_id = @userId";
+            const string updateSql = "UPDATE bike_reservations SET `row_number` = @row, bike_number = @bike WHERE lesson_id = @lessonId AND user_id = @userId";
             await using var updateCmd = new MySqlCommand(updateSql, connection);
             updateCmd.Parameters.AddWithValue("@row",      request.RowNumber);
             updateCmd.Parameters.AddWithValue("@bike",     request.BikeNumber);
@@ -1981,7 +2034,7 @@ app.MapPost("/lessons/{lessonId:int}/bikes", async (int lessonId, IConfiguration
 
         // New bike reservation
         const string insertSql = """
-            INSERT INTO bike_reservations (lesson_id, user_id, row_number, bike_number, created_at)
+            INSERT INTO bike_reservations (lesson_id, user_id, `row_number`, bike_number, created_at)
             VALUES (@lessonId, @userId, @row, @bike, NOW())
             """;
         await using var insertCmd = new MySqlCommand(insertSql, connection);

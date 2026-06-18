@@ -3,10 +3,15 @@ using FitLife.Tests.Fakes;
 namespace FitLife.Tests.Notifications;
 
 /// <summary>
-/// Tests for the notification type → icon and colour mapping, mirroring
-/// AppNotification.TypeIcon and AppNotification.TypeColor from FitLife.Maui.
+/// US-B05 — Notificaties versturen (Beheerder, Could have).
+/// "Leden ontvangen de notificatie in de app." Elk notificatietype (reservering,
+/// wachtlijst, nieuwe workout, annulering, abonnement, presentie) wordt in de
+/// notificatielijst herkenbaar weergegeven met een eigen icoon en kleur.
+/// Raakt ook US-L04 (wachtlijstmelding) en US-L03 (annuleringsmelding).
 /// Tested via TestNotificationTypes to avoid a Microsoft.Maui.Graphics dependency.
 /// </summary>
+[Trait("UserStory", "US-B05")]
+[Trait("Rol", "Beheerder")]
 public class NotificationIconTests
 {
     // ── TypeIcon: elk type heeft een onderscheidend icoon ─────────────────────

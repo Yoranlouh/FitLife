@@ -32,15 +32,18 @@
             </VerticalStackLayout>
             <Grid Grid.Column="2"
                   VerticalOptions="Center"
-                  WidthRequest="44" HeightRequest="44"
-                  AutomationId="HomeNotificationBell">
+                  WidthRequest="44" HeightRequest="44">
                 <Grid.GestureRecognizers>
                     <TapGestureRecognizer Tapped="OnNotificationClicked" />
                 </Grid.GestureRecognizers>
+                <!-- AutomationId staat op de Image (niet op de Grid): een kale Grid met enkel
+                     een TapGestureRecognizer krijgt in WinUI geen automation-peer en is dan
+                     niet vindbaar voor UI-tests. Een tik op de Image triggert dezelfde gesture. -->
                 <Image Source="icon_bell.svg"
                        WidthRequest="26" HeightRequest="26"
                        HorizontalOptions="Center"
-                       VerticalOptions="Center" />
+                       VerticalOptions="Center"
+                       AutomationId="HomeNotificationBell" />
                 <Border IsVisible="{Binding HasUnread}"
                         BackgroundColor="#E53935"
                         StrokeThickness="0"
@@ -87,10 +90,12 @@
                       AutomationId="HomeMemberTilesGrid">
 
                     <!-- Rooster -->
+                    <!-- AutomationId staat op de inner Label (niet op de Border): een Border met
+                         enkel een TapGestureRecognizer krijgt in WinUI geen automation-peer en is
+                         niet vindbaar voor UI-tests. Een tik op de Label triggert de tile-gesture. -->
                     <Border Grid.Row="0" Grid.Column="0"
                             Stroke="{StaticResource MediumGray}" StrokeThickness="0.5"
-                            BackgroundColor="White" HeightRequest="200"
-                            AutomationId="HomeTileSchedule">
+                            BackgroundColor="White" HeightRequest="200">
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Tapped="OnViewLessonsClicked" />
                         </Border.GestureRecognizers>
@@ -98,15 +103,15 @@
                             <Image Source="icon_calendar.svg" WidthRequest="46" HeightRequest="46" HorizontalOptions="Center" />
                             <Label Text="{h:Translate Home_Schedule}"
                                    FontSize="13" TextColor="{StaticResource Black}"
-                                   HorizontalOptions="Center" HorizontalTextAlignment="Center" />
+                                   HorizontalOptions="Center" HorizontalTextAlignment="Center"
+                                   AutomationId="HomeTileSchedule" />
                         </VerticalStackLayout>
                     </Border>
 
                     <!-- Afspraken & reserveringen -->
                     <Border Grid.Row="0" Grid.Column="1"
                             Stroke="{StaticResource MediumGray}" StrokeThickness="0.5"
-                            BackgroundColor="White" HeightRequest="200"
-                            AutomationId="HomeTileReservations">
+                            BackgroundColor="White" HeightRequest="200">
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Tapped="OnReservationsClicked" />
                         </Border.GestureRecognizers>
@@ -114,15 +119,15 @@
                             <Image Source="icon_bookmark.svg" WidthRequest="46" HeightRequest="46" HorizontalOptions="Center" />
                             <Label Text="{h:Translate Home_Reservations}"
                                    FontSize="13" TextColor="{StaticResource Black}"
-                                   HorizontalOptions="Center" HorizontalTextAlignment="Center" />
+                                   HorizontalOptions="Center" HorizontalTextAlignment="Center"
+                                   AutomationId="HomeTileReservations" />
                         </VerticalStackLayout>
                     </Border>
 
                     <!-- Profiel -->
                     <Border Grid.Row="1" Grid.Column="0"
                             Stroke="{StaticResource MediumGray}" StrokeThickness="0.5"
-                            BackgroundColor="White" HeightRequest="200"
-                            AutomationId="HomeTileProfile">
+                            BackgroundColor="White" HeightRequest="200">
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Tapped="OnProfileClicked" />
                         </Border.GestureRecognizers>
@@ -130,15 +135,15 @@
                             <Image Source="icon_profile.svg" WidthRequest="46" HeightRequest="46" HorizontalOptions="Center" />
                             <Label Text="{h:Translate Home_Profile}"
                                    FontSize="13" TextColor="{StaticResource Black}"
-                                   HorizontalOptions="Center" HorizontalTextAlignment="Center" />
+                                   HorizontalOptions="Center" HorizontalTextAlignment="Center"
+                                   AutomationId="HomeTileProfile" />
                         </VerticalStackLayout>
                     </Border>
 
                     <!-- Abonnement -->
                     <Border Grid.Row="1" Grid.Column="1"
                             Stroke="{StaticResource MediumGray}" StrokeThickness="0.5"
-                            BackgroundColor="White" HeightRequest="200"
-                            AutomationId="HomeTileSubscription">
+                            BackgroundColor="White" HeightRequest="200">
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Tapped="OnSubscriptionClicked" />
                         </Border.GestureRecognizers>
@@ -146,12 +151,16 @@
                             <Image Source="icon_payment.svg" WidthRequest="46" HeightRequest="46" HorizontalOptions="Center" />
                             <Label Text="{h:Translate Home_Subscription}"
                                    FontSize="13" TextColor="{StaticResource Black}"
-                                   HorizontalOptions="Center" HorizontalTextAlignment="Center" />
+                                   HorizontalOptions="Center" HorizontalTextAlignment="Center"
+                                   AutomationId="HomeTileSubscription" />
                         </VerticalStackLayout>
                     </Border>
                 </Grid>
 
-                <!-- ==================== TRAINER TILES ==================== -->
+                <!-- ==================== TRAINER / ADMIN TILES ==================== -->
+                <!-- An admin has exactly the same function as a trainer, so IsInstructor
+                     (which is true for both the "instructor" and "admin" roles) drives
+                     this single shared staff view. -->
                 <Grid ColumnDefinitions="*,*"
                       RowDefinitions="Auto,Auto,Auto"
                       IsVisible="{Binding IsInstructor}">
@@ -245,85 +254,6 @@
                                    HorizontalOptions="Center" HorizontalTextAlignment="Center" />
                         </VerticalStackLayout>
                     </Border>
-                </Grid>
-
-                <!-- ==================== ADMIN TILES ==================== -->
-                <Grid ColumnDefinitions="*,*"
-                      RowDefinitions="Auto,Auto,Auto"
-                      IsVisible="{Binding IsAdmin}">
-
-                    <!-- Les Aanmaken -->
-                    <Border Grid.Row="0" Grid.Column="0"
-                            Stroke="{StaticResource MediumGray}" StrokeThickness="0.5"
-                            BackgroundColor="White" HeightRequest="200">
-                        <Border.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnCreateLessonClicked" />
-                        </Border.GestureRecognizers>
-                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="14">
-                            <Image Source="icon_plus.svg" WidthRequest="46" HeightRequest="46" HorizontalOptions="Center" />
-                            <Label Text="{h:Translate Home_CreateLesson}"
-                                   FontSize="13" TextColor="{StaticResource Black}"
-                                   HorizontalOptions="Center" HorizontalTextAlignment="Center" />
-                        </VerticalStackLayout>
-                    </Border>
-
-                    <!-- Lessen Beheer -->
-                    <Border Grid.Row="0" Grid.Column="1"
-                            Stroke="{StaticResource MediumGray}" StrokeThickness="0.5"
-                            BackgroundColor="White" HeightRequest="200">
-                        <Border.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnViewLessonsClicked" />
-                        </Border.GestureRecognizers>
-                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="14">
-                            <Image Source="icon_calendar.svg" WidthRequest="46" HeightRequest="46" HorizontalOptions="Center" />
-                            <Label Text="{h:Translate Home_ManageLessons}"
-                                   FontSize="13" TextColor="{StaticResource Black}"
-                                   HorizontalOptions="Center" HorizontalTextAlignment="Center" />
-                        </VerticalStackLayout>
-                    </Border>
-
-                    <!-- Instructeurs -->
-                    <Border Grid.Row="1" Grid.Column="0"
-                            Stroke="{StaticResource MediumGray}" StrokeThickness="0.5"
-                            BackgroundColor="White" HeightRequest="200">
-                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="14">
-                            <Image Source="icon_badge.svg" WidthRequest="46" HeightRequest="46" HorizontalOptions="Center" />
-                            <Label Text="{h:Translate Home_Instructors}"
-                                   FontSize="13" TextColor="{StaticResource Black}"
-                                   HorizontalOptions="Center" HorizontalTextAlignment="Center" />
-                        </VerticalStackLayout>
-                    </Border>
-
-                    <!-- Leden -->
-                    <Border Grid.Row="1" Grid.Column="1"
-                            Stroke="{StaticResource MediumGray}" StrokeThickness="0.5"
-                            BackgroundColor="White" HeightRequest="200">
-                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="14">
-                            <Image Source="icon_members.svg" WidthRequest="46" HeightRequest="46" HorizontalOptions="Center" />
-                            <Label Text="{h:Translate Home_Members}"
-                                   FontSize="13" TextColor="{StaticResource Black}"
-                                   HorizontalOptions="Center" HorizontalTextAlignment="Center" />
-                        </VerticalStackLayout>
-                    </Border>
-
-                    <!-- Profiel -->
-                    <Border Grid.Row="2" Grid.Column="0"
-                            Stroke="{StaticResource MediumGray}" StrokeThickness="0.5"
-                            BackgroundColor="White" HeightRequest="200">
-                        <Border.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnProfileClicked" />
-                        </Border.GestureRecognizers>
-                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="14">
-                            <Image Source="icon_profile.svg" WidthRequest="46" HeightRequest="46" HorizontalOptions="Center" />
-                            <Label Text="{h:Translate Home_Profile}"
-                                   FontSize="13" TextColor="{StaticResource Black}"
-                                   HorizontalOptions="Center" HorizontalTextAlignment="Center" />
-                        </VerticalStackLayout>
-                    </Border>
-
-                    <Border Grid.Row="2" Grid.Column="1"
-                            Stroke="{StaticResource MediumGray}" StrokeThickness="0.5"
-                            BackgroundColor="{StaticResource LightGray}" HeightRequest="200" />
                 </Grid>
 
                 <BoxView HeightRequest="60" Color="{StaticResource LightGray}" />

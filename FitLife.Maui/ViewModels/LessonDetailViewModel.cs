@@ -86,7 +86,7 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
     [NotifyPropertyChangedFor(nameof(ShowBikeSection))]
     private bool _isSpinningLesson;
 
-    // Shows the full label of the selected bike, e.g. "Jouw fiets: Rij 2 - Fiets 3"
+    // Shows the selected bike's continuous number (1–16), e.g. "Jouw fiets: 8"
     [ObservableProperty]
     private string _selectedBikeDisplay = string.Empty;
 
@@ -554,15 +554,37 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
 
         var bikes = await _bikeReservationService.GetBikesAsync(Lesson.Id, userId.Value);
 
-        BikeOptions.Clear();
-        foreach (var bike in bikes)
-            BikeOptions.Add(bike);
+        // Update the grid IN PLACE rather than Clear()+Add(). The API always returns
+        // exactly 16 bikes in stable row-major order, so item i always maps to the same
+        // seat. Mutating the existing observable items (instead of replacing the whole
+        // collection) keeps the CollectionView's child views — including the button that
+        // just raised this command — alive, which is what prevents the native renderer
+        // crash. Only fall back to a full rebuild if the shapes unexpectedly differ.
+        if (BikeOptions.Count == bikes.Count)
+        {
+            for (int i = 0; i < bikes.Count; i++)
+            {
+                BikeOptions[i].RowNumber               = bikes[i].RowNumber;
+                BikeOptions[i].BikeNumber              = bikes[i].BikeNumber;
+                BikeOptions[i].IsAvailable             = bikes[i].IsAvailable;
+                BikeOptions[i].IsSelectedByCurrentUser = bikes[i].IsSelectedByCurrentUser;
+            }
+        }
+        else
+        {
+            BikeOptions.Clear();
+            foreach (var bike in bikes)
+                BikeOptions.Add(bike);
+        }
 
         var own = bikes.FirstOrDefault(b => b.IsSelectedByCurrentUser);
         if (own != null)
         {
-            SelectedBikeDisplay = Translator.T("Spinning_YourBike",
-                Translator.T("Spinning_BikeLabel", own.RowNumber, own.BikeNumber));
+            // Use the continuous 1–16 number (DisplayLabel) so the badge matches the
+            // tile exactly: tapping tile 8 reads "Jouw fiets: 8". The per-row "Rij x -
+            // Fiets y" wording is deliberately not used — it restarts at 1 each row and
+            // confused the bike numbering.
+            SelectedBikeDisplay = Translator.T("Spinning_YourBike", own.DisplayLabel);
             HasBikeSelected = true;
         }
         else
@@ -577,7 +599,10 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
     [RelayCommand]
     private async Task SelectBike(BikeItem bike)
     {
-        if (Lesson == null || IsBusy || !bike.IsAvailable) return;
+        // bike can be null if the CollectionView hands back a recycled/empty
+        // CommandParameter — guard first so dereferencing it can never crash (the
+        // NullReferenceException that previously took down the page on every tap).
+        if (bike == null || Lesson == null || IsBusy || !bike.IsAvailable) return;
 
         var userId = _authenticationService.CurrentUserId;
         if (userId == null) return;
@@ -589,10 +614,18 @@ public partial class LessonDetailViewModel : BaseViewModel, IQueryAttributable
                 Lesson.Id, userId.Value, bike.RowNumber, bike.BikeNumber);
 
             if (result.Success)
-                await LoadBikesAsync(); // refresh grid to reflect the new selection
+            {
+                // Refresh the grid to reflect the new selection. LoadBikesAsync updates
+                // the existing 16 items in place (no Clear/rebuild), so the button that
+                // raised this command is never torn down mid-tap — the previous source of
+                // the crash. No artificial delay is needed.
+                await LoadBikesAsync();
+            }
             else
+            {
                 await Shell.Current.DisplayAlert(
                     Translator.T("Common_Error"), result.Message, Translator.T("Common_OK"));
+            }
         }
         finally
         {

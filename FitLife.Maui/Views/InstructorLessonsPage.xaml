@@ -5,6 +5,7 @@
              xmlns:responses="clr-namespace:SharedLibrary.DTOs.Responses;assembly=SharedLibrary"
              xmlns:h="clr-namespace:FitLife.Maui.Helpers"
              x:Class="FitLife.Maui.Views.InstructorLessonsPage"
+             x:Name="InstructorLessonsRoot"
              x:DataType="vm:InstructorLessonsViewModel"
              Shell.NavBarIsVisible="False"
              BackgroundColor="White"
@@ -96,7 +97,7 @@
                                 <VerticalStackLayout Grid.Row="0" Grid.Column="1" Grid.RowSpan="4"
                                                      VerticalOptions="Center" Spacing="6">
                                     <Button Text="{h:Translate Instructor_Edit}"
-                                            Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.OpenManageLessonCommand}"
+                                            Command="{Binding BindingContext.OpenManageLessonCommand, Source={x:Reference InstructorLessonsRoot}}"
                                             CommandParameter="{Binding .}"
                                             FontSize="12"
                                             BackgroundColor="#5B6636"
@@ -105,7 +106,7 @@
                                             Padding="10,5"
                                             HeightRequest="36" />
                                     <Button Text="{h:Translate Instructor_Delete}"
-                                            Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DeleteLessonCommand}"
+                                            Command="{Binding BindingContext.DeleteLessonCommand, Source={x:Reference InstructorLessonsRoot}}"
                                             CommandParameter="{Binding .}"
                                             FontSize="12"
                                             BackgroundColor="#D32F2F"

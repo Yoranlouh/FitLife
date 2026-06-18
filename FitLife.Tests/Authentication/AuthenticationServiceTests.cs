@@ -3,6 +3,16 @@ using FitLife.Tests.Fakes;
 
 namespace FitLife.Tests.Authentication;
 
+/// <summary>
+/// Cross-cutting — Authenticatie & sessie (inloggen, uitloggen, rollen).
+/// Login onderbouwt alle user stories: het levert userId, rol, credits en
+/// abonnement waarop de stories verder bouwen. Specifieke acceptatiecriteria
+/// zijn extra getagd:
+///   • US-L06 — credits/abonnement zichtbaar na inloggen.
+///   • US-L07 — profielfoto gekoppeld aan het account.
+/// Rollen: voor nu telt een Beheerder (admin) als Instructeur (zelfde functie).
+/// </summary>
+[Trait("UserStory", "Cross-cutting")]
 public class AuthenticationServiceTests
 {
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -58,6 +68,7 @@ public class AuthenticationServiceTests
     }
 
     [Fact]
+    [Trait("UserStory", "US-L06")]
     public async Task Login_MetGeldigeGegevens_VultCreditsIn()
     {
         var service = new AuthenticationService(JsonClient(true, credits: 9));
@@ -66,6 +77,7 @@ public class AuthenticationServiceTests
     }
 
     [Fact]
+    [Trait("UserStory", "US-L06")]
     public async Task Login_MetGeldigeGegevens_VultAbonnementTypeIn()
     {
         var service = new AuthenticationService(JsonClient(true, subscriptionType: "Rookie"));
@@ -118,14 +130,18 @@ public class AuthenticationServiceTests
     }
 
     // ── Toegangsrechten en rollen ─────────────────────────────────────────────
+    // Rollen uit de user stories: Lid, Instructeur en Beheerder.
+    // Voor nu heeft een Beheerder (admin) EXACT dezelfde functie als een trainer,
+    // dus IsInstructor is true voor zowel "instructor" als "admin" en zij zien
+    // dezelfde staf-weergave. Een admin is daardoor nooit een "member".
 
     [Fact]
-    public async Task Login_AlsAdmin_StelIsAdminIn()
+    public async Task Login_AlsAdmin_TeltAlsInstructeur()
     {
         var service = new AuthenticationService(JsonClient(true, role: "admin"));
         await service.LoginAsync("admin@example.com", "wachtwoord");
         Assert.True(service.IsAdmin);
-        Assert.False(service.IsInstructor);
+        Assert.True(service.IsInstructor);   // admin == trainer: zelfde functie
         Assert.False(service.IsMember);
     }
 
@@ -155,6 +171,7 @@ public class AuthenticationServiceTests
         var service = new AuthenticationService(JsonClient(true, role: "ADMIN"));
         await service.LoginAsync("admin@example.com", "wachtwoord");
         Assert.True(service.IsAdmin);
+        Assert.True(service.IsInstructor);   // hoofdletterongevoelig, en admin == trainer
     }
 
     // ── Uitloggen ─────────────────────────────────────────────────────────────
@@ -242,9 +259,10 @@ public class AuthenticationServiceTests
         Assert.Equal("Heraangemeld", service.CurrentUserName);
     }
 
-    // ── Profielfoto ───────────────────────────────────────────────────────────
+    // ── Profielfoto (US-L07) ──────────────────────────────────────────────────
 
     [Fact]
+    [Trait("UserStory", "US-L07")]
     public async Task UpdatePhotoUrl_NaInloggen_WijzigtGecachedeFotoUrl()
     {
         var service = new AuthenticationService(JsonClient(true));
@@ -256,6 +274,7 @@ public class AuthenticationServiceTests
     }
 
     [Fact]
+    [Trait("UserStory", "US-L07")]
     public async Task UpdatePhotoUrl_MetNull_WischtFotoUrl()
     {
         var service = new AuthenticationService(JsonClient(true));
