@@ -56,3 +56,10 @@ TestResults/
 # ===============================
 coverage/
 coverage.xml
+
+# ===============================
+# Local diagnostic / scratch dumps
+# ===============================
+diag_*.txt
+*_Diag*.cs
+**/Tests/_Diag*.cs
